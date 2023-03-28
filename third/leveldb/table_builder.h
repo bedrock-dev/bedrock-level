@@ -18,6 +18,7 @@
 #include "leveldb/export.h"
 #include "leveldb/options.h"
 #include "leveldb/status.h"
+#include "leveldb/compressor.h"
 
 namespace leveldb {
 
@@ -82,7 +83,7 @@ class LEVELDB_EXPORT TableBuilder {
  private:
   bool ok() const { return status().ok(); }
   void WriteBlock(BlockBuilder* block, BlockHandle* handle);
-  void WriteRawBlock(const Slice& data, CompressionType, BlockHandle* handle);
+  void WriteRawBlock(const Slice& data, Compressor* compressor, BlockHandle* handle);
 
   struct Rep;
   Rep* rep_;
