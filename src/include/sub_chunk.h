@@ -9,23 +9,20 @@
 #include <cstdint>
 #include <vector>
 #include <cstdio>
+#include "palette.h"
 
 namespace bl {
-    class block_palette {
-        block_palette() = default;
-
-    private:
-        uint8_t bits_;
-    };
-
 
     class sub_chunk {
     public:
 
 
         struct layer {
-            std::array<int, 16 * 16 * 16> blocks_;
-            block_palette palette_;
+            uint8_t bits;
+            uint8_t type;
+            uint32_t palette_len;
+            std::vector<int> blocks;
+            std::vector<palette::compound_tag *> palettes;
         };
 
         sub_chunk() = default;
@@ -38,10 +35,11 @@ namespace bl {
 
         bool load(const uint8_t *data, size_t len);
 
-
         //for develop
 
         void dump_to_file(FILE *fp) const;
+
+        void push_back_layer(const layer &layer) { this->layers_.push_back(layer); }
 
     private:
 

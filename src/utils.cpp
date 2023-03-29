@@ -66,6 +66,5 @@ namespace bl::utils {
 
         return bytes;
     }
-
-
 }
+
