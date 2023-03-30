@@ -76,11 +76,11 @@ int main() {
 //    bl::sub_chunk sub_chunk;
 //    sub_chunk.load(data.data(), data.size());
 //    sub_chunk.dump_to_file(stdout);
-
-    system("chcp 65001");
+//    system("chcp 65001");
     bl::bedrock_level level;
-    level.open("./mc-world");
+    level.open("./2");
     level.parse_keys();
+
     return 0;
 
 }

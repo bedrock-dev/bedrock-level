@@ -86,11 +86,12 @@ namespace bl {
         leveldb::Iterator *it = db_->NewIterator(leveldb::ReadOptions());
         for (it->SeekToFirst(); it->Valid(); it->Next()) {
             auto k = bl::bedrock_key::parse_key(it->key().ToString());
-            if (k.type != bedrock_key::Unknown) {
-                std::cout << k.to_string() << std::endl;
-            } else {
-                std::cout << "Unknown" << std::endl;
+            if (k.type == bedrock_key::Data3D) {
+                utils::write_file("./data3d/" + std::to_string(k.x) + "_" + std::to_string(k.z) + ".data3d",
+                                  (const uint8_t *) it->value().data(),
+                                  it->value().size());
             }
+
         }
     }
 }

@@ -47,6 +47,10 @@ struct NonCopyable {
 
 namespace bl::utils {
     std::vector<uint8_t> read_file(const std::string &file_name);
+
+
+    void write_file(const std::string &file_name, const uint8_t *data, size_t len);
+
 }
 
 #endif //BEDROCK_LEVEL_UTILS_H

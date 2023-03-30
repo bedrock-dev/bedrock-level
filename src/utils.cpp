@@ -66,5 +66,15 @@ namespace bl::utils {
 
         return bytes;
     }
+
+    void write_file(const std::string &file_name, const uint8_t *data, size_t len) {
+        std::ofstream output(file_name, std::ios::binary);
+        if (!output.is_open()) {
+            BL_ERROR("Can not open file %s", file_name.c_str());
+            return;
+        }
+        output.write(reinterpret_cast<const char *>(data), static_cast<std::streamsize>(len));
+        output.close();
+    }
 }
 
