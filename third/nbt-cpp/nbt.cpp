@@ -843,11 +843,9 @@ void read_compound_bin(std::istream & input, tags::compound_tag & compound, cons
 		if (id > tag_id::tag_longarray)
 			throw std::out_of_range("unknown tag id: " + std::to_string(id_numeric));
 		if (id == tag_id::tag_end){
-            printf("Tag end\n");
             break;
         }
 		std::string key = tags::read_string(input, ctxt);
-        printf("Read key %s\n",key.c_str());
 		compound.value.emplace(std::move(key), tags::read(id, input));
 	}
 }

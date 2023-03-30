@@ -13,7 +13,7 @@
 #include "bit_tools.h"
 #include "nbt.hpp"
 #include "sub_chunk.h"
-
+#include "bedrock_level.h"
 //
 //void printBinaries(const leveldb::Slice &slice) {
 //    for (int i = 0; i < slice.size(); i++) {
@@ -71,15 +71,15 @@ int main() {
 //        printf("%d ", v);
     // }
 
+//
+//    auto data = bl::utils::read_file("./subchunks/0_0_0.subdata");
+//    bl::sub_chunk sub_chunk;
+//    sub_chunk.load(data.data(), data.size());
+//    sub_chunk.dump_to_file(stdout);
 
-
-
-    auto data = bl::utils::read_file("./subchunks/0_0_0.subdata");
-    bl::sub_chunk sub_chunk;
-    sub_chunk.load(data.data(), data.size());
-    sub_chunk.dump_to_file(stdout);
-
-
+    system("chcp 65001");
+    bl::bedrock_level level;
+    level.open("./mc-world");
     return 0;
 
 }
