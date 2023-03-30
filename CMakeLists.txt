@@ -15,6 +15,7 @@ add_library(bedrock-level
         src/bit_tools.cpp
         src/palette.cpp
         src/bedrock_level.cpp
+        src/bedrock_key.cpp
         )
 
 add_library(nbt-cpp

@@ -20,11 +20,15 @@ namespace bl {
 
         bool open(const std::string &root);
 
+        //for dev
+        void parse_keys();
+
     private:
         bool is_open_{false};
         leveldb::DB *db_{nullptr};
         std::string root_name_;
         nbt::tags::compound_tag level_dat_;
+
 
     private:
 

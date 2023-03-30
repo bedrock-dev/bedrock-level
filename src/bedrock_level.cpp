@@ -14,6 +14,7 @@
 #include <fstream>
 #include "bit_tools.h"
 #include "nbt.hpp"
+#include "bedrock_key.h"
 #include "sub_chunk.h"
 #include <fstream>
 
@@ -56,7 +57,7 @@ namespace bl {
             char header[8];
             dat.read(header, 8);
             dat >> contexts::bedrock_disk >> this->level_dat_;
-            std::cout << contexts::mojangson << this->level_dat_;
+            // std::cout << contexts::mojangson << this->level_dat_;
         } catch (const std::exception &e) {
             BL_ERROR("Invalid level.dat Format: %s", e.what());
             return false;
@@ -78,6 +79,19 @@ namespace bl {
             BL_ERROR("Can not open level database: %s", status.ToString().c_str());
         }
         return status.ok();
+    }
+
+
+    void bedrock_level::parse_keys() {
+        leveldb::Iterator *it = db_->NewIterator(leveldb::ReadOptions());
+        for (it->SeekToFirst(); it->Valid(); it->Next()) {
+            auto k = bl::bedrock_key::parse_key(it->key().ToString());
+            if (k.type != bedrock_key::Unknown) {
+                std::cout << k.to_string() << std::endl;
+            } else {
+                std::cout << "Unknown" << std::endl;
+            }
+        }
     }
 }
 

@@ -80,6 +80,7 @@ int main() {
     system("chcp 65001");
     bl::bedrock_level level;
     level.open("./mc-world");
+    level.parse_keys();
     return 0;
 
 }
