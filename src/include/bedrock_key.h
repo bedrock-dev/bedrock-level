@@ -10,6 +10,19 @@
 
 namespace bl {
 
+    struct chunk_pos {
+        int32_t x{0};
+        int32_t z{0};
+        int32_t dim{-1};
+
+        [[nodiscard]] bool valid() const { return this->dim >= 0 && this->dim <= 2; }
+
+        [[nodiscard]] std::string to_string() const;
+
+        chunk_pos() = default;
+    };
+
+
     struct chunk_key {
         [[nodiscard]] std::string to_string() const;
 
@@ -23,7 +36,7 @@ namespace bl {
             SubChunkTerrain = 47,  // 0x2f (/)
             LegacyTerrain = 48,    //?
             BlockEntity = 49,
-            Entity = 50,
+            Entity = 50,        //no longer used
             PendingTicks = 51,
             BlockExtraData = 52,  //?
             BiomeState = 53,
@@ -41,19 +54,64 @@ namespace bl {
             Unknown = -1
         };
 
+        [[nodiscard]] bool valid() const { return this->cp.valid() && this->type != Unknown; }
+
         static std::string chunk_key_to_str(chunk_key::key_type key);
 
-        static chunk_key parse_chunk_ley(const std::string &key);
+        static chunk_key parse(const std::string &key);
 
         [[maybe_unused]] const static chunk_key INVALID_CHUNK_KEY;
 
-        key_type type;
-        int x;
-        int z;
-        int dimId;
-        int8_t y_index;
+
+        key_type type{Unknown};
+        chunk_pos cp;
+        int8_t y_index{};
     };
 
+    struct actor_key {
+        int64_t actor_uid{static_cast<int64_t>(0xffffffffffffffff)};
+
+        [[nodiscard]] inline bool valid() const { return this->actor_uid != 0xffffffffffffffff; }
+
+        [[nodiscard]] std::string to_string() const;
+
+        static actor_key parse(const std::string &key);
+
+
+    };
+
+    struct actor_digest_key {
+        chunk_pos cp;
+
+        static actor_digest_key parse(const std::string &key);
+
+        [[nodiscard]] inline bool valid() const { return this->cp.valid(); }
+
+        [[nodiscard]] std::string to_string() const;
+
+    };
+
+
+    struct village_key {
+        enum key_type {
+            INFO,
+            DWELLERS,
+            PLAYERS,
+            POI,
+            Unknown
+        };
+
+        static std::string village_key_type_to_str(key_type t);
+
+        [[nodiscard]] bool valid() const { return this->uuid.size() == 36 && this->type != Unknown; }
+
+        [[nodiscard]] std::string to_string() const;
+
+        static village_key parse(const std::string &key);
+
+        std::string uuid;
+        key_type type{Unknown};
+    };
 
 }  // namespace bl
 

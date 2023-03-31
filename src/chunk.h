@@ -6,6 +6,10 @@
 #define BEDROCK_LEVEL_CHUNK_H
 
 
+namespace bl {
+
+}
+
 class chunk {
 
 };

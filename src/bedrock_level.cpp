@@ -83,7 +83,7 @@ namespace bl {
     void bedrock_level::parse_keys() {
         leveldb::Iterator *it = db_->NewIterator(leveldb::ReadOptions());
         for (it->SeekToFirst(); it->Valid(); it->Next()) {
-            auto k = bl::chunk_key::parse_chunk_ley(it->key().ToString());
+            auto k = bl::chunk_key::parse(it->key().ToString());
             if (k.type == chunk_key::Unknown) {
                 std::cout << "unknown";
             } else {

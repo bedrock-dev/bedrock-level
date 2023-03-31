@@ -10,20 +10,8 @@ namespace bl {
 
     const chunk_key chunk_key::INVALID_CHUNK_KEY = chunk_key{chunk_key::Unknown, 0, 0, 0, 0};
 
-    namespace {
 
-        //
-        //        chunk_key parse_global_key_space(const char *data) {
-        //            return chunk_key::INVALID_KEY;
-        //        }
-        //
-        //        chunk_key parse_chunk_key_space(const char *data) {
-        //
-        //        }
-
-    }
-
-    chunk_key chunk_key::parse_chunk_ley(const std::string &key) {
+    chunk_key chunk_key::parse(const std::string &key) {
         auto sz = key.size();
         if (sz == 9 || sz == 10 || sz == 13 || sz == 14) {
             auto x = *reinterpret_cast<const int *>(key.data());
@@ -55,12 +43,71 @@ namespace bl {
                 y_index = key.back();
             }
 
-            return chunk_key{type, x, z, dim, y_index};
+            chunk_pos cp{x, z, dim};
+            return chunk_key{type, cp, y_index};
         } else {
-            //    BL_LOGGER("Meet key with length %zu, tag is %d ", key.size(), (int) key[8]);
             return INVALID_CHUNK_KEY;
         }
     }
+
+    actor_key actor_key::parse(const std::string &key) {
+        actor_key res;
+        if (key.size() != 19 || key.rfind("actorprefix", 0) != 0)return res;
+        res.actor_uid = *reinterpret_cast<const int64_t *>(key.data() + 11);
+        return res;
+    }
+
+    actor_digest_key actor_digest_key::parse(const std::string &key) {
+        actor_digest_key res{};
+        if (key.size() != 12 && key.size() != 16) return res;
+        if (key.rfind("digp", 0) != 0) return res;
+        res.cp.x = *reinterpret_cast<const int32_t *> (key.data() + 4);
+        res.cp.z = *reinterpret_cast<const int32_t *> (key.data() + 8);
+        res.cp.dim = 0;
+        if (key.size() == 16) {
+            res.cp.dim = *reinterpret_cast<const int32_t *> (key.data() + 12);
+        }
+
+        return res;
+    }
+
+    village_key village_key::parse(const std::string &key) {
+        village_key res;
+        if (key.size() < 46)return res;
+        if (key.rfind("VILLAGE_", 0) != 0) return res;
+        res.uuid = std::string(key.begin() + 8, key.begin() + 44); //uuid
+        std::string type_str = std::string(key.data() + 45);
+        if (type_str == "DWELLERS") {
+            res.type = DWELLERS;
+        } else if (type_str == "INFO") {
+            res.type = INFO;
+        } else if (type_str == "PLAYERS") {
+            res.type = PLAYERS;
+        } else if (type_str == "POI") {
+            res.type = POI;
+        } else {
+            res.type = Unknown;
+        }
+        return res;
+    }
+
+    std::string village_key::village_key_type_to_str(village_key::key_type t) {
+        switch (t) {
+            case INFO:
+                return "INFO";
+            case DWELLERS:
+                return "DWELLERS";
+            case PLAYERS:
+                return "PLAYERS";
+            case POI:
+                return "POI";
+            case Unknown:
+                return "UNKNOWN";
+        }
+        return "UNKNOWN";
+
+    }
+
 
     std::string chunk_key::chunk_key_to_str(bl::chunk_key::key_type key) {
         switch (key) {
@@ -115,15 +162,33 @@ namespace bl {
         return "Unknown";
     }
 
+    std::string chunk_pos::to_string() const {
+        return std::to_string(this->x) + ", " + std::to_string(this->z) + ", " + std::to_string(this->dim);
+    }
+
+
     std::string chunk_key::to_string() const {
-        auto chunk_pos = std::to_string(x) + ", " + std::to_string(z);
         auto type_info =
                 chunk_key_to_str(type) + "(" + std::to_string(static_cast<int>(type)) + ")";
         auto index_info = std::string();
         if (type == SubChunkTerrain) {
-            index_info = std::to_string(y_index);
+            index_info = "y = " + std::to_string(y_index);
         }
-        return "[" + chunk_pos + "] (" + std::to_string(dimId) + ") " + type_info + " " +
+
+        return "[" + this->cp.to_string() + "] " + type_info + " " +
                index_info;
     }
+
+    std::string actor_key::to_string() const {
+        return std::to_string(this->actor_uid);
+    }
+
+    std::string actor_digest_key::to_string() const {
+        return this->cp.to_string();
+    }
+
+    std::string village_key::to_string() const {
+        return this->uuid + "," + village_key_type_to_str(this->type);
+    }
+
 }  // namespace bl
