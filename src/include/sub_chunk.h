@@ -7,16 +7,15 @@
 
 #include <array>
 #include <cstdint>
-#include <vector>
 #include <cstdio>
+#include <vector>
+
 #include "palette.h"
 
 namespace bl {
 
     class sub_chunk {
-    public:
-
-
+       public:
         struct layer {
             uint8_t bits;
             uint8_t type;
@@ -35,22 +34,19 @@ namespace bl {
 
         bool load(const uint8_t *data, size_t len);
 
-        //for develop
+        // for develop
 
         void dump_to_file(FILE *fp) const;
 
         void push_back_layer(const layer &layer) { this->layers_.push_back(layer); }
 
-    private:
-
+       private:
         uint8_t version_{0xff};
         uint8_t y_index_{0xff};
         uint8_t layers_num_{0xff};
 
         std::vector<layer> layers_;
-
     };
-}
+}  // namespace bl
 
-
-#endif //BEDROCK_LEVEL_SUB_CHUNK_H
+#endif  // BEDROCK_LEVEL_SUB_CHUNK_H

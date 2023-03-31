@@ -4,12 +4,11 @@
 
 #include "utils.h"
 
-
 #include <cstdarg>
 #include <cstdint>
 #include <cstdio>
-#include <iostream>
 #include <fstream>
+#include <iostream>
 
 #define KNRM "\x1B[0m"
 #define KRED "\x1B[31m"
@@ -19,7 +18,6 @@
 #define KMAG "\x1B[35m"
 #define KCYN "\x1B[36m"
 #define KWHT "\x1B[37m"
-
 
 void log(const char *file_name, const char *function_name, size_t line, const char *fmt, ...) {
 #ifdef DEBUG
@@ -32,7 +30,8 @@ void log(const char *file_name, const char *function_name, size_t line, const ch
 #endif
 }
 
-void error_msg(const char *file_name, const char *function_name, size_t line, const char *fmt, ...) {
+void error_msg(const char *file_name, const char *function_name, size_t line, const char *fmt,
+               ...) {
     va_list args;
     va_start(args, fmt);
     fprintf(stdout, "[ERROR] [%s:%zu @ %s]:", file_name, line, function_name);
@@ -61,7 +60,8 @@ namespace bl::utils {
             BL_ERROR("Can not open file %s", file_name.c_str());
             return {};
         }
-        std::vector<uint8_t> bytes((std::istreambuf_iterator<char>(input)), (std::istreambuf_iterator<char>()));
+        std::vector<uint8_t> bytes((std::istreambuf_iterator<char>(input)),
+                                   (std::istreambuf_iterator<char>()));
         input.close();
 
         return bytes;
@@ -76,5 +76,4 @@ namespace bl::utils {
         output.write(reinterpret_cast<const char *>(data), static_cast<std::streamsize>(len));
         output.close();
     }
-}
-
+}  // namespace bl::utils

@@ -5,31 +5,23 @@
 #ifndef BEDROCK_LEVEL_PALETTE_H
 #define BEDROCK_LEVEL_PALETTE_H
 
-#include <string>
 #include <map>
 #include <ostream>
+#include <string>
 #include <unordered_map>
 #include <utility>
 
 namespace bl::palette {
 
-    enum tag_type {
-        End = 0,
-        Byte = 1,
-        Int = 3,
-        String = 8,
-        Compound = 10,
-        LEN = 11
-    };
-
+    enum tag_type { End = 0, Byte = 1, Int = 3, String = 8, Compound = 10, LEN = 11 };
 
     std::string tag_type_to_str(tag_type type);
 
     struct abstract_tag {
-    public:
+       public:
         explicit abstract_tag(std::string key) : key_(std::move(key)) {}
 
-        [[nodiscard]]  virtual tag_type type() const = 0;
+        [[nodiscard]] virtual tag_type type() const = 0;
 
         virtual void write(std::ostream &o, int indent) {
             if (indent != 0) {
@@ -40,7 +32,7 @@ namespace bl::palette {
 
         [[nodiscard]] std::string key() const { return this->key_; }
 
-    protected:
+       protected:
         std::string key_;
     };
 
@@ -54,7 +46,7 @@ namespace bl::palette {
         void write(std::ostream &o, int indent) override {
             abstract_tag::write(o, indent);
             o << "{\n";
-            for (auto &kv: this->value) {
+            for (auto &kv : this->value) {
                 kv.second->write(o, indent + 4);
             }
 
@@ -74,7 +66,6 @@ namespace bl::palette {
 
         [[nodiscard]] tag_type type() const override { return String; }
 
-
         void write(std::ostream &o, int indent) override {
             abstract_tag::write(o, indent);
             o << "'" << this->value << "'" << std::endl;
@@ -90,12 +81,10 @@ namespace bl::palette {
 
         [[nodiscard]] tag_type type() const override { return Int; }
 
-
         void write(std::ostream &o, int indent) override {
             abstract_tag::write(o, indent);
             o << this->value << std::endl;
         }
-
 
         int32_t value{};
     };
@@ -115,9 +104,7 @@ namespace bl::palette {
         uint8_t value{};
     };
 
-
     [[maybe_unused]] compound_tag *read_one_palette(const uint8_t *data, int &read);
-}
+}  // namespace bl::palette
 
-
-#endif //BEDROCK_LEVEL_PALETTE_H
+#endif  // BEDROCK_LEVEL_PALETTE_H

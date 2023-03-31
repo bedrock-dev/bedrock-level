@@ -3,6 +3,7 @@
 //
 
 #include "palette.h"
+
 #include "utils.h"
 
 namespace bl::palette {
@@ -66,11 +67,10 @@ namespace bl::palette {
                 read += read_byte(data + read, tag->value);
                 return tag;
             } else {
-                throw std::runtime_error("unsupported tag type " + std::to_string((int) type));
+                throw std::runtime_error("unsupported tag type " + std::to_string((int)type));
             }
         }
-    }
-
+    }  // namespace
 
     [[maybe_unused]] compound_tag *read_one_palette(const uint8_t *data, int &read) {
         read = 0;
@@ -101,7 +101,4 @@ namespace bl::palette {
         return "ERROR";
     }
 
-}
-
-
-
+}  // namespace bl::palette

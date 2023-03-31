@@ -77,10 +77,9 @@ int main() {
 //    sub_chunk.load(data.data(), data.size());
 //    sub_chunk.dump_to_file(stdout);
 //    system("chcp 65001");
-    bl::bedrock_level level;
-    level.open("./2");
-    level.parse_keys();
-
+//    bl::bedrock_level level;
+//    level.open("./2");
+//    level.parse_keys();
     return 0;
 
 }
