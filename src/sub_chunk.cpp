@@ -42,7 +42,7 @@ namespace bl {
                 if (tag) {
                     layer->palettes.push_back(tag);
                 } else {
-                    throw std::runtime_error("Error read Palette");
+                    throw std::runtime_error("Error read palette");
                 }
                 read += r;
             }
@@ -59,10 +59,11 @@ namespace bl {
             read++;
             layer.type = layer_header & 0x1;
             layer.bits = layer_header >> 1u;
+            BL_LOGGER("layer bits is %u\n", layer.bits);
             const auto read_bytes = (layer.bits * BLOCK_NUM) >> 3;
             if (layer.bits < 8) {
                 layer.blocks =
-                    bl::bits::restructureBytes<int>(layer.bits, stream + read, read_bytes);
+                        bl::bits::restructureBytes<int>(layer.bits, stream + read, read_bytes);
             } else {
                 BL_ERROR("Layer bits is %d\n", layer.bits);
             }
@@ -104,13 +105,13 @@ namespace bl {
         fprintf(fp, "Layers  : %u\n", this->layers_num_);
         fprintf(fp, "===========================================\n");
         size_t index = 0;
-        for (auto &layer : this->layers_) {
+        for (auto &layer: this->layers_) {
             fprintf(fp, "Layer %zu:\n", index);
             fprintf(fp, "Bits per block: %d\n", layer.bits);
             fprintf(fp, "Palette type: %d\n", layer.type);
             fprintf(fp, "Palette len: %d\n", layer.palette_len);
             auto i = 0;
-            for (auto b : layer.blocks) {
+            for (auto b: layer.blocks) {
                 printf("%02d ", b);
                 i++;
                 if (i % 16 == 0) {
@@ -120,7 +121,7 @@ namespace bl {
                     printf("------------------------------------------\n");
                 }
             }
-            for (auto palette : layer.palettes) {
+            for (auto palette: layer.palettes) {
                 palette->write(std::cout, 0);
             }
 

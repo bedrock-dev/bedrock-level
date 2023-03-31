@@ -6,6 +6,7 @@
 #define BEDROCK_LEVEL_BEDROCK_KEY_H
 
 #include <string>
+#include <functional>
 #include <vector>
 
 namespace bl {
@@ -20,6 +21,10 @@ namespace bl {
         [[nodiscard]] std::string to_string() const;
 
         chunk_pos() = default;
+
+        bool operator==(const chunk_pos &p) const;
+
+        bool operator<(const chunk_pos &rhs) const;
     };
 
 
@@ -54,6 +59,7 @@ namespace bl {
             Unknown = -1
         };
 
+
         [[nodiscard]] bool valid() const { return this->cp.valid() && this->type != Unknown; }
 
         static std::string chunk_key_to_str(chunk_key::key_type key);
@@ -62,6 +68,7 @@ namespace bl {
 
         [[maybe_unused]] const static chunk_key INVALID_CHUNK_KEY;
 
+        [[nodiscard]] std::string to_raw() const;
 
         key_type type{Unknown};
         chunk_pos cp;
@@ -114,5 +121,20 @@ namespace bl {
     };
 
 }  // namespace bl
+
+
+namespace std {
+
+    template<>
+    struct hash<bl::chunk_pos> {
+        std::size_t operator()(const bl::chunk_pos &k) const {
+            size_t hash = 3241;
+            hash = 3457689L * hash + k.x;
+            hash = 8734625L * hash + k.z;
+            hash = 2873465L * hash + k.dim;
+            return hash;
+        }
+    };
+}
 
 #endif  // BEDROCK_LEVEL_BEDROCK_KEY_H

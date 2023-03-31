@@ -15,7 +15,7 @@
 namespace bl {
 
     class sub_chunk {
-       public:
+    public:
         struct layer {
             uint8_t bits;
             uint8_t type;
@@ -40,11 +40,10 @@ namespace bl {
 
         void push_back_layer(const layer &layer) { this->layers_.push_back(layer); }
 
-       private:
+    private:
         uint8_t version_{0xff};
         uint8_t y_index_{0xff};
         uint8_t layers_num_{0xff};
-
         std::vector<layer> layers_;
     };
 }  // namespace bl

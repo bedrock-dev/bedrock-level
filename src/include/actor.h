@@ -5,10 +5,18 @@
 #ifndef BEDROCK_LEVEL_ACRTOR_H
 #define BEDROCK_LEVEL_ACRTOR_H
 
+#include "utils.h"
 
-class actor {
 
-};
+namespace bl {
+    class actor {
+    public:
+        bool load(const uint8_t *data, size_t len);
+
+    private:
+
+    };
+}
 
 
 #endif //BEDROCK_LEVEL_ACRTOR_H

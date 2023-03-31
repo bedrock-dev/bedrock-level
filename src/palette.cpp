@@ -26,6 +26,11 @@ namespace bl::palette {
             return 4;
         }
 
+        int read_short(const uint8_t *data, int16_t &val) {
+            val = *reinterpret_cast<const int16_t *>(data);
+            return 2;
+        }
+
         int read_byte(const uint8_t *data, uint8_t &val) {
             val = data[0];
             return 1;
@@ -80,7 +85,10 @@ namespace bl::palette {
                 auto *tag = new int_tag(key);
                 read += read_int(data + read, tag->value);
                 return tag;
-
+            } else if (type == Short) {
+                auto *tag = new short_tag(key);
+                read += read_short(data + read, tag->value);
+                return tag;
             } else if (type == Long) {
                 auto *tag = new long_tag(key);
                 read += read_long(data + read, tag->value);
@@ -111,6 +119,10 @@ namespace bl::palette {
                         auto *child = new int_tag("");
                         read += read_int(data + read, child->value);
                         tag->value.push_back(child);
+                    } else if (child_type == Short) {
+                        auto *child = new short_tag("");
+                        read += read_short(data + read, child->value);
+                        tag->value.push_back(child);
                     } else if (child_type == Long) {
                         auto *child = new long_tag("");
                         read += read_long(data + read, child->value);
@@ -140,7 +152,8 @@ namespace bl::palette {
                         } while (cc);
                         tag->value.push_back(child);
                     } else {
-                        throw std::runtime_error("unsupported list child tag type " + std::to_string((int) child_type));
+                        throw std::runtime_error(
+                                "unsupported list child tag type " + std::to_string((int) child_type));
                     }
                 }
                 return tag;
@@ -184,6 +197,9 @@ namespace bl::palette {
                 return "Float";
             case Double:
                 return "Double";
+            case Short:
+                return "Short";
+                break;
         }
         return "UNKNOWN";
     }

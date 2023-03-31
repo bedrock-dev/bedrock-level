@@ -15,7 +15,17 @@
 namespace bl::palette {
 
     enum tag_type {
-        End = 0, Byte = 1, Int = 3, Long = 4, Float = 5, Double = 6, String = 8, List = 9, Compound = 10, LEN = 11
+        End = 0,
+        Byte = 1,
+        Short = 2,
+        Int = 3,
+        Long = 4,
+        Float = 5,
+        Double = 6,
+        String = 8,
+        List = 9,
+        Compound = 10,
+        LEN = 11
     };
 
     std::string tag_type_to_str(tag_type type);
@@ -90,6 +100,21 @@ namespace bl::palette {
         }
 
         int32_t value{};
+    };
+
+    struct short_tag : public abstract_tag {
+        short_tag() = delete;
+
+        explicit short_tag(const std::string &key) : abstract_tag(key) {}
+
+        [[nodiscard]] tag_type type() const override { return Short; }
+
+        void write(std::ostream &o, int indent) override {
+            abstract_tag::write(o, indent);
+            o << this->value << std::endl;
+        }
+
+        int16_t value{};
     };
 
     struct long_tag : public abstract_tag {

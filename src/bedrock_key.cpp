@@ -166,6 +166,22 @@ namespace bl {
         return std::to_string(this->x) + ", " + std::to_string(this->z) + ", " + std::to_string(this->dim);
     }
 
+    bool chunk_pos::operator<(const chunk_pos &rhs) const {
+        if (x < rhs.x)
+            return true;
+        if (rhs.x < x)
+            return false;
+        if (z < rhs.z)
+            return true;
+        if (rhs.z < z)
+            return false;
+        return dim < rhs.dim;
+    }
+
+    bool chunk_pos::operator==(const chunk_pos &p) const {
+        return this->x == p.x && this->dim == p.dim && this->z == p.z;
+    }
+
 
     std::string chunk_key::to_string() const {
         auto type_info =
@@ -177,6 +193,27 @@ namespace bl {
 
         return "[" + this->cp.to_string() + "] " + type_info + " " +
                index_info;
+    }
+
+    std::string chunk_key::to_raw() const {
+        size_t sz = 9;
+        if (this->type == SubChunkTerrain)
+            sz += 1;
+        if (this->cp.dim != 0)sz += 4;
+        std::string r(sz, '\0');
+        memcpy(r.data(), &cp.x, 4);
+        memcpy(r.data() + 4, &cp.z, 4);
+        if (this->cp.dim != 0) {
+            memcpy(r.data() + 8, &cp.dim, 4);
+            r[12] = this->type;
+        } else {
+            r[8] = this->type;
+        }
+
+        if (this->type == SubChunkTerrain) {
+            r[r.size() - 1] = y_index;
+        }
+        return r;
     }
 
     std::string actor_key::to_string() const {

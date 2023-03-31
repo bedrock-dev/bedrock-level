@@ -20,10 +20,13 @@ namespace bl {
     };
 
 
+    class village_data {
+
+    };
 
 }
 
-class global {
+class global_data {
 
 };
 

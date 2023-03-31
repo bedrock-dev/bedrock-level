@@ -9,17 +9,20 @@
 
 #include "leveldb/db.h"
 #include "nbt.hpp"
+#include <optional>
+#include "bedrock_key.h"
+#include <functional>
+#include <map>
 
 namespace bl {
 
+    class chunk;
+
     class bedrock_level {
-       public:
+    public:
         [[nodiscard]] bool is_open() const { return this->is_open_; }
 
         bool open(const std::string &root);
-
-        // for dev
-        void parse_keys();
 
         leveldb::DB *&db() { return this->db_; }
 
@@ -27,13 +30,22 @@ namespace bl {
 
         ~bedrock_level();
 
-       private:
+        void for_each_chunk_pos(const std::function<void(const chunk_pos &cp)> &f);
+
+        chunk *get_chunk(const chunk_pos &cp);
+
+    private:
         bool is_open_{false};
         leveldb::DB *db_{nullptr};
         std::string root_name_;
+
         nbt::tags::compound_tag level_dat_;
 
-       private:
+        std::map<chunk_pos, chunk *> chunk_data_cache_;
+
+        void cache_keys();
+
+    private:
         bool read_level_dat();
 
         bool read_db();
