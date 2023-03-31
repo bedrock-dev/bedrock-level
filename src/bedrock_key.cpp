@@ -40,9 +40,9 @@ namespace bl {
             }
 
             auto type = static_cast<chunk_key::key_type>(key[key_type_idx]);
-            if (type != Data3D && type != SubChunkTerrain && type != BlockEntity
-                // add new item dynamically
-            ) {
+
+
+            if ((type < 43 || type > 65) && type != 118) {
                 return INVALID_CHUNK_KEY;
             }
 
@@ -57,6 +57,7 @@ namespace bl {
 
             return chunk_key{type, x, z, dim, y_index};
         } else {
+            //    BL_LOGGER("Meet key with length %zu, tag is %d ", key.size(), (int) key[8]);
             return INVALID_CHUNK_KEY;
         }
     }
@@ -107,6 +108,9 @@ namespace bl {
                 return "BlendingData";
             case ActorDigestVersion:
                 return "ActorDigestVersion";
+            case RandomTicks:
+                return "RandomTicks";
+                break;
         }
         return "Unknown";
     }
@@ -114,7 +118,7 @@ namespace bl {
     std::string chunk_key::to_string() const {
         auto chunk_pos = std::to_string(x) + ", " + std::to_string(z);
         auto type_info =
-            chunk_key_to_str(type) + "(" + std::to_string(static_cast<int>(type)) + ")";
+                chunk_key_to_str(type) + "(" + std::to_string(static_cast<int>(type)) + ")";
         auto index_info = std::string();
         if (type == SubChunkTerrain) {
             index_info = std::to_string(y_index);

@@ -31,8 +31,22 @@ namespace bl::palette {
             return 1;
         }
 
-        int read_type(const uint8_t *data, tag_type &type) {
+        int read_long(const uint8_t *data, int64_t &val) {
+            val = *reinterpret_cast<const int64_t *>(data);
+            return 8;
+        }
 
+        int read_float(const uint8_t *data, float &val) {
+            val = *reinterpret_cast<const float *>(data);
+            return 4;
+        }
+
+        int read_double(const uint8_t *data, double &val) {
+            val = *reinterpret_cast<const double *>(data);
+            return 8;
+        }
+
+        int read_type(const uint8_t *data, tag_type &type) {
             type = static_cast<tag_type>(data[0]);
             return 1;
         }
@@ -66,6 +80,19 @@ namespace bl::palette {
                 auto *tag = new int_tag(key);
                 read += read_int(data + read, tag->value);
                 return tag;
+
+            } else if (type == Long) {
+                auto *tag = new long_tag(key);
+                read += read_long(data + read, tag->value);
+                return tag;
+            } else if (type == Float) {
+                auto *tag = new float_tag(key);
+                read += read_float(data + read, tag->value);
+                return tag;
+            } else if (type == Double) {
+                auto *tag = new double_tag(key);
+                read += read_double(data + read, tag->value);
+                return tag;
             } else if (type == String) {
                 auto *tag = new string_tag(key);
                 read += read_string(data + read, tag->value);
@@ -76,19 +103,41 @@ namespace bl::palette {
                 return tag;
             } else if (type == List) {
                 auto *tag = new list_tag(key);
-
                 tag_type child_type;
                 read += read_type(data + read, child_type);
-                int32_t list_len;
-                read += read_int(data + read, list_len);
-                for (int i = 0; i < list_len; i++) {
+                read += read_int(data + read, tag->size);
+                for (int i = 0; i < tag->size; i++) {
                     if (child_type == Int) {
                         auto *child = new int_tag("");
                         read += read_int(data + read, child->value);
                         tag->value.push_back(child);
+                    } else if (child_type == Long) {
+                        auto *child = new long_tag("");
+                        read += read_long(data + read, child->value);
+                        tag->value.push_back(child);
+                    } else if (child_type == Float) {
+                        auto *child = new float_tag("");
+                        read += read_float(data + read, child->value);
+                        tag->value.push_back(child);
+                    } else if (child_type == Double) {
+                        auto *child = new double_tag("");
+                        read += read_double(data + read, child->value);
+                        tag->value.push_back(child);
                     } else if (child_type == String) {
                         auto *child = new string_tag("");
                         read += read_string(data + read, child->value);
+                        tag->value.push_back(child);
+                    } else if (child_type == Compound) {
+                        auto *child = new compound_tag("");
+                        abstract_tag *cc;
+                        do {
+                            int r;
+                            cc = read_nbt(data + read, r);
+                            if (cc) {
+                                child->value[cc->key()] = cc;
+                            }
+                            read += r;
+                        } while (cc);
                         tag->value.push_back(child);
                     } else {
                         throw std::runtime_error("unsupported list child tag type " + std::to_string((int) child_type));
@@ -128,8 +177,15 @@ namespace bl::palette {
                 return "ERROR";
             case List:
                 return "List";
+            case Long:
+                return "Long";
+                break;
+            case Float:
+                return "Float";
+            case Double:
+                return "Double";
         }
-        return "ERROR";
+        return "UNKNOWN";
     }
 
     std::vector<compound_tag *> read_palette_to_end(const uint8_t *data, size_t len) {

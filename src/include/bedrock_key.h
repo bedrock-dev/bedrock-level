@@ -30,6 +30,7 @@ namespace bl {
             FinalizedState = 54,
             BorderBlocks = 56,  // Education Edition Feature
             HardCodedSpawnAreas = 57,
+            RandomTicks = 58,
             Checksums = 59,  // 0x3b (;)
             GenerationSeed = 60,
             BlendingBiomeHeight = 62,
@@ -53,7 +54,6 @@ namespace bl {
         int8_t y_index;
     };
 
-    struct global_key {};
 
 }  // namespace bl
 

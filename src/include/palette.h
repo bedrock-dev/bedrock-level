@@ -15,7 +15,7 @@
 namespace bl::palette {
 
     enum tag_type {
-        End = 0, Byte = 1, Int = 3, String = 8, List = 9, Compound = 10, LEN = 11
+        End = 0, Byte = 1, Int = 3, Long = 4, Float = 5, Double = 6, String = 8, List = 9, Compound = 10, LEN = 11
     };
 
     std::string tag_type_to_str(tag_type type);
@@ -92,6 +92,54 @@ namespace bl::palette {
         int32_t value{};
     };
 
+    struct long_tag : public abstract_tag {
+        long_tag() = delete;
+
+        explicit long_tag(const std::string &key) : abstract_tag(key) {}
+
+        [[nodiscard]] tag_type type() const override { return Long; }
+
+        void write(std::ostream &o, int indent) override {
+            abstract_tag::write(o, indent);
+            o << this->value << std::endl;
+        }
+
+        int64_t value{};
+    };
+
+
+    struct float_tag : public abstract_tag {
+        float_tag() = delete;
+
+        explicit float_tag(const std::string &key) : abstract_tag(key) {}
+
+        [[nodiscard]] tag_type type() const override { return Float; }
+
+        void write(std::ostream &o, int indent) override {
+            abstract_tag::write(o, indent);
+            o << this->value << std::endl;
+        }
+
+        float value{};
+    };
+
+
+    struct double_tag : public abstract_tag {
+        double_tag() = delete;
+
+        explicit double_tag(const std::string &key) : abstract_tag(key) {}
+
+        [[nodiscard]] tag_type type() const override { return Double; }
+
+        void write(std::ostream &o, int indent) override {
+            abstract_tag::write(o, indent);
+            o << this->value << std::endl;
+        }
+
+        double value{};
+    };
+
+
     struct byte_tag : public abstract_tag {
         byte_tag() = delete;
 
@@ -116,6 +164,7 @@ namespace bl::palette {
 
         void write(std::ostream &o, int indent) override {
             abstract_tag::write(o, indent);
+            o << "[" << this->size << "] ";
             o << "{\n";
             for (auto &tag: this->value) {
                 tag->write(o, indent + 4);
@@ -127,6 +176,7 @@ namespace bl::palette {
         }
 
         std::vector<abstract_tag *> value;
+        int32_t size;
     };
 
 

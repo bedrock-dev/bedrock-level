@@ -23,6 +23,10 @@ add_library(bedrock-level
         src/bedrock_key.cpp
         src/data_3d.cpp
         src/chunk.cpp
+        src/actor.cpp
+        src/player.cpp
+        src/scoreboard.cpp
+        src/global.cpp
         )
 
 add_library(nbt-cpp
@@ -37,6 +41,16 @@ target_link_libraries(bedrock-level
         nbt-cpp
         )
 
+
+function(create_app name files)
+    add_executable(
+            ${name}
+            ${files}
+    )
+    target_link_libraries(${name} PRIVATE bedrock-level)
+endfunction(create_app)
+
+create_app(level_dumper app/bedrock_level_dumper.cpp)
 
 #testing
 
@@ -65,4 +79,4 @@ create_test(utils_test tests/utils_test.cpp)
 create_test(bit_tools_test tests/bit_tools_test.cpp)
 create_test(data3d_test tests/data3d_test.cpp)
 create_test(bedrock_level_test tests/bedrock_level_test.cpp)
-create_test(nbt_test tests/nbt_test.cpp)
+create_test(nbt_test tests/palettes_test.cpp)

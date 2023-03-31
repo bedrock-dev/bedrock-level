@@ -8,9 +8,9 @@
 #include "utils.h"
 #include "palette.h"
 
-TEST(NBT, readBlockEntity) {
+TEST(Palette, readPendingTick) {
     using namespace nbt;
-    auto data = bl::utils::read_file("./bes/0_8_blockentity.nbt");
+    auto data = bl::utils::read_file("./pts/0_0.pt.palette");
     EXPECT_TRUE(!data.empty());
     auto palettes = bl::palette::read_palette_to_end(data.data(), data.size());
     for (auto p: palettes) {
