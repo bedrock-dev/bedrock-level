@@ -20,7 +20,7 @@ namespace bl {
             uint8_t bits;
             uint8_t type;
             uint32_t palette_len;
-            std::vector<int> blocks;
+            std::vector<int16_t> blocks;
             std::vector<palette::compound_tag *> palettes;
         };
 

@@ -5,6 +5,7 @@
 #include "chunk.h"
 #include "bedrock_level.h"
 #include "bedrock_key.h"
+#include "utils.h"
 
 namespace bl {
 
@@ -16,6 +17,7 @@ namespace bl {
         auto &db = level.db();
         //get sub chunks terrain
         for (auto sub_index: this->sub_chunk_indexes_) {
+            BL_LOGGER("Sub index is %d", sub_index);
             auto terrain_key = bl::chunk_key{chunk_key::SubChunkTerrain, this->pos_, sub_index};
             std::string raw;
             auto r = db->Get(leveldb::ReadOptions(), terrain_key.to_raw(), &raw);

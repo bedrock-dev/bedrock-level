@@ -20,6 +20,7 @@ namespace bl {
 
     namespace {
 
+
         // sub chunk layout
         // https://user-images.githubusercontent.com/13713600/148380033-6223ac76-54b7-472c-a355-5923b87cb7c5.png
 
@@ -51,27 +52,31 @@ namespace bl {
         }
 
         bool read_one_layer(sub_chunk *sub_chunk, const uint8_t *stream, size_t len, int &read) {
+            read = 0;
             constexpr auto BLOCK_NUM = 16 * 16 * 16;
             if (!sub_chunk || !stream) return false;
-            read = 0;
             bl::sub_chunk::layer layer;
             auto layer_header = stream[0];
             read++;
             layer.type = layer_header & 0x1;
             layer.bits = layer_header >> 1u;
-            BL_LOGGER("layer bits is %u\n", layer.bits);
-            const auto read_bytes = (layer.bits * BLOCK_NUM) >> 3;
-            if (layer.bits < 8) {
-                layer.blocks =
-                        bl::bits::restructureBytes<int>(layer.bits, stream + read, read_bytes);
+
+
+            if (layer.bits != 0) {
+                auto read_bytes = 0;
+                int block_per_word = 32 / layer.bits;
+                auto words = 4096 / block_per_word;
+                if (4096 % block_per_word != 0)words++;
+                read_bytes += words * 4;
+                read += read_bytes;
+
+                layer.palette_len = *reinterpret_cast<const uint32_t *>(stream + read);
+                read += 4;
             } else {
-                BL_ERROR("Layer bits is %d\n", layer.bits);
+                layer.palette_len = 1;
             }
-            read += read_bytes;
 
             // palette header
-            layer.palette_len = *reinterpret_cast<const uint32_t *>(stream + read);
-            read += 4;
             int palette_read = 0;
             read_palettes(&layer, stream + read, layer.palette_len, len - read, palette_read);
             read += palette_read;
@@ -87,12 +92,13 @@ namespace bl {
             return false;
         }
         idx += read;
-        for (int i = 0; i < this->layers_num_; i++) {
-            BL_LOGGER("Read layer: %d", i);
-            if (!read_one_layer(this, data + idx, len - idx, read)) {
-                BL_ERROR("can not read layer %d", i);
-                return false;
-            }
+
+        for (auto i = 0; i < (int) this->layers_num_; i++) {
+            read_one_layer(this, data + idx, len - idx, read);
+//            if (!read_one_layer(this, data + idx, len - idx, read)) {
+//                BL_ERROR("can not read layer %d", i);
+//                return false;
+//            }
             idx += read;
         }
 
