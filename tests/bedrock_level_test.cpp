@@ -31,7 +31,7 @@ TEST(BedrockLevel, ZeroChunkTest) {
     std::string data;
     level.db()->Get(leveldb::ReadOptions(), key, &data);
 
-    utils::write_file("a.subchunk", (uint8_t *) data.data(), data.size());
+    utils::write_file("a.subchunk", data.data(), data.size());
 
     // sub_chunk c;
 

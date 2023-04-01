@@ -76,11 +76,11 @@ namespace bl::bits {
     }
 
 
-    std::vector<int16_t> rearrange_words(size_t bits_len, const uint8_t *data, size_t len) {
-        Assert(len % 4 == 0, "Invalid World input.");
-        if (bits_len == 1) {
-        }
-    }
+//    std::vector<int16_t> rearrange_words(size_t bits_len, const uint8_t *data, size_t len) {
+//        Assert(len % 4 == 0, "Invalid World input.");
+//        if (bits_len == 1) {
+//        }
+//    }
 
 
 

@@ -21,10 +21,15 @@ namespace bl {
     namespace {
 
 
+        void read_block_data(std::array<int16_t, 4096> &block_data, int bits) {
+
+        }
+
+
         // sub chunk layout
         // https://user-images.githubusercontent.com/13713600/148380033-6223ac76-54b7-472c-a355-5923b87cb7c5.png
 
-        bool read_header(sub_chunk *sub_chunk, const uint8_t *stream, int &read) {
+        bool read_header(sub_chunk *sub_chunk, const byte_t *stream, int &read) {
             if (!sub_chunk || !stream) return false;
             // assert that stream is long enough
             sub_chunk->set_version(stream[0]);
@@ -34,7 +39,7 @@ namespace bl {
             return true;
         }
 
-        bool read_palettes(bl::sub_chunk::layer *layer, const uint8_t *stream, size_t number,
+        bool read_palettes(bl::sub_chunk::layer *layer, const byte_t *stream, size_t number,
                            size_t len, int &read) {
             read = 0;
             for (int i = 0; i < number; i++) {
@@ -51,7 +56,7 @@ namespace bl {
             return true;
         }
 
-        bool read_one_layer(sub_chunk *sub_chunk, const uint8_t *stream, size_t len, int &read) {
+        bool read_one_layer(sub_chunk *sub_chunk, const byte_t *stream, size_t len, int &read) {
             read = 0;
             constexpr auto BLOCK_NUM = 16 * 16 * 16;
             if (!sub_chunk || !stream) return false;
@@ -60,7 +65,6 @@ namespace bl {
             read++;
             layer.type = layer_header & 0x1;
             layer.bits = layer_header >> 1u;
-
 
             if (layer.bits != 0) {
                 auto read_bytes = 0;
@@ -85,7 +89,7 @@ namespace bl {
         }
     }  // namespace
 
-    bool sub_chunk::load(const uint8_t *data, size_t len) {
+    bool sub_chunk::load(const byte_t *data, size_t len) {
         size_t idx = 0;  // 全局索引
         int read{0};
         if (!read_header(this, data, read)) {
@@ -94,14 +98,12 @@ namespace bl {
         idx += read;
 
         for (auto i = 0; i < (int) this->layers_num_; i++) {
-            read_one_layer(this, data + idx, len - idx, read);
-//            if (!read_one_layer(this, data + idx, len - idx, read)) {
-//                BL_ERROR("can not read layer %d", i);
-//                return false;
-//            }
+            if (!read_one_layer(this, data + idx, len - idx, read)) {
+                BL_ERROR("can not read layer %d", i);
+                return false;
+            }
             idx += read;
         }
-
         return true;
     }
 

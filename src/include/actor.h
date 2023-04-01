@@ -11,7 +11,7 @@
 namespace bl {
     class actor {
     public:
-        bool load(const uint8_t *data, size_t len);
+        bool load(const byte_t *data, size_t len);
 
     private:
 

@@ -26,7 +26,7 @@ namespace bl {
             }
 
             bl::sub_chunk sb;
-            if (!sb.load(reinterpret_cast<uint8_t *> (raw.data()), raw.size())) {
+            if (!sb.load(raw.data(), raw.size())) {
                 throw std::runtime_error("Can not parse sub chunk content. " + terrain_key.to_string());
             }
 

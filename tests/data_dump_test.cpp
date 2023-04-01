@@ -41,7 +41,7 @@ TEST(BedrockLevel, ExportData3d) {
         if (k.type == chunk_key::Data3D) {
             utils::write_file(
                     "data3d/" + std::to_string(k.cp.x) + "_" + std::to_string(k.cp.z) + ".data3d",
-                    (uint8_t *) it->value().data(), it->value().size());
+                    it->value().data(), it->value().size());
         }
     }
 }
@@ -79,7 +79,7 @@ TEST(BedrockLevel, ExportSubChunkTerrain) {
             utils::write_file(
                     "sub_chunks/" + std::to_string(k.cp.x) + "_" + std::to_string(k.cp.z) + std::to_string(k.y_index) +
                     ".subchunk",
-                    (uint8_t *) it->value().data(), it->value().size());
+                    it->value().data(), it->value().size());
         }
     }
 }
@@ -98,7 +98,7 @@ TEST(BedrockLevel, ExportBlockEntity) {
         if (k.type == chunk_key::BlockEntity) {
             utils::write_file(
                     "bes/" + std::to_string(k.cp.z) + "_" + std::to_string(k.cp.z) + ".blockentity.palette",
-                    (uint8_t *) it->value().data(), it->value().size());
+                    it->value().data(), it->value().size());
         }
     }
 }
@@ -115,7 +115,7 @@ TEST(BedrockLevel, ExportPts) {
         if (k.type == chunk_key::PendingTicks) {
             utils::write_file(
                     "pts/" + std::to_string(k.cp.x) + "_" + std::to_string(k.cp.z) + ".pt.palette",
-                    (uint8_t *) it->value().data(), it->value().size());
+                    it->value().data(), it->value().size());
         }
     }
 }
@@ -152,7 +152,7 @@ TEST(BedrockLevel, ExportRandomTick) {
         if (k.type == chunk_key::RandomTicks) {
             utils::write_file(
                     "rt/" + std::to_string(k.cp.x) + "_" + std::to_string(k.cp.z) + ".rt.palette",
-                    (uint8_t *) it->value().data(), it->value().size());
+                    it->value().data(), it->value().size());
         }
     }
 }
@@ -192,10 +192,10 @@ TEST(BedrockLevel, SaveInvalid) {
 
         utils::write_file(
                 "invalid/" + std::to_string(idx) + ".key",
-                (uint8_t *) it->key().data(), it->key().size());
+                it->key().data(), it->key().size());
         utils::write_file(
                 "invalid/" + std::to_string(idx) + ".value",
-                (uint8_t *) it->value().data(), it->value().size());
+                it->value().data(), it->value().size());
         ++idx;
 
     }
@@ -212,7 +212,7 @@ TEST(BedrockLevel, DumpActors) {
         auto key = bl::actor_key::parse(it->key().ToString());
         if (key.valid()) {
             auto path = "./dump/actors/" + std::to_string(key.actor_uid) + ".palette";
-            utils::write_file(path, (uint8_t *) it->value().data(), it->value().size());
+            utils::write_file(path, it->value().data(), it->value().size());
         }
     }
 }

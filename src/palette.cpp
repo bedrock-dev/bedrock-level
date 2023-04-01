@@ -204,7 +204,7 @@ namespace bl::palette {
         return "UNKNOWN";
     }
 
-    std::vector<compound_tag *> read_palette_to_end(const uint8_t *data, size_t len) {
+    std::vector<compound_tag *> read_palette_to_end(const byte_t *data, size_t len) {
         size_t ptr = 0;
         std::vector<compound_tag *> res;
         while (ptr < len) {

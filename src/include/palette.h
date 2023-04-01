@@ -12,6 +12,9 @@
 #include <unordered_map>
 #include <utility>
 
+#include "utils.h"
+
+
 namespace bl::palette {
 
     enum tag_type {
@@ -205,9 +208,9 @@ namespace bl::palette {
     };
 
 
-    [[maybe_unused]] compound_tag *read_one_palette(const uint8_t *data, int &read);
+    [[maybe_unused]] compound_tag *read_one_palette(const byte_t *data, int &read);
 
-    std::vector<compound_tag *> read_palette_to_end(const uint8_t *data, size_t len);
+    std::vector<compound_tag *> read_palette_to_end(const byte_t *data, size_t len);
 }  // namespace bl::palette
 
 #endif  // BEDROCK_LEVEL_PALETTE_H

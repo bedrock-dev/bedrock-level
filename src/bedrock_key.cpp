@@ -10,7 +10,6 @@ namespace bl {
 
     const chunk_key chunk_key::INVALID_CHUNK_KEY = chunk_key{chunk_key::Unknown, 0, 0, 0, 0};
 
-
     chunk_key chunk_key::parse(const std::string &key) {
         auto sz = key.size();
         if (sz == 9 || sz == 10 || sz == 13 || sz == 14) {

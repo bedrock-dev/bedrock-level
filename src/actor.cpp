@@ -9,7 +9,7 @@
 namespace bl {
 
 
-    bool actor::load(const uint8_t *data, size_t len) {
+    bool actor::load(const byte_t *data, size_t len) {
         auto palettes = bl::palette::read_palette_to_end(data, len);
         BL_LOGGER("Total %zu palettes\n", palettes.size());
         for (auto &palette: palettes) {

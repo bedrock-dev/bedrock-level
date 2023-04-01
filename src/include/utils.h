@@ -32,6 +32,9 @@ void error_msg(const char *file_name, const char *function_name, size_t line, co
 #define Assert(Expr, Msg) ;
 #endif
 
+
+typedef char byte_t;
+
 void M_Assert(const char *expr_str, bool expr, const char *file, int line, const char *fmt, ...);
 
 // disable data copy
@@ -46,9 +49,9 @@ struct NonCopyable {
 #include <cstdint>
 
 namespace bl::utils {
-    std::vector<uint8_t> read_file(const std::string &file_name);
+    std::vector<byte_t> read_file(const std::string &file_name);
 
-    void write_file(const std::string &file_name, const uint8_t *data, size_t len);
+    void write_file(const std::string &file_name, const byte_t *data, size_t len);
 
 }  // namespace bl::utils
 

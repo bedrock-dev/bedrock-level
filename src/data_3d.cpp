@@ -11,7 +11,7 @@
 
 namespace bl {
 
-    bool data_3d::load(const uint8_t *data, size_t len) {
+    bool data_3d::load(const byte_t *data, size_t len) {
         if (len < 512) {
             BL_LOGGER("Invalid Data3d format");
             return false;

@@ -32,7 +32,7 @@ namespace bl {
 
         void set_layers_num(uint8_t layers_num) { this->layers_num_ = layers_num; }
 
-        bool load(const uint8_t *data, size_t len);
+        bool load(const byte_t *data, size_t len);
 
         // for develop
 

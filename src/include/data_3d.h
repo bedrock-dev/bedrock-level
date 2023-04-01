@@ -8,12 +8,13 @@
 #include <array>
 #include <cstdint>
 #include <cstdio>
+#include "utils.h"
 
 namespace bl {
 
     class data_3d {
-       public:
-        bool load(const uint8_t *data, size_t len);
+    public:
+        bool load(const byte_t *data, size_t len);
 
         void dump_to_file(FILE *fp) const;
 
@@ -25,7 +26,7 @@ namespace bl {
             return this->height_map_;
         }
 
-       private:
+    private:
         std::array<int16_t, 256> height_map_;
         int biome_info_;  // TODO
     };

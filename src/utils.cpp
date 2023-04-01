@@ -54,20 +54,20 @@ void M_Assert(const char *expr_str, bool expr, const char *file, int line, const
 
 namespace bl::utils {
 
-    std::vector<uint8_t> read_file(const std::string &file_name) {
+    std::vector<byte_t> read_file(const std::string &file_name) {
         std::ifstream input(file_name, std::ios::binary);
         if (!input.is_open()) {
             BL_ERROR("Can not open file %s", file_name.c_str());
             return {};
         }
-        std::vector<uint8_t> bytes((std::istreambuf_iterator<char>(input)),
-                                   (std::istreambuf_iterator<char>()));
+        std::vector<byte_t> bytes((std::istreambuf_iterator<char>(input)),
+                                  (std::istreambuf_iterator<char>()));
         input.close();
 
         return bytes;
     }
 
-    void write_file(const std::string &file_name, const uint8_t *data, size_t len) {
+    void write_file(const std::string &file_name, const byte_t *data, size_t len) {
         std::ofstream output(file_name, std::ios::binary);
         if (!output.is_open()) {
             BL_ERROR("Can not open file %s", file_name.c_str());
