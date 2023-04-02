@@ -34,6 +34,7 @@ void error_msg(const char *file_name, const char *function_name, size_t line, co
 
 
 typedef char byte_t;
+static_assert(sizeof(byte_t) == 1);
 
 void M_Assert(const char *expr_str, bool expr, const char *file, int line, const char *fmt, ...);
 

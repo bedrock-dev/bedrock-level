@@ -13,7 +13,7 @@ namespace bl::palette {
 
 
     namespace {
-        int read_string(const uint8_t *data, std::string &val) {
+        int read_string(const byte_t *data, std::string &val) {
             uint16_t len = *reinterpret_cast<const uint16_t *>(data);
             if (len != 0) {
                 val = std::string(data + 2, data + len + 2);
@@ -21,37 +21,37 @@ namespace bl::palette {
             return len + 2;
         }
 
-        int read_int(const uint8_t *data, int32_t &val) {
+        int read_int(const byte_t *data, int32_t &val) {
             val = *reinterpret_cast<const int32_t *>(data);
             return 4;
         }
 
-        int read_short(const uint8_t *data, int16_t &val) {
+        int read_short(const byte_t *data, int16_t &val) {
             val = *reinterpret_cast<const int16_t *>(data);
             return 2;
         }
 
-        int read_byte(const uint8_t *data, uint8_t &val) {
+        int read_byte(const byte_t *data, uint8_t &val) {
             val = data[0];
             return 1;
         }
 
-        int read_long(const uint8_t *data, int64_t &val) {
+        int read_long(const byte_t *data, int64_t &val) {
             val = *reinterpret_cast<const int64_t *>(data);
             return 8;
         }
 
-        int read_float(const uint8_t *data, float &val) {
+        int read_float(const byte_t *data, float &val) {
             val = *reinterpret_cast<const float *>(data);
             return 4;
         }
 
-        int read_double(const uint8_t *data, double &val) {
+        int read_double(const byte_t *data, double &val) {
             val = *reinterpret_cast<const double *>(data);
             return 8;
         }
 
-        int read_type(const uint8_t *data, tag_type &type) {
+        int read_type(const byte_t *data, tag_type &type) {
             type = static_cast<tag_type>(data[0]);
             return 1;
         }
@@ -60,7 +60,7 @@ namespace bl::palette {
         /*
          * 不保证内存够用
          */
-        abstract_tag *read_nbt(const uint8_t *data, int &read) {
+        abstract_tag *read_nbt(const byte_t *data, int &read) {
             read = 0;
             tag_type type;
             read += read_type(data, type);
@@ -163,7 +163,7 @@ namespace bl::palette {
         }
     }  // namespace
 
-    [[maybe_unused]] compound_tag *read_one_palette(const uint8_t *data, int &read) {
+    [[maybe_unused]] compound_tag *read_one_palette(const byte_t *data, int &read) {
         read = 0;
         auto r = read_nbt(data, read);
         if (!r || r->type() != tag_type::Compound) {

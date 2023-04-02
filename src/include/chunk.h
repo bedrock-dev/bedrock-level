@@ -17,11 +17,6 @@ namespace bl {
 
     class bedrock_level;
 
-    class BlockInfo {
-        std::string name;
-        int biome;
-    };
-
 
     class chunk {
 
@@ -29,7 +24,7 @@ namespace bl {
 
         friend class bedrock_level;
 
-        BlockInfo get_block(int x, int y, int z);
+        block_info get_block(int x, int y, int z);
 
         explicit chunk(const chunk_pos &pos) : pos_(pos), loaded_(false) {};
 
@@ -42,7 +37,7 @@ namespace bl {
         bool load_data(bedrock_level &level);
 
         bool loaded_{false};
-        std::unordered_map<int16_t, sub_chunk> sub_chunks_;
+        std::map<int8_t, sub_chunk> sub_chunks_;
 
         //lighted
         const chunk_pos pos_;

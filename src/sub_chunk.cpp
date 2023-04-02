@@ -21,9 +21,14 @@ namespace bl {
     namespace {
 
 
-        void read_block_data(std::array<int16_t, 4096> &block_data, int bits) {
+        void read_block_data(std::array<int16_t, 4096> &block_data, int bits, const byte_t *data, size_t len) {
+            int index = 0;
+            while (index < 4096) {
+
+            }
 
         }
+
 
 
         // sub chunk layout
@@ -67,19 +72,21 @@ namespace bl {
             layer.bits = layer_header >> 1u;
 
             if (layer.bits != 0) {
-                auto read_bytes = 0;
                 int block_per_word = 32 / layer.bits;
-                auto words = 4096 / block_per_word;
-                if (4096 % block_per_word != 0)words++;
-                read_bytes += words * 4;
-                read += read_bytes;
-
+                auto words = BLOCK_NUM / block_per_word;
+                if (BLOCK_NUM % block_per_word != 0)words++;
+                layer.blocks = bits::rearrange_words(layer.bits, stream + read, words << 2);
+                Assert(layer.blocks.size() >= BLOCK_NUM, "Invalid block data len");
+                layer.blocks.resize(BLOCK_NUM);
+                BL_LOGGER("blocks number:%d , bit len = %d", layer.blocks.size(), layer.bits);
+                read += words << 2;
                 layer.palette_len = *reinterpret_cast<const uint32_t *>(stream + read);
                 read += 4;
             } else {
+                //uniform
+                layer.blocks = std::vector<uint16_t>(4096, 0);
                 layer.palette_len = 1;
             }
-
             // palette header
             int palette_read = 0;
             read_palettes(&layer, stream + read, layer.palette_len, len - read, palette_read);
@@ -136,4 +143,28 @@ namespace bl {
             ++index;
         }
     }
+
+    block_info sub_chunk::get_block(int rx, int ry, int rz) {
+        auto idx = ry * 256 + rx * 16 + rz;
+        if (idx < 0 || idx > 4096) {
+            return {"minecraft:air"};
+        }
+
+        auto block = this->layers_[0].blocks[idx];
+        BL_LOGGER("Blocks index = %d, palettes size is %d bits is %d", block, this->layers_[0].palette_len,
+                  this->layers_[0].bits);
+
+        auto *palette = this->layers_[0].palettes[block];
+
+        auto id = palette->value.find("name");
+        if (id == palette->value.end()) {
+            return {"minecraft:air"};
+        } else {
+            BL_LOGGER("tag type: %s", bl::palette::tag_type_to_str(id->second->type()).c_str());
+
+            return {"minecraft:air"};
+            //return {dynamic_cast<bl::palette::string_tag *>(id->second)->value};
+        }
+    }
+
 }  // namespace bl

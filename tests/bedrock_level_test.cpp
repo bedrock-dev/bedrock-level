@@ -3,6 +3,10 @@
 //
 #include <gtest/gtest.h>
 #include "bedrock_level.h"
+#include "bedrock_key.h"
+#include "sub_chunk.h"
+#include "utils.h"
+#include "chunk.h"
 
 TEST(BedrockLevel, TraverseKey) {
     using namespace bl;
@@ -17,9 +21,6 @@ TEST(BedrockLevel, TraverseKey) {
     //-1, -1, 2
 }
 
-#include "bedrock_key.h"
-#include "sub_chunk.h"
-#include "utils.h"
 
 TEST(BedrockLevel, ZeroChunkTest) {
     using namespace bl;
@@ -34,6 +35,23 @@ TEST(BedrockLevel, ZeroChunkTest) {
     utils::write_file("a.subchunk", data.data(), data.size());
 
     // sub_chunk c;
-
     // c.load(reinterpret_cast<uint8_t *>(data.data()), data.size());
+}
+
+TEST(BedrockLevel, ReadChunk) {
+    using namespace bl;
+    bl::bedrock_level level;
+    EXPECT_TRUE(level.open("./sample"));
+    auto *ch = level.get_chunk({6, 0, 2});
+    if (ch) {
+        for (int i = 0; i < 64; i++) {
+            auto block = ch->get_block(0, i, 0);
+            std::cout << block.name << std::endl;
+        }
+    } else {
+        BL_LOGGER("Can not find chunk");
+    }
+    EXPECT_TRUE(ch);
+
+
 }

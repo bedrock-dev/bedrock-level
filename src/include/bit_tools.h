@@ -13,16 +13,10 @@
 
 namespace bl::bits {
 
-//    inline uint8_t mask(uint8_t low, uint8_t high) { return (0xff >> (7u - high) & (0xff << low)); }
-//
-//    //    template<typename T>
-//    //    std::vector<T> combineBytes(size_t bit_len, const uint8_t *data, size_t len) {
-//    //        //TODO
-//    //        if (bit_len <= 0 || bit_len % 8 != 0) {
-//    //            return {};
-//    //        }
-//    //        return {};
-//    //    }
+    inline uint8_t mask(uint8_t low, uint8_t high) { return (0xff >> (7u - high) & (0xff << low)); }
+
+
+
 //
 //    template<typename T>
 //    std::vector<T> rearrange_bytes(size_t bit_len, const uint8_t *data, size_t len) {
@@ -72,7 +66,8 @@ namespace bl::bits {
 //    }
 //     */
 //
-//    std::vector<int16_t> rearrange_words(size_t bits_len, const uint8_t *data, size_t len);
+
+    std::vector<uint16_t> rearrange_words(size_t bits_len, const byte_t *data, size_t len);
 
 
 }  // namespace bl::bits

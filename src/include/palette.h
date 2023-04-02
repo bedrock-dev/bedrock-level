@@ -204,7 +204,7 @@ namespace bl::palette {
         }
 
         std::vector<abstract_tag *> value;
-        int32_t size;
+        int32_t size{0};
     };
 
 
