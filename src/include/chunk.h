@@ -24,7 +24,7 @@ namespace bl {
 
         friend class bedrock_level;
 
-        block_info get_block(int x, int y, int z);
+        block_info get_block(int cx, int y, int cz);
 
         explicit chunk(const chunk_pos &pos) : pos_(pos), loaded_(false) {};
 
@@ -32,12 +32,15 @@ namespace bl {
 
         inline bool loaded() const { return this->loaded_; }
 
+        static void map_y_to_subchunk(int y, int &index, int &offset);
+
+
     private:
 
         bool load_data(bedrock_level &level);
 
         bool loaded_{false};
-        std::map<int8_t, sub_chunk> sub_chunks_;
+        std::map<int, sub_chunk> sub_chunks_;
 
         //lighted
         const chunk_pos pos_;

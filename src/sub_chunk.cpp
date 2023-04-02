@@ -78,7 +78,7 @@ namespace bl {
                 layer.blocks = bits::rearrange_words(layer.bits, stream + read, words << 2);
                 Assert(layer.blocks.size() >= BLOCK_NUM, "Invalid block data len");
                 layer.blocks.resize(BLOCK_NUM);
-                BL_LOGGER("blocks number:%d , bit len = %d", layer.blocks.size(), layer.bits);
+                //   BL_LOGGER("blocks number:%d , bit len = %d", layer.blocks.size(), layer.bits);
                 read += words << 2;
                 layer.palette_len = *reinterpret_cast<const uint32_t *>(stream + read);
                 read += 4;
@@ -99,11 +99,8 @@ namespace bl {
     bool sub_chunk::load(const byte_t *data, size_t len) {
         size_t idx = 0;  // 全局索引
         int read{0};
-        if (!read_header(this, data, read)) {
-            return false;
-        }
+        if (!read_header(this, data, read)) return false;
         idx += read;
-
         for (auto i = 0; i < (int) this->layers_num_; i++) {
             if (!read_one_layer(this, data + idx, len - idx, read)) {
                 BL_ERROR("can not read layer %d", i);
@@ -145,26 +142,22 @@ namespace bl {
     }
 
     block_info sub_chunk::get_block(int rx, int ry, int rz) {
-        auto idx = ry * 256 + rx * 16 + rz;
-        if (idx < 0 || idx > 4096) {
-            return {"minecraft:air"};
+        if (rx < 0 || rx > 15 || ry < 0 || ry > 15 || rz < 0 || rz > 15) {
+            return {};
         }
-
+        auto idx = ry * 256 + rz * 16 + rx;
         auto block = this->layers_[0].blocks[idx];
-        BL_LOGGER("Blocks index = %d, palettes size is %d bits is %d", block, this->layers_[0].palette_len,
-                  this->layers_[0].bits);
 
+        if (block >= this->layers_[0].palettes.size()) {
+            BL_LOGGER("Invalid block index with value %d", block);
+            return {};
+        }
         auto *palette = this->layers_[0].palettes[block];
-
         auto id = palette->value.find("name");
         if (id == palette->value.end()) {
-            return {"minecraft:air"};
-        } else {
-            BL_LOGGER("tag type: %s", bl::palette::tag_type_to_str(id->second->type()).c_str());
-
-            return {"minecraft:air"};
-            //return {dynamic_cast<bl::palette::string_tag *>(id->second)->value};
+            return {};
         }
+        return {dynamic_cast<bl::palette::string_tag *>(id->second)->value};
     }
 
 }  // namespace bl

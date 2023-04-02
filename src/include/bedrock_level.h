@@ -6,7 +6,7 @@
 #define BEDROCK_LEVEL_BEDROCK_LEVEL_H
 
 #include <string>
-
+#include "chunk.h"
 #include "leveldb/db.h"
 #include "nbt.hpp"
 #include <optional>
@@ -16,10 +16,12 @@
 
 namespace bl {
 
-    class chunk;
-
     class bedrock_level {
     public:
+
+        //for users
+
+
         [[nodiscard]] bool is_open() const { return this->is_open_; }
 
         bool open(const std::string &root);
@@ -33,6 +35,8 @@ namespace bl {
         void for_each_chunk_pos(const std::function<void(const chunk_pos &cp)> &f);
 
         chunk *get_chunk(const chunk_pos &cp);
+
+        block_info get_block(const bl::block_pos &pos, int dim);
 
     private:
         bool is_open_{false};

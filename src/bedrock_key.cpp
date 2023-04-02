@@ -227,4 +227,36 @@ namespace bl {
         return this->uuid + "," + village_key_type_to_str(this->type);
     }
 
+
+    /**
+     *   TBlockPos2 TBlockPos::InChunkOffset() const {
+        auto newX = x % 16;
+        auto newZ = z % 16;
+        if (newX < 0) newX += 16;
+        if (newZ < 0) newZ += 16;
+        return {newX, newZ};
+    }
+
+    TBlockPos2 TBlockPos::toChunkPos() const {
+        auto cx = x < 0 ? x - 15 : x;
+        auto cz = z < 0 ? z - 15 : z;
+        return {cx / 16, cz / 16};
+
+    }
+
+     * @return
+     */
+    chunk_pos block_pos::to_chunk_pos() const {
+        auto cx = x < 0 ? x - 15 : x;
+        auto cz = z < 0 ? z - 15 : z;
+        return {cx / 16, cz / 16, -1};
+    }
+
+    chunk_pos block_pos::in_chunk_offset() const {
+        auto ox = x % 16;
+        auto oz = z % 16;
+        if (ox < 0) ox += 16;
+        if (oz < 0) oz += 16;
+        return {ox, oz, -1};
+    }
 }  // namespace bl

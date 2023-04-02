@@ -14,7 +14,7 @@
 
 namespace bl {
     struct block_info {
-        std::string name;
+        std::string name{"minecraft:unknown"};
     };
 
     class sub_chunk {
@@ -47,7 +47,7 @@ namespace bl {
 
     private:
         uint8_t version_{0xff};
-        uint8_t y_index_{0xff};
+        int y_index_{0};
         uint8_t layers_num_{0xff};
         std::vector<layer> layers_;
     };

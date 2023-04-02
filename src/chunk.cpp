@@ -6,31 +6,42 @@
 #include "bedrock_level.h"
 #include "bedrock_key.h"
 #include "utils.h"
-
+#include <utility>
 
 namespace bl {
 
-    namespace {
 
-        int8_t get_y_index(int y) {
-            return y / 16;
-        }
+    /**
+     * Overworld [-64 ~-1]+[0~319]
+     * [-64,-49][-48,-33][-32,-17][-16,-1]
+     * NEther  [0~127]
+     * The End [0~255]
+     */
+
+
+
+    void chunk::map_y_to_subchunk(int y, int &index, int &offset) {
+        index = y < 0 ? (y - 15) / 16 : y / 16;
+        offset = y % 16;
+        if (offset < 0)offset += 16;
     }
 
-    block_info bl::chunk::get_block(int x, int y, int z) {
-        auto idx = y / 16;
-        auto it = this->sub_chunks_.find((int8_t) idx);
+    block_info bl::chunk::get_block(int cx, int y, int cz) {
+        int index;
+        int offset;
+        map_y_to_subchunk(y, index, offset);
+        auto it = this->sub_chunks_.find(index);
         if (it == this->sub_chunks_.end()) {
-            return {"minecraft:air"};
+            return {};
         }
-        return it->second.get_block(x, y % 16, z);
+        return it->second.get_block(cx, offset, cz);
     }
 
     bool chunk::load_data(bedrock_level &level) {
+        if (this->loaded())return true;
+        BL_LOGGER("Try load chunk %s", this->pos_.to_string().c_str());
         auto &db = level.db();
-        //get sub chunks terrain
         for (auto sub_index: this->sub_chunk_indexes_) {
-//            BL_LOGGER("Sub index is %d", sub_index);
             auto terrain_key = bl::chunk_key{chunk_key::SubChunkTerrain, this->pos_, sub_index};
             std::string raw;
             auto r = db->Get(leveldb::ReadOptions(), terrain_key.to_raw(), &raw);
@@ -49,4 +60,6 @@ namespace bl {
         loaded_ = true;
         return true;
     }
+
+
 }

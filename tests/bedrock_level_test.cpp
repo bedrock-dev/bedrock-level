@@ -43,6 +43,7 @@ TEST(BedrockLevel, ReadChunk) {
     bl::bedrock_level level;
     EXPECT_TRUE(level.open("./sample"));
     auto *ch = level.get_chunk({6, 0, 2});
+    EXPECT_TRUE(ch);
     if (ch) {
         for (int i = 0; i < 64; i++) {
             auto block = ch->get_block(0, i, 0);
@@ -51,7 +52,21 @@ TEST(BedrockLevel, ReadChunk) {
     } else {
         BL_LOGGER("Can not find chunk");
     }
-    EXPECT_TRUE(ch);
+}
 
+TEST(BedrockLevel, ReadBlock) {
+    using namespace bl;
+    bl::bedrock_level level;
+    EXPECT_TRUE(level.open("./sample"));
+    for (int y = 63; y < 70; y++) {
+        for (int x = -245; x < -237; x++) {
+            for (int z = 719; z < 727; z++) {
+                auto b = level.get_block(block_pos(x, y, z), 0);
+                printf("%s ", b.name.c_str());
+            }
+            printf("\n");
+        }
+        printf("======================================\n");
 
+    }
 }

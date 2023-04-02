@@ -124,4 +124,14 @@ namespace bl {
             f(kv.first);
         }
     }
+
+    block_info bedrock_level::get_block(const block_pos &pos, int dim) {
+        auto cp = pos.to_chunk_pos();
+        cp.dim = dim;
+        if (!cp.valid())return {};
+        auto off = pos.in_chunk_offset();
+        auto *ch = this->get_chunk(cp);
+        if (!ch)return {};
+        return ch->get_block(off.x, pos.y, off.z);
+    }
 }  // namespace bl

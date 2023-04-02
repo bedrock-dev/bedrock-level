@@ -28,6 +28,19 @@ namespace bl {
     };
 
 
+    struct block_pos {
+        int x{};
+        int y{};
+        int z{};
+
+        block_pos(int xx, int yy, int zz) : x(xx), y(yy), z(zz) {}
+
+        chunk_pos to_chunk_pos() const;
+
+        chunk_pos in_chunk_offset() const;
+
+    };
+
     struct chunk_key {
         [[nodiscard]] std::string to_string() const;
 
