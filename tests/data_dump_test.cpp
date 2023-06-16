@@ -1,20 +1,18 @@
 //
 // Created by xhy on 2023/3/30.
 //
-#include "bedrock_level.h"
-
 #include <gtest/gtest.h>
 
 #include <iostream>
 
 #include "bedrock_key.h"
+#include "bedrock_level.h"
 #include "utils.h"
 
 TEST(BedrockLevel, SimpleOpen) {
     bl::bedrock_level level;
     EXPECT_TRUE(level.open("./2"));
 }
-
 
 TEST(BedrockLevel, CheckChunkKeys) {
     using namespace bl;
@@ -28,8 +26,7 @@ TEST(BedrockLevel, CheckChunkKeys) {
     }
 }
 
-
-//Tag 43
+// Tag 43
 TEST(BedrockLevel, ExportData3d) {
     using namespace bl;
     bl::bedrock_level level;
@@ -40,16 +37,13 @@ TEST(BedrockLevel, ExportData3d) {
         auto k = bl::chunk_key::parse(it->key().ToString());
         if (k.type == chunk_key::Data3D) {
             utils::write_file(
-                    "data3d/" + std::to_string(k.cp.x) + "_" + std::to_string(k.cp.z) + ".data3d",
-                    it->value().data(), it->value().size());
+                "data3d/" + std::to_string(k.cp.x) + "_" + std::to_string(k.cp.z) + ".data3d",
+                it->value().data(), it->value().size());
         }
     }
 }
 
-
-
-
-//Tag 44
+// Tag 44
 TEST(BedrockLevel, CheckVersion) {
     using namespace bl;
     bl::bedrock_level level;
@@ -60,13 +54,12 @@ TEST(BedrockLevel, CheckVersion) {
         auto k = bl::chunk_key::parse(it->key().ToString());
         if (k.type == chunk_key::VersionNew) {
             ASSERT_EQ(it->value().size(), 1);
-            printf("Chunk version is %d\n", (int) it->value()[0]);
+            printf("Chunk version is %d\n", (int)it->value()[0]);
         }
     }
 }
 
-
-//Tag 47
+// Tag 47
 TEST(BedrockLevel, ExportSubChunkTerrain) {
     using namespace bl;
     bl::bedrock_level level;
@@ -76,16 +69,14 @@ TEST(BedrockLevel, ExportSubChunkTerrain) {
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
         auto k = bl::chunk_key::parse(it->key().ToString());
         if (k.type == chunk_key::SubChunkTerrain) {
-            utils::write_file(
-                    "sub_chunks/" + std::to_string(k.cp.x) + "_" + std::to_string(k.cp.z) + std::to_string(k.y_index) +
-                    ".subchunk",
-                    it->value().data(), it->value().size());
+            utils::write_file("sub_chunks/" + std::to_string(k.cp.x) + "_" +
+                                  std::to_string(k.cp.z) + std::to_string(k.y_index) + ".subchunk",
+                              it->value().data(), it->value().size());
         }
     }
 }
 
-
-//Tag 49
+// Tag 49
 TEST(BedrockLevel, ExportBlockEntity) {
     using namespace bl;
     bl::bedrock_level level;
@@ -96,14 +87,14 @@ TEST(BedrockLevel, ExportBlockEntity) {
         auto k = bl::chunk_key::parse(it->key().ToString());
         printf("%s\n", k.to_string().c_str());
         if (k.type == chunk_key::BlockEntity) {
-            utils::write_file(
-                    "bes/" + std::to_string(k.cp.z) + "_" + std::to_string(k.cp.z) + ".blockentity.palette",
-                    it->value().data(), it->value().size());
+            utils::write_file("bes/" + std::to_string(k.cp.z) + "_" + std::to_string(k.cp.z) +
+                                  ".blockentity.palette",
+                              it->value().data(), it->value().size());
         }
     }
 }
 
-//Tag 51
+// Tag 51
 TEST(BedrockLevel, ExportPts) {
     using namespace bl;
     bl::bedrock_level level;
@@ -114,14 +105,13 @@ TEST(BedrockLevel, ExportPts) {
         auto k = bl::chunk_key::parse(it->key().ToString());
         if (k.type == chunk_key::PendingTicks) {
             utils::write_file(
-                    "pts/" + std::to_string(k.cp.x) + "_" + std::to_string(k.cp.z) + ".pt.palette",
-                    it->value().data(), it->value().size());
+                "pts/" + std::to_string(k.cp.x) + "_" + std::to_string(k.cp.z) + ".pt.palette",
+                it->value().data(), it->value().size());
         }
     }
 }
 
-
-//Tag 54
+// Tag 54
 
 TEST(BedrockLevel, CheckChunkState) {
     using namespace bl;
@@ -138,9 +128,7 @@ TEST(BedrockLevel, CheckChunkState) {
     }
 }
 
-
-
-//Tag 58
+// Tag 58
 TEST(BedrockLevel, ExportRandomTick) {
     using namespace bl;
     bl::bedrock_level level;
@@ -151,12 +139,11 @@ TEST(BedrockLevel, ExportRandomTick) {
         auto k = bl::chunk_key::parse(it->key().ToString());
         if (k.type == chunk_key::RandomTicks) {
             utils::write_file(
-                    "rt/" + std::to_string(k.cp.x) + "_" + std::to_string(k.cp.z) + ".rt.palette",
-                    it->value().data(), it->value().size());
+                "rt/" + std::to_string(k.cp.x) + "_" + std::to_string(k.cp.z) + ".rt.palette",
+                it->value().data(), it->value().size());
         }
     }
 }
-
 
 TEST(BedrockLevel, SaveInvalid) {
     using namespace bl;
@@ -168,19 +155,19 @@ TEST(BedrockLevel, SaveInvalid) {
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
         auto ck = bl::chunk_key::parse(it->key().ToString());
         if (ck.valid()) {
-//            std::cout << "Chunk key: " << ck.to_string() << std::endl;
+            //            std::cout << "Chunk key: " << ck.to_string() << std::endl;
             continue;
         }
 
         auto actor_key = bl::actor_key::parse(it->key().ToString());
         if (actor_key.valid()) {
-//            std::cout << "Actor key: " << actor_key.to_string() << std::endl;
+            //            std::cout << "Actor key: " << actor_key.to_string() << std::endl;
             continue;
         }
 
         auto digest_key = bl::actor_digest_key::parse(it->key().ToString());
         if (digest_key.valid()) {
-//            std::cout << "Digest key: " << digest_key.to_string() << std::endl;
+            //            std::cout << "Digest key: " << digest_key.to_string() << std::endl;
             continue;
         }
 
@@ -190,17 +177,13 @@ TEST(BedrockLevel, SaveInvalid) {
             continue;
         }
 
-        utils::write_file(
-                "invalid/" + std::to_string(idx) + ".key",
-                it->key().data(), it->key().size());
-        utils::write_file(
-                "invalid/" + std::to_string(idx) + ".value",
-                it->value().data(), it->value().size());
+        utils::write_file("invalid/" + std::to_string(idx) + ".key", it->key().data(),
+                          it->key().size());
+        utils::write_file("invalid/" + std::to_string(idx) + ".value", it->value().data(),
+                          it->value().size());
         ++idx;
-
     }
 }
-
 
 TEST(BedrockLevel, DumpActors) {
     using namespace bl;
@@ -216,8 +199,3 @@ TEST(BedrockLevel, DumpActors) {
         }
     }
 }
-
-
-
-
-

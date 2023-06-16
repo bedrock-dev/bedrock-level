@@ -5,8 +5,9 @@
 #ifndef BEDROCK_LEVEL_BEDROCK_KEY_H
 #define BEDROCK_LEVEL_BEDROCK_KEY_H
 
-#include <string>
+#include <cstdint>
 #include <functional>
+#include <string>
 #include <vector>
 
 namespace bl {
@@ -27,7 +28,6 @@ namespace bl {
         bool operator<(const chunk_pos &rhs) const;
     };
 
-
     struct block_pos {
         int x{};
         int y{};
@@ -38,7 +38,6 @@ namespace bl {
         chunk_pos to_chunk_pos() const;
 
         chunk_pos in_chunk_offset() const;
-
     };
 
     struct chunk_key {
@@ -54,7 +53,7 @@ namespace bl {
             SubChunkTerrain = 47,  // 0x2f (/)
             LegacyTerrain = 48,    //?
             BlockEntity = 49,
-            Entity = 50,        //no longer used
+            Entity = 50,  // no longer used
             PendingTicks = 51,
             BlockExtraData = 52,  //?
             BiomeState = 53,
@@ -71,7 +70,6 @@ namespace bl {
             VersionOld = 118,  // 0x76 (v)
             Unknown = -1
         };
-
 
         [[nodiscard]] bool valid() const { return this->cp.valid() && this->type != Unknown; }
 
@@ -96,8 +94,6 @@ namespace bl {
         [[nodiscard]] std::string to_string() const;
 
         static actor_key parse(const std::string &key);
-
-
     };
 
     struct actor_digest_key {
@@ -108,22 +104,16 @@ namespace bl {
         [[nodiscard]] inline bool valid() const { return this->cp.valid(); }
 
         [[nodiscard]] std::string to_string() const;
-
     };
 
-
     struct village_key {
-        enum key_type {
-            INFO,
-            DWELLERS,
-            PLAYERS,
-            POI,
-            Unknown
-        };
+        enum key_type { INFO, DWELLERS, PLAYERS, POI, Unknown };
 
         static std::string village_key_type_to_str(key_type t);
 
-        [[nodiscard]] bool valid() const { return this->uuid.size() == 36 && this->type != Unknown; }
+        [[nodiscard]] bool valid() const {
+            return this->uuid.size() == 36 && this->type != Unknown;
+        }
 
         [[nodiscard]] std::string to_string() const;
 
@@ -135,10 +125,9 @@ namespace bl {
 
 }  // namespace bl
 
-
 namespace std {
 
-    template<>
+    template <>
     struct hash<bl::chunk_pos> {
         std::size_t operator()(const bl::chunk_pos &k) const {
             size_t hash = 3241;
@@ -148,6 +137,6 @@ namespace std {
             return hash;
         }
     };
-}
+}  // namespace std
 
 #endif  // BEDROCK_LEVEL_BEDROCK_KEY_H

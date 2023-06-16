@@ -5,22 +5,21 @@
 #ifndef BEDROCK_LEVEL_BEDROCK_LEVEL_H
 #define BEDROCK_LEVEL_BEDROCK_LEVEL_H
 
+#include <functional>
+#include <map>
+#include <optional>
 #include <string>
+
+#include "bedrock_key.h"
 #include "chunk.h"
 #include "leveldb/db.h"
 #include "nbt.hpp"
-#include <optional>
-#include "bedrock_key.h"
-#include <functional>
-#include <map>
 
 namespace bl {
 
     class bedrock_level {
-    public:
-
-        //for users
-
+       public:
+        // for users
 
         [[nodiscard]] bool is_open() const { return this->is_open_; }
 
@@ -38,7 +37,7 @@ namespace bl {
 
         block_info get_block(const bl::block_pos &pos, int dim);
 
-    private:
+       private:
         bool is_open_{false};
         leveldb::DB *db_{nullptr};
         std::string root_name_;
@@ -49,7 +48,7 @@ namespace bl {
 
         void cache_keys();
 
-    private:
+       private:
         bool read_level_dat();
 
         bool read_db();

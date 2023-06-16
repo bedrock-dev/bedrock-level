@@ -1,12 +1,14 @@
 //
 // Created by xhy on 2023/4/1.
 //
-#include <gtest/gtest.h>
 #include "bedrock_level.h"
+
+#include <gtest/gtest.h>
+
 #include "bedrock_key.h"
+#include "chunk.h"
 #include "sub_chunk.h"
 #include "utils.h"
-#include "chunk.h"
 
 TEST(BedrockLevel, TraverseKey) {
     using namespace bl;
@@ -20,7 +22,6 @@ TEST(BedrockLevel, TraverseKey) {
 
     //-1, -1, 2
 }
-
 
 TEST(BedrockLevel, ZeroChunkTest) {
     using namespace bl;
@@ -67,6 +68,5 @@ TEST(BedrockLevel, ReadBlock) {
             printf("\n");
         }
         printf("======================================\n");
-
     }
 }

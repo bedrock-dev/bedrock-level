@@ -7,16 +7,13 @@
 
 #include "utils.h"
 
-
 namespace bl {
     class actor {
-    public:
+       public:
         bool load(const byte_t *data, size_t len);
 
-    private:
-
+       private:
     };
-}
+}  // namespace bl
 
-
-#endif //BEDROCK_LEVEL_ACRTOR_H
+#endif  // BEDROCK_LEVEL_ACRTOR_H

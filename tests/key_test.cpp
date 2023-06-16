@@ -3,6 +3,7 @@
 //
 
 #include <gtest/gtest.h>
+
 #include "bedrock_key.h"
 
 TEST(ChunkPos, VailidCheck) {
@@ -18,7 +19,6 @@ TEST(ChunkPos, VailidCheck) {
     EXPECT_TRUE(c4.valid());
     EXPECT_TRUE(!c5.valid());
 }
-
 
 TEST(ChunkKey, Convert) {
     using namespace bl;

@@ -35,3 +35,6 @@
 
 .idea/*
 build
+build/*
+.cache
+.cache/*

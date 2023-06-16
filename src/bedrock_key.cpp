@@ -28,7 +28,6 @@ namespace bl {
 
             auto type = static_cast<chunk_key::key_type>(key[key_type_idx]);
 
-
             if ((type < 43 || type > 65) && type != 118) {
                 return INVALID_CHUNK_KEY;
             }
@@ -51,7 +50,7 @@ namespace bl {
 
     actor_key actor_key::parse(const std::string &key) {
         actor_key res;
-        if (key.size() != 19 || key.rfind("actorprefix", 0) != 0)return res;
+        if (key.size() != 19 || key.rfind("actorprefix", 0) != 0) return res;
         res.actor_uid = *reinterpret_cast<const int64_t *>(key.data() + 11);
         return res;
     }
@@ -60,11 +59,11 @@ namespace bl {
         actor_digest_key res{};
         if (key.size() != 12 && key.size() != 16) return res;
         if (key.rfind("digp", 0) != 0) return res;
-        res.cp.x = *reinterpret_cast<const int32_t *> (key.data() + 4);
-        res.cp.z = *reinterpret_cast<const int32_t *> (key.data() + 8);
+        res.cp.x = *reinterpret_cast<const int32_t *>(key.data() + 4);
+        res.cp.z = *reinterpret_cast<const int32_t *>(key.data() + 8);
         res.cp.dim = 0;
         if (key.size() == 16) {
-            res.cp.dim = *reinterpret_cast<const int32_t *> (key.data() + 12);
+            res.cp.dim = *reinterpret_cast<const int32_t *>(key.data() + 12);
         }
 
         return res;
@@ -72,9 +71,9 @@ namespace bl {
 
     village_key village_key::parse(const std::string &key) {
         village_key res;
-        if (key.size() < 46)return res;
+        if (key.size() < 46) return res;
         if (key.rfind("VILLAGE_", 0) != 0) return res;
-        res.uuid = std::string(key.begin() + 8, key.begin() + 44); //uuid
+        res.uuid = std::string(key.begin() + 8, key.begin() + 44);  // uuid
         std::string type_str = std::string(key.data() + 45);
         if (type_str == "DWELLERS") {
             res.type = DWELLERS;
@@ -104,9 +103,7 @@ namespace bl {
                 return "UNKNOWN";
         }
         return "UNKNOWN";
-
     }
-
 
     std::string chunk_key::chunk_key_to_str(bl::chunk_key::key_type key) {
         switch (key) {
@@ -162,18 +159,15 @@ namespace bl {
     }
 
     std::string chunk_pos::to_string() const {
-        return std::to_string(this->x) + ", " + std::to_string(this->z) + ", " + std::to_string(this->dim);
+        return std::to_string(this->x) + ", " + std::to_string(this->z) + ", " +
+               std::to_string(this->dim);
     }
 
     bool chunk_pos::operator<(const chunk_pos &rhs) const {
-        if (x < rhs.x)
-            return true;
-        if (rhs.x < x)
-            return false;
-        if (z < rhs.z)
-            return true;
-        if (rhs.z < z)
-            return false;
+        if (x < rhs.x) return true;
+        if (rhs.x < x) return false;
+        if (z < rhs.z) return true;
+        if (rhs.z < z) return false;
         return dim < rhs.dim;
     }
 
@@ -181,24 +175,21 @@ namespace bl {
         return this->x == p.x && this->dim == p.dim && this->z == p.z;
     }
 
-
     std::string chunk_key::to_string() const {
         auto type_info =
-                chunk_key_to_str(type) + "(" + std::to_string(static_cast<int>(type)) + ")";
+            chunk_key_to_str(type) + "(" + std::to_string(static_cast<int>(type)) + ")";
         auto index_info = std::string();
         if (type == SubChunkTerrain) {
             index_info = "y = " + std::to_string(y_index);
         }
 
-        return "[" + this->cp.to_string() + "] " + type_info + " " +
-               index_info;
+        return "[" + this->cp.to_string() + "] " + type_info + " " + index_info;
     }
 
     std::string chunk_key::to_raw() const {
         size_t sz = 9;
-        if (this->type == SubChunkTerrain)
-            sz += 1;
-        if (this->cp.dim != 0)sz += 4;
+        if (this->type == SubChunkTerrain) sz += 1;
+        if (this->cp.dim != 0) sz += 4;
         std::string r(sz, '\0');
         memcpy(r.data(), &cp.x, 4);
         memcpy(r.data() + 4, &cp.z, 4);
@@ -215,18 +206,13 @@ namespace bl {
         return r;
     }
 
-    std::string actor_key::to_string() const {
-        return std::to_string(this->actor_uid);
-    }
+    std::string actor_key::to_string() const { return std::to_string(this->actor_uid); }
 
-    std::string actor_digest_key::to_string() const {
-        return this->cp.to_string();
-    }
+    std::string actor_digest_key::to_string() const { return this->cp.to_string(); }
 
     std::string village_key::to_string() const {
         return this->uuid + "," + village_key_type_to_str(this->type);
     }
-
 
     /**
      *   TBlockPos2 TBlockPos::InChunkOffset() const {

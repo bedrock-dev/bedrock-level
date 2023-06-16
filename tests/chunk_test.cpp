@@ -2,8 +2,9 @@
 // Created by xhy on 2023/4/2.
 //
 
-#include <gtest/gtest.h>
 #include "chunk.h"
+
+#include <gtest/gtest.h>
 
 void check_map(int y, int index, int offset) {
     int i, o;
@@ -25,4 +26,3 @@ TEST(Chunk, SubIndexMapping) {
     check_map(15, 0, 15);
     check_map(16, 1, 0);
 }
-

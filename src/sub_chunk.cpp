@@ -20,16 +20,12 @@ namespace bl {
 
     namespace {
 
-
-        void read_block_data(std::array<int16_t, 4096> &block_data, int bits, const byte_t *data, size_t len) {
+        void read_block_data(std::array<int16_t, 4096> &block_data, int bits, const byte_t *data,
+                             size_t len) {
             int index = 0;
             while (index < 4096) {
-
             }
-
         }
-
-
 
         // sub chunk layout
         // https://user-images.githubusercontent.com/13713600/148380033-6223ac76-54b7-472c-a355-5923b87cb7c5.png
@@ -74,7 +70,7 @@ namespace bl {
             if (layer.bits != 0) {
                 int block_per_word = 32 / layer.bits;
                 auto words = BLOCK_NUM / block_per_word;
-                if (BLOCK_NUM % block_per_word != 0)words++;
+                if (BLOCK_NUM % block_per_word != 0) words++;
                 layer.blocks = bits::rearrange_words(layer.bits, stream + read, words << 2);
                 Assert(layer.blocks.size() >= BLOCK_NUM, "Invalid block data len");
                 layer.blocks.resize(BLOCK_NUM);
@@ -83,7 +79,7 @@ namespace bl {
                 layer.palette_len = *reinterpret_cast<const uint32_t *>(stream + read);
                 read += 4;
             } else {
-                //uniform
+                // uniform
                 layer.blocks = std::vector<uint16_t>(4096, 0);
                 layer.palette_len = 1;
             }
@@ -101,7 +97,7 @@ namespace bl {
         int read{0};
         if (!read_header(this, data, read)) return false;
         idx += read;
-        for (auto i = 0; i < (int) this->layers_num_; i++) {
+        for (auto i = 0; i < (int)this->layers_num_; i++) {
             if (!read_one_layer(this, data + idx, len - idx, read)) {
                 BL_ERROR("can not read layer %d", i);
                 return false;
@@ -117,13 +113,13 @@ namespace bl {
         fprintf(fp, "Layers  : %u\n", this->layers_num_);
         fprintf(fp, "===========================================\n");
         size_t index = 0;
-        for (auto &layer: this->layers_) {
+        for (auto &layer : this->layers_) {
             fprintf(fp, "Layer %zu:\n", index);
             fprintf(fp, "Bits per block: %d\n", layer.bits);
             fprintf(fp, "Palette type: %d\n", layer.type);
             fprintf(fp, "Palette len: %d\n", layer.palette_len);
             auto i = 0;
-            for (auto b: layer.blocks) {
+            for (auto b : layer.blocks) {
                 printf("%02d ", b);
                 i++;
                 if (i % 16 == 0) {
@@ -133,7 +129,7 @@ namespace bl {
                     printf("------------------------------------------\n");
                 }
             }
-            for (auto palette: layer.palettes) {
+            for (auto palette : layer.palettes) {
                 palette->write(std::cout, 0);
             }
 

@@ -8,9 +8,7 @@
 
 namespace bl::palette {
 
-
 #define MEM_CHECK(ptr) Assert(data + 1, "Memory out of bound.")
-
 
     namespace {
         int read_string(const byte_t *data, std::string &val) {
@@ -55,7 +53,6 @@ namespace bl::palette {
             type = static_cast<tag_type>(data[0]);
             return 1;
         }
-
 
         /*
          * 不保证内存够用
@@ -152,13 +149,13 @@ namespace bl::palette {
                         } while (cc);
                         tag->value.push_back(child);
                     } else {
-                        throw std::runtime_error(
-                                "unsupported list child tag type " + std::to_string((int) child_type));
+                        throw std::runtime_error("unsupported list child tag type " +
+                                                 std::to_string((int)child_type));
                     }
                 }
                 return tag;
             } else {
-                throw std::runtime_error("unsupported tag type " + std::to_string((int) type));
+                throw std::runtime_error("unsupported tag type " + std::to_string((int)type));
             }
         }
     }  // namespace
