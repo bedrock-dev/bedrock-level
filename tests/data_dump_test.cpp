@@ -11,18 +11,19 @@
 #include "bedrock_level.h"
 #include "utils.h"
 
-const std::string WORLD_ROOT = R"(C:\Users\xhy\dev\bedrock-level\worlds\a)";
+const std::string TEST_WORLD_ROOT = R"(C:\Users\xhy\dev\bedrock-level\data\worlds\a)";
+const std::string DUMP_ROOT = R"(C:\Users\xhy\dev\bedrock-level\data\dumps\)";
 
 TEST(BedrockLevel, SimpleOpen) {
     bl::bedrock_level level;
-    EXPECT_TRUE(level.open(WORLD_ROOT));
+    EXPECT_TRUE(level.open(TEST_WORLD_ROOT));
     //    level.close();
 }
 
 TEST(BedrockLevel, CheckChunkKeys) {
     using namespace bl;
     bl::bedrock_level level;
-    EXPECT_TRUE(level.open(WORLD_ROOT + "/a"));
+    EXPECT_TRUE(level.open(TEST_WORLD_ROOT));
     auto *db = level.db();
     auto *it = db->NewIterator(leveldb::ReadOptions());
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
@@ -37,7 +38,7 @@ TEST(BedrockLevel, CheckChunkKeys) {
 TEST(BedrockLevel, ExportData3d) {
     using namespace bl;
     bl::bedrock_level level;
-    EXPECT_TRUE(level.open(WORLD_ROOT + "/a"));
+    EXPECT_TRUE(level.open(TEST_WORLD_ROOT));
     auto *db = level.db();
     auto *it = db->NewIterator(leveldb::ReadOptions());
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
@@ -55,7 +56,7 @@ TEST(BedrockLevel, ExportData3d) {
 TEST(BedrockLevel, CheckVersion) {
     using namespace bl;
     bl::bedrock_level level;
-    EXPECT_TRUE(level.open(WORLD_ROOT + "/a"));
+    EXPECT_TRUE(level.open(TEST_WORLD_ROOT));
     auto *db = level.db();
     auto *it = db->NewIterator(leveldb::ReadOptions());
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
@@ -73,15 +74,16 @@ TEST(BedrockLevel, ExportSubChunkTerrain) {
     using namespace bl;
     bl::bedrock_level level;
 
-    EXPECT_TRUE(level.open(WORLD_ROOT + "/a"));
+    EXPECT_TRUE(level.open(TEST_WORLD_ROOT));
 
     auto *db = level.db();
     auto *it = db->NewIterator(leveldb::ReadOptions());
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
         auto k = bl::chunk_key::parse(it->key().ToString());
         if (k.type == chunk_key::SubChunkTerrain) {
-            utils::write_file("sub_chunks/" + std::to_string(k.cp.x) + "_" +
-                                  std::to_string(k.cp.z) + std::to_string(k.y_index) + ".subchunk",
+            utils::write_file(DUMP_ROOT + "sub_chunks/" + std::to_string(k.cp.x) + "_" +
+                                  std::to_string(k.cp.z) + "_" + std::to_string(k.y_index) +
+                                  ".subchunk",
                               it->value().data(), it->value().size());
         }
     }
@@ -93,15 +95,15 @@ TEST(BedrockLevel, ExportSubChunkTerrain) {
 TEST(BedrockLevel, ExportBlockEntity) {
     using namespace bl;
     bl::bedrock_level level;
-    EXPECT_TRUE(level.open(WORLD_ROOT + "/a"));
+    EXPECT_TRUE(level.open(TEST_WORLD_ROOT));
     auto *db = level.db();
     auto *it = db->NewIterator(leveldb::ReadOptions());
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
         auto k = bl::chunk_key::parse(it->key().ToString());
         printf("%s\n", k.to_string().c_str());
         if (k.type == chunk_key::BlockEntity) {
-            utils::write_file("bes/" + std::to_string(k.cp.z) + "_" + std::to_string(k.cp.z) +
-                                  ".blockentity.palette",
+            utils::write_file(DUMP_ROOT + "bes/" + std::to_string(k.cp.z) + "_" +
+                                  std::to_string(k.cp.z) + ".blockentity.palette",
                               it->value().data(), it->value().size());
         }
     }
@@ -114,16 +116,16 @@ TEST(BedrockLevel, ExportPts) {
     using namespace bl;
     bl::bedrock_level level;
 
-    EXPECT_TRUE(level.open(WORLD_ROOT + "/a"));
+    EXPECT_TRUE(level.open(TEST_WORLD_ROOT));
 
     auto *db = level.db();
     auto *it = db->NewIterator(leveldb::ReadOptions());
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
         auto k = bl::chunk_key::parse(it->key().ToString());
         if (k.type == chunk_key::PendingTicks) {
-            utils::write_file(
-                "pts/" + std::to_string(k.cp.x) + "_" + std::to_string(k.cp.z) + ".pt.palette",
-                it->value().data(), it->value().size());
+            utils::write_file(DUMP_ROOT + "pts/" + std::to_string(k.cp.x) + "_" +
+                                  std::to_string(k.cp.z) + ".pt.palette",
+                              it->value().data(), it->value().size());
         }
     }
     delete it;
@@ -135,7 +137,7 @@ TEST(BedrockLevel, ExportPts) {
 TEST(BedrockLevel, CheckChunkState) {
     using namespace bl;
     bl::bedrock_level level;
-    EXPECT_TRUE(level.open(WORLD_ROOT + "/a"));
+    EXPECT_TRUE(level.open(TEST_WORLD_ROOT));
     auto *db = level.db();
     auto *it = db->NewIterator(leveldb::ReadOptions());
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
@@ -153,15 +155,15 @@ TEST(BedrockLevel, CheckChunkState) {
 TEST(BedrockLevel, ExportRandomTick) {
     using namespace bl;
     bl::bedrock_level level;
-    EXPECT_TRUE(level.open(WORLD_ROOT + "/a"));
+    EXPECT_TRUE(level.open(TEST_WORLD_ROOT));
     auto *db = level.db();
     auto *it = db->NewIterator(leveldb::ReadOptions());
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
         auto k = bl::chunk_key::parse(it->key().ToString());
         if (k.type == chunk_key::RandomTicks) {
-            utils::write_file(
-                "rt/" + std::to_string(k.cp.x) + "_" + std::to_string(k.cp.z) + ".rt.palette",
-                it->value().data(), it->value().size());
+            utils::write_file(DUMP_ROOT + "rt/" + std::to_string(k.cp.x) + "_" +
+                                  std::to_string(k.cp.z) + ".rt.palette",
+                              it->value().data(), it->value().size());
         }
     }
     delete it;
@@ -172,7 +174,7 @@ TEST(BedrockLevel, SaveInvalid) {
     using namespace bl;
     bl::bedrock_level level;
 
-    EXPECT_TRUE(level.open(WORLD_ROOT + "/a"));
+    EXPECT_TRUE(level.open(TEST_WORLD_ROOT));
     auto *db = level.db();
     size_t idx = 0;
     auto *it = db->NewIterator(leveldb::ReadOptions());
@@ -215,13 +217,13 @@ TEST(BedrockLevel, SaveInvalid) {
 TEST(BedrockLevel, DumpActors) {
     using namespace bl;
     bl::bedrock_level level;
-    EXPECT_TRUE(level.open(WORLD_ROOT + "/a"));
+    EXPECT_TRUE(level.open(TEST_WORLD_ROOT));
     auto *db = level.db();
     auto *it = db->NewIterator(leveldb::ReadOptions());
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
         auto key = bl::actor_key::parse(it->key().ToString());
         if (key.valid()) {
-            auto path = "./dump/actors/" + std::to_string(key.actor_uid) + ".palette";
+            auto path = DUMP_ROOT + "/actors/" + std::to_string(key.actor_uid) + ".palette";
             utils::write_file(path, it->value().data(), it->value().size());
         }
     }

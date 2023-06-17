@@ -38,4 +38,5 @@ build
 build/*
 .cache
 .cache/*
-worlds/*
+data/worlds/*
+data/dumps/*

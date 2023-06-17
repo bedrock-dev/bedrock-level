@@ -25,6 +25,13 @@ namespace bl {
         if (offset < 0) offset += 16;
     }
 
+    /**
+     *
+     * @param cx 区块内x
+     * @param y  区块内y(同时也是主世界y)
+     * @param cz 区块内z
+     * @return
+     */
     block_info bl::chunk::get_block(int cx, int y, int cz) {
         int index;
         int offset;

@@ -5,28 +5,25 @@
 #ifndef BEDROCK_LEVEL_CHUNK_H
 #define BEDROCK_LEVEL_CHUNK_H
 
+// cached chunks
 
-//cached chunks
-
-#include "sub_chunk.h"
 #include <unordered_map>
-#include "bedrock_key.h"
 #include <unordered_set>
+
+#include "bedrock_key.h"
+#include "sub_chunk.h"
 
 namespace bl {
 
     class bedrock_level;
 
-
     class chunk {
-
-    public:
-
+       public:
         friend class bedrock_level;
 
         block_info get_block(int cx, int y, int cz);
 
-        explicit chunk(const chunk_pos &pos) : pos_(pos), loaded_(false) {};
+        explicit chunk(const chunk_pos &pos) : pos_(pos), loaded_(false){};
 
         chunk() = delete;
 
@@ -34,19 +31,16 @@ namespace bl {
 
         static void map_y_to_subchunk(int y, int &index, int &offset);
 
-
-    private:
-
+       private:
         bool load_data(bedrock_level &level);
 
         bool loaded_{false};
         std::map<int, sub_chunk> sub_chunks_;
 
-        //lighted
+        // lighted
         const chunk_pos pos_;
         std::unordered_set<int8_t> sub_chunk_indexes_;
     };
-}
+}  // namespace bl
 
-
-#endif //BEDROCK_LEVEL_CHUNK_H
+#endif  // BEDROCK_LEVEL_CHUNK_H

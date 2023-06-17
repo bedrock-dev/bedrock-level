@@ -35,7 +35,7 @@ namespace bl {
             // assert that stream is long enough
             sub_chunk->set_version(stream[0]);
             sub_chunk->set_layers_num(stream[1]);
-            sub_chunk->set_y_index(stream[2]);
+            sub_chunk->set_y_index(static_cast<int8_t>(stream[2]));
             read = 3;
             return true;
         }
@@ -109,7 +109,7 @@ namespace bl {
 
     void sub_chunk::dump_to_file(FILE *fp) const {
         fprintf(fp, "Version : %u\n", this->version_);
-        fprintf(fp, "Y index : %u\n", this->y_index_);
+        fprintf(fp, "Y index : %d\n", this->y_index_);
         fprintf(fp, "Layers  : %u\n", this->layers_num_);
         fprintf(fp, "===========================================\n");
         size_t index = 0;
@@ -139,15 +139,18 @@ namespace bl {
 
     block_info sub_chunk::get_block(int rx, int ry, int rz) {
         if (rx < 0 || rx > 15 || ry < 0 || ry > 15 || rz < 0 || rz > 15) {
+            BL_ERROR("Invalid in chunk position %d %d %d", rx, ry, rz);
             return {};
         }
+        BL_LOGGER("Read in sub chunk position %d %d %d", rx, ry, rz);
         auto idx = ry * 256 + rz * 16 + rx;
         auto block = this->layers_[0].blocks[idx];
 
         if (block >= this->layers_[0].palettes.size()) {
-            BL_LOGGER("Invalid block index with value %d", block);
+            BL_ERROR("Invalid block index with value %d", block);
             return {};
         }
+
         auto *palette = this->layers_[0].palettes[block];
         auto id = palette->value.find("name");
         if (id == palette->value.end()) {

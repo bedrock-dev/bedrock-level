@@ -58,15 +58,20 @@ TEST(BedrockLevel, ReadChunk) {
 TEST(BedrockLevel, ReadBlock) {
     using namespace bl;
     bl::bedrock_level level;
-    EXPECT_TRUE(level.open("./sample"));
-    for (int y = 63; y < 70; y++) {
-        for (int x = -245; x < -237; x++) {
-            for (int z = 719; z < 727; z++) {
-                auto b = level.get_block(block_pos(x, y, z), 0);
-                printf("%s ", b.name.c_str());
-            }
-            printf("\n");
-        }
-        printf("======================================\n");
+    EXPECT_TRUE(level.open("../data/worlds/a"));
+    for (int i = -64; i < 64; i++) {
+        auto b = level.get_block({0, i, 0}, 0);
+        printf("%d: %s\n", i, b.name.c_str());
     }
+    //    for (int y = 110; y < 130; y++) {
+    //        for (int x = 0; x < 16; x++) {
+    //            for (int z = 0; z < 16; z++) {
+    //                auto b = level.get_block(block_pos(x, y, z), 0);
+    //                printf("%20s ", b.name.c_str());
+    //            }
+    //            printf("\n");
+    //        }
+    //        printf("======================================\n");
+    //    }
+    printf("\n");
 }
