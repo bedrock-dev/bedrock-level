@@ -116,3 +116,12 @@ TEST(Rearrange, Bit6) {
         EXPECT_TRUE(i == 63);
     }
 }
+
+TEST(Rearrange, Custom) {
+    byte_t data[] = {0x00, 0x11, 0x11, 0x11};
+    auto res = bl::bits::rearrange_words(6, data, 4);
+    EXPECT_TRUE(res.size() == 5);
+    for (auto i : res) {
+        BL_LOGGER("%d", i);
+    }
+}

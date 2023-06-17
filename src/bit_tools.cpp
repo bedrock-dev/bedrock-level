@@ -65,7 +65,8 @@ namespace bl::bits {
             return res;
         }
 
-        void split_word(size_t bit_len, const byte_t *data, uint16_t *res) {
+        void split_word(size_t bit_len, uint32_t word, uint16_t *res) {
+            const byte_t *data = reinterpret_cast<byte_t *>(&word);
             size_t index{0};
             uint8_t offset{0};
             size_t res_idx = 0;
@@ -91,14 +92,21 @@ namespace bl::bits {
                 res_idx++;
             }
         }
-
+        /**
+         *
+         * @param data data pointer
+         * @param n data len
+         * @param bit_len  split length
+         * @return
+         */
         std::vector<uint16_t> word_n(const byte_t *data, size_t n, size_t bit_len) {
             auto word_num = n / 4;
             auto npw = 32 / bit_len;
             std::vector<uint16_t> res(npw * word_num, 0);
             size_t res_idx{0};
             for (int i = 0; i < word_num; i++) {
-                split_word(bit_len, data + i, res.data() + res_idx);
+                split_word(bit_len, *reinterpret_cast<const uint32_t *>(data + i * 4),
+                           res.data() + res_idx);
                 res_idx += npw;
             }
             return res;
@@ -107,6 +115,7 @@ namespace bl::bits {
 
     std::vector<uint16_t> rearrange_words(size_t bits_len, const byte_t *data, size_t len) {
         Assert(len % 4 == 0, "Invalid World input.");
+        BL_LOGGER("Bits len is %zu", bits_len);
         switch (bits_len) {
             case 1:
                 return word_1(data, len);

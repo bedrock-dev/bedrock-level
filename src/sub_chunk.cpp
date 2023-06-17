@@ -19,12 +19,8 @@
 namespace bl {
 
     namespace {
-
-        void read_block_data(std::array<int16_t, 4096> &block_data, int bits, const byte_t *data,
-                             size_t len) {
-            int index = 0;
-            while (index < 4096) {
-            }
+        inline void endian_swap(int &x) {
+            x = (x >> 24) | ((x << 8) & 0x00FF0000) | ((x >> 8) & 0x0000FF00) | (x << 24);
         }
 
         // sub chunk layout
@@ -53,7 +49,7 @@ namespace bl {
                 }
                 read += r;
             }
-
+            BL_LOGGER("Palettes size is %zu", layer->palettes.size());
             return true;
         }
 
@@ -69,15 +65,36 @@ namespace bl {
 
             if (layer.bits != 0) {
                 int block_per_word = 32 / layer.bits;
-                auto words = BLOCK_NUM / block_per_word;
-                if (BLOCK_NUM % block_per_word != 0) words++;
-                layer.blocks = bits::rearrange_words(layer.bits, stream + read, words << 2);
-                Assert(layer.blocks.size() >= BLOCK_NUM, "Invalid block data len");
+                auto wordCount = BLOCK_NUM / block_per_word;
+                if (BLOCK_NUM % block_per_word != 0) wordCount++;
                 layer.blocks.resize(BLOCK_NUM);
-                //   BL_LOGGER("blocks number:%d , bit len = %d", layer.blocks.size(), layer.bits);
-                read += words << 2;
-                layer.palette_len = *reinterpret_cast<const uint32_t *>(stream + read);
+                int position = 0;
+                for (int wordi = 0; wordi < wordCount; wordi++) {
+                    auto word = *reinterpret_cast<const int *>(stream + read + wordi * 4);
+                    //                    endian_swap(word);
+                    for (int block = 0; block < block_per_word; block++) {
+                        int state = (word >> ((position % block_per_word) * layer.bits)) &
+                                    ((1 << layer.bits) - 1);
+                        if (position < layer.blocks.size()) {
+                            layer.blocks[position] = state;
+                        }
+                        position++;
+                    }
+                }
+
+                read += wordCount << 2;
+                int palette_len = *reinterpret_cast<const int *>(stream + read);
+                //                endian_swap(palette_len);
+                layer.palette_len = palette_len;
+                for (auto i : layer.blocks) {
+                    if (i >= layer.palette_len) {
+                        BL_ERROR("Invalid block state %d", i);
+                    }
+                }
                 read += 4;
+
+                //
+
             } else {
                 // uniform
                 layer.blocks = std::vector<uint16_t>(4096, 0);
@@ -118,16 +135,16 @@ namespace bl {
             fprintf(fp, "Bits per block: %d\n", layer.bits);
             fprintf(fp, "Palette type: %d\n", layer.type);
             fprintf(fp, "Palette len: %d\n", layer.palette_len);
-            auto i = 0;
-            for (auto b : layer.blocks) {
-                printf("%02d ", b);
-                i++;
-                if (i % 16 == 0) {
+            for (auto y = 0; y < 16; y++) {
+                printf("Y = %d\n", y);
+                for (auto z = 0; z < 16; z++) {
+                    for (auto x = 0; x < 16; x++) {
+                        auto idx = x * 256 + z * 16 + y;
+                        printf("%02d ", layer.blocks[idx]);
+                    }
                     printf("\n");
                 }
-                if (i % 256 == 0) {
-                    printf("------------------------------------------\n");
-                }
+                printf("==============================\n");
             }
             for (auto palette : layer.palettes) {
                 palette->write(std::cout, 0);
@@ -142,8 +159,8 @@ namespace bl {
             BL_ERROR("Invalid in chunk position %d %d %d", rx, ry, rz);
             return {};
         }
-        BL_LOGGER("Read in sub chunk position %d %d %d", rx, ry, rz);
-        auto idx = ry * 256 + rz * 16 + rx;
+        //        BL_LOGGER("Read in sub chunk position %d %d %d", rx, ry, rz);
+        auto idx = ry + rz * 16 + rx * 256;
         auto block = this->layers_[0].blocks[idx];
 
         if (block >= this->layers_[0].palettes.size()) {
