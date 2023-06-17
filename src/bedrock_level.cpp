@@ -5,9 +5,10 @@
 #include "bedrock_level.h"
 
 #include <fstream>
-#include "chunk.h"
+
 #include "bedrock_key.h"
 #include "bit_tools.h"
+#include "chunk.h"
 #include "leveldb/cache.h"
 #include "leveldb/comparator.h"
 #include "leveldb/db.h"
@@ -23,7 +24,7 @@ namespace bl {
     bool bedrock_level::open(const std::string &root) {
         this->root_name_ = root;
         auto res = this->read_level_dat() && this->read_db();
-        if (!res)return false;
+        if (!res) return false;
         this->cache_keys();
         return true;
     }
@@ -55,16 +56,14 @@ namespace bl {
         options.compressors[0] = new leveldb::ZlibCompressorRaw(-1);
         options.compressors[1] = new leveldb::ZlibCompressor();
         leveldb::Status status = leveldb::DB::Open(
-                options, this->root_name_ + "/" + bl::bedrock_level::LEVEL_DB, &this->db_);
+            options, this->root_name_ + "/" + bl::bedrock_level::LEVEL_DB, &this->db_);
         if (!status.ok()) {
-            BL_ERROR("Can not open level database: %s", status.ToString().c_str());
+            BL_ERROR("Can not open level database: %s.", status.ToString().c_str());
         }
         return status.ok();
     }
 
-
-    bedrock_level::~bedrock_level() = default;
-
+    bedrock_level::~bedrock_level() { delete this->db_; };
 
     void bedrock_level::cache_keys() {
         leveldb::Iterator *it = db_->NewIterator(leveldb::ReadOptions());
@@ -87,25 +86,23 @@ namespace bl {
                 continue;
             }
 
-
-
-//            auto actor_key = bl::actor_key::parse(it->key().ToString());
-//            if (actor_key.valid()) {
-//                continue;
-//            }
-//
-//            auto digest_key = bl::actor_digest_key::parse(it->key().ToString());
-//            if (digest_key.valid()) {
-//                continue;
-//            }
-//
-//            auto village_key = bl::village_key::parse(it->key().ToString());
-//            if (village_key.valid()) {
-//                continue;
-//
-//            }
-
+            //            auto actor_key = bl::actor_key::parse(it->key().ToString());
+            //            if (actor_key.valid()) {
+            //                continue;
+            //            }
+            //
+            //            auto digest_key = bl::actor_digest_key::parse(it->key().ToString());
+            //            if (digest_key.valid()) {
+            //                continue;
+            //            }
+            //
+            //            auto village_key = bl::village_key::parse(it->key().ToString());
+            //            if (village_key.valid()) {
+            //                continue;
+            //
+            //            }
         }
+        delete it;
     }
 
     chunk *bedrock_level::get_chunk(const chunk_pos &cp) {
@@ -113,14 +110,14 @@ namespace bl {
         if (it == this->chunk_data_cache_.end()) {
             return nullptr;
         } else {
-            //lazy load
+            // lazy load
             it->second->load_data(*this);
             return it->second;
         }
     }
 
     void bedrock_level::for_each_chunk_pos(const std::function<void(const chunk_pos &)> &f) {
-        for (auto &kv: this->chunk_data_cache_) {
+        for (auto &kv : this->chunk_data_cache_) {
             f(kv.first);
         }
     }
@@ -128,10 +125,10 @@ namespace bl {
     block_info bedrock_level::get_block(const block_pos &pos, int dim) {
         auto cp = pos.to_chunk_pos();
         cp.dim = dim;
-        if (!cp.valid())return {};
+        if (!cp.valid()) return {};
         auto off = pos.in_chunk_offset();
         auto *ch = this->get_chunk(cp);
-        if (!ch)return {};
+        if (!ch) return {};
         return ch->get_block(off.x, pos.y, off.z);
     }
 }  // namespace bl

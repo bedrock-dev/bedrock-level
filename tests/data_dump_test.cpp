@@ -3,34 +3,41 @@
 //
 #include <gtest/gtest.h>
 
+#include <cerrno>
 #include <iostream>
+#include <string>
 
 #include "bedrock_key.h"
 #include "bedrock_level.h"
 #include "utils.h"
 
+const std::string WORLD_ROOT = R"(C:\Users\xhy\dev\bedrock-level\worlds\a)";
+
 TEST(BedrockLevel, SimpleOpen) {
     bl::bedrock_level level;
-    EXPECT_TRUE(level.open("./2"));
+    EXPECT_TRUE(level.open(WORLD_ROOT));
+    //    level.close();
 }
 
 TEST(BedrockLevel, CheckChunkKeys) {
     using namespace bl;
     bl::bedrock_level level;
-    EXPECT_TRUE(level.open("./2"));
+    EXPECT_TRUE(level.open(WORLD_ROOT + "/a"));
     auto *db = level.db();
     auto *it = db->NewIterator(leveldb::ReadOptions());
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
         auto k = bl::chunk_key::parse(it->key().ToString());
         std::cout << k.to_string() << std::endl;
     }
+    delete it;
+    level.close();
 }
 
 // Tag 43
 TEST(BedrockLevel, ExportData3d) {
     using namespace bl;
     bl::bedrock_level level;
-    EXPECT_TRUE(level.open("./2"));
+    EXPECT_TRUE(level.open(WORLD_ROOT + "/a"));
     auto *db = level.db();
     auto *it = db->NewIterator(leveldb::ReadOptions());
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
@@ -41,13 +48,14 @@ TEST(BedrockLevel, ExportData3d) {
                 it->value().data(), it->value().size());
         }
     }
+    delete it;
 }
 
 // Tag 44
 TEST(BedrockLevel, CheckVersion) {
     using namespace bl;
     bl::bedrock_level level;
-    EXPECT_TRUE(level.open("./2"));
+    EXPECT_TRUE(level.open(WORLD_ROOT + "/a"));
     auto *db = level.db();
     auto *it = db->NewIterator(leveldb::ReadOptions());
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
@@ -57,13 +65,16 @@ TEST(BedrockLevel, CheckVersion) {
             printf("Chunk version is %d\n", (int)it->value()[0]);
         }
     }
+    delete it;
 }
 
 // Tag 47
 TEST(BedrockLevel, ExportSubChunkTerrain) {
     using namespace bl;
     bl::bedrock_level level;
-    EXPECT_TRUE(level.open("./2"));
+
+    EXPECT_TRUE(level.open(WORLD_ROOT + "/a"));
+
     auto *db = level.db();
     auto *it = db->NewIterator(leveldb::ReadOptions());
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
@@ -74,13 +85,15 @@ TEST(BedrockLevel, ExportSubChunkTerrain) {
                               it->value().data(), it->value().size());
         }
     }
+    delete it;
+    level.close();
 }
 
 // Tag 49
 TEST(BedrockLevel, ExportBlockEntity) {
     using namespace bl;
     bl::bedrock_level level;
-    EXPECT_TRUE(level.open("./2"));
+    EXPECT_TRUE(level.open(WORLD_ROOT + "/a"));
     auto *db = level.db();
     auto *it = db->NewIterator(leveldb::ReadOptions());
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
@@ -92,13 +105,17 @@ TEST(BedrockLevel, ExportBlockEntity) {
                               it->value().data(), it->value().size());
         }
     }
+    delete it;
+    level.close();
 }
 
 // Tag 51
 TEST(BedrockLevel, ExportPts) {
     using namespace bl;
     bl::bedrock_level level;
-    EXPECT_TRUE(level.open("./2"));
+
+    EXPECT_TRUE(level.open(WORLD_ROOT + "/a"));
+
     auto *db = level.db();
     auto *it = db->NewIterator(leveldb::ReadOptions());
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
@@ -109,6 +126,8 @@ TEST(BedrockLevel, ExportPts) {
                 it->value().data(), it->value().size());
         }
     }
+    delete it;
+    level.close();
 }
 
 // Tag 54
@@ -116,7 +135,7 @@ TEST(BedrockLevel, ExportPts) {
 TEST(BedrockLevel, CheckChunkState) {
     using namespace bl;
     bl::bedrock_level level;
-    EXPECT_TRUE(level.open("./2"));
+    EXPECT_TRUE(level.open(WORLD_ROOT + "/a"));
     auto *db = level.db();
     auto *it = db->NewIterator(leveldb::ReadOptions());
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
@@ -126,13 +145,15 @@ TEST(BedrockLevel, CheckChunkState) {
             printf("Chunk State is %d\n", *reinterpret_cast<const int32_t *>(it->value().data()));
         }
     }
+    delete it;
+    level.close();
 }
 
 // Tag 58
 TEST(BedrockLevel, ExportRandomTick) {
     using namespace bl;
     bl::bedrock_level level;
-    EXPECT_TRUE(level.open("./2"));
+    EXPECT_TRUE(level.open(WORLD_ROOT + "/a"));
     auto *db = level.db();
     auto *it = db->NewIterator(leveldb::ReadOptions());
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
@@ -143,15 +164,19 @@ TEST(BedrockLevel, ExportRandomTick) {
                 it->value().data(), it->value().size());
         }
     }
+    delete it;
+    level.close();
 }
 
 TEST(BedrockLevel, SaveInvalid) {
     using namespace bl;
     bl::bedrock_level level;
-    EXPECT_TRUE(level.open("./sample"));
+
+    EXPECT_TRUE(level.open(WORLD_ROOT + "/a"));
     auto *db = level.db();
     size_t idx = 0;
     auto *it = db->NewIterator(leveldb::ReadOptions());
+
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
         auto ck = bl::chunk_key::parse(it->key().ToString());
         if (ck.valid()) {
@@ -183,12 +208,14 @@ TEST(BedrockLevel, SaveInvalid) {
                           it->value().size());
         ++idx;
     }
+    delete it;
+    level.close();
 }
 
 TEST(BedrockLevel, DumpActors) {
     using namespace bl;
     bl::bedrock_level level;
-    EXPECT_TRUE(level.open("./sample"));
+    EXPECT_TRUE(level.open(WORLD_ROOT + "/a"));
     auto *db = level.db();
     auto *it = db->NewIterator(leveldb::ReadOptions());
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
@@ -198,4 +225,6 @@ TEST(BedrockLevel, DumpActors) {
             utils::write_file(path, it->value().data(), it->value().size());
         }
     }
+    delete it;
+    level.close();
 }

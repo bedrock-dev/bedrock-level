@@ -27,7 +27,7 @@ namespace bl {
 
         leveldb::DB *&db() { return this->db_; }
 
-        inline void close() { delete this->db_; }
+        inline void close() {}
 
         ~bedrock_level();
 

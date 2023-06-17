@@ -38,3 +38,4 @@ build
 build/*
 .cache
 .cache/*
+worlds/*
