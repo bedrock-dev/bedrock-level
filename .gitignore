@@ -33,6 +33,7 @@
 
 .build
 
+.vscode
 .idea/*
 build
 build/*
