@@ -30,6 +30,7 @@ add_library(bedrock-level
         src/player.cpp
         src/scoreboard.cpp
         src/global.cpp
+        src/color.cpp
         )
 
 
