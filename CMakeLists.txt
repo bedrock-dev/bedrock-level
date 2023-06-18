@@ -9,7 +9,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include_directories(src/include)
 include_directories(third/)
 include_directories(third/nbt-cpp)
-
+include_directories(third/stb)
 
 # find_package(Catch2 REQUIRED)
 
@@ -32,11 +32,16 @@ add_library(bedrock-level
         src/global.cpp
         )
 
+
 add_library(nbt-cpp
         third/nbt-cpp/nbt.cpp
         third/nbt-cpp/nbt_internal.hpp
         third/nbt-cpp/nbt.hpp
         )
+
+#add_library(stb-image
+#        third/stb/stb_image_write.h
+#        )
 
 target_link_libraries(bedrock-level
         ${PROJECT_SOURCE_DIR}/libs/libleveldb.a
@@ -87,3 +92,5 @@ create_test(actor_test tests/actor_test.cpp)
 create_test(key_test tests/key_test.cpp)
 create_test(bedrock_level_test tests/bedrock_level_test.cpp)
 create_test(chunk_test tests/chunk_test.cpp)
+create_test(stb_image_test tests/stb_image_test.cpp)
+

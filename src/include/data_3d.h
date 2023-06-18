@@ -30,7 +30,7 @@ namespace bl {
         std::array<int16_t, 256> height_map_;
         int biome_info_;  // TODO
     };
-
+   
 }  // namespace bl
 
 #endif  // BEDROCK_LEVEL_DATA_3D_H
