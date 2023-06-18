@@ -18,7 +18,7 @@ namespace bl {
         bool load(const byte_t *data, size_t len);
         void dump_to_file(FILE *fp) const;
 
-        inline int16_t height(int16_t x, int16_t z) {
+        inline int height(int16_t x, int16_t z) {
             return this->height_map_[static_cast<size_t>((x << 4u) + z)] - int16_t{64};
         }
 
