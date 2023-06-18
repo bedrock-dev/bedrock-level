@@ -13,7 +13,7 @@
 #include "bedrock_key.h"
 #include "chunk.h"
 #include "leveldb/db.h"
-#include "nbt.hpp"
+#include "nbt-cpp/nbt.hpp"
 
 namespace bl {
 

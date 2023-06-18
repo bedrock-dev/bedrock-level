@@ -8,8 +8,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include_directories(src/include)
 include_directories(third/)
-include_directories(third/nbt-cpp)
-include_directories(third/stb)
 
 # find_package(Catch2 REQUIRED)
 
@@ -20,7 +18,7 @@ enable_testing()
 add_library(bedrock-level
         src/sub_chunk.cpp
         src/utils.cpp
-        src/bit_tools.cpp
+        #        src/bit_tools.cpp
         src/palette.cpp
         src/bedrock_level.cpp
         src/bedrock_key.cpp
@@ -94,4 +92,5 @@ create_test(key_test tests/key_test.cpp)
 create_test(bedrock_level_test tests/bedrock_level_test.cpp)
 create_test(chunk_test tests/chunk_test.cpp)
 create_test(stb_image_test tests/stb_image_test.cpp)
+create_test(color_test tests/color_test.cpp)
 
