@@ -44,9 +44,9 @@ TEST(BedrockLevel, ExportData3d) {
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
         auto k = bl::chunk_key::parse(it->key().ToString());
         if (k.type == chunk_key::Data3D) {
-            utils::write_file(
-                "data3d/" + std::to_string(k.cp.x) + "_" + std::to_string(k.cp.z) + ".data3d",
-                it->value().data(), it->value().size());
+            utils::write_file(DUMP_ROOT + "data3d/" + std::to_string(k.cp.x) + "_" +
+                                  std::to_string(k.cp.z) + ".data3d",
+                              it->value().data(), it->value().size());
         }
     }
     delete it;

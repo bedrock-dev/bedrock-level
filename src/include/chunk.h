@@ -11,6 +11,7 @@
 #include <unordered_set>
 
 #include "bedrock_key.h"
+#include "data_3d.h"
 #include "sub_chunk.h"
 
 namespace bl {
@@ -22,6 +23,8 @@ namespace bl {
         friend class bedrock_level;
 
         block_info get_block(int cx, int y, int cz);
+
+        int get_height(int cx, int cz);
 
         explicit chunk(const chunk_pos &pos) : pos_(pos), loaded_(false){};
 
@@ -36,10 +39,10 @@ namespace bl {
 
         bool loaded_{false};
         std::map<int, sub_chunk> sub_chunks_;
-
         // lighted
         const chunk_pos pos_;
         std::unordered_set<int8_t> sub_chunk_indexes_;
+        data_3d d3d_{};
     };
 }  // namespace bl
 

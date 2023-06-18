@@ -106,6 +106,10 @@ namespace bl {
     }
 
     chunk *bedrock_level::get_chunk(const chunk_pos &cp) {
+        if (!cp.valid()) {
+            BL_ERROR("Invalid Chunk position %s", cp.to_string().c_str());
+            return nullptr;
+        }
         auto it = this->chunk_data_cache_.find(cp);
         if (it == this->chunk_data_cache_.end()) {
             return nullptr;

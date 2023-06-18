@@ -19,6 +19,17 @@ namespace bl {
      * The End [0~255]
      */
 
+    namespace {
+        std::string load_raw(leveldb::DB *&db, const chunk_key &key) {
+            std::string raw;
+            auto r = db->Get(leveldb::ReadOptions(), key.to_raw(), &raw);
+            if (!r.ok()) {
+                throw std::runtime_error("Can not read sub chunk content. " + key.to_string());
+            }
+            return raw;
+        }
+    }  // namespace
+
     void chunk::map_y_to_subchunk(int y, int &index, int &offset) {
         index = y < 0 ? (y - 15) / 16 : y / 16;
         offset = y % 16;
@@ -49,24 +60,25 @@ namespace bl {
         auto &db = level.db();
         for (auto sub_index : this->sub_chunk_indexes_) {
             auto terrain_key = bl::chunk_key{chunk_key::SubChunkTerrain, this->pos_, sub_index};
-            std::string raw;
-            auto r = db->Get(leveldb::ReadOptions(), terrain_key.to_raw(), &raw);
-            if (!r.ok()) {
-                throw std::runtime_error("Can not read sub chunk content. " +
-                                         terrain_key.to_string());
-            }
-
+            auto raw = load_raw(level.db(), terrain_key);
             bl::sub_chunk sb;
             if (!sb.load(raw.data(), raw.size())) {
                 throw std::runtime_error("Can not parse sub chunk content. " +
                                          terrain_key.to_string());
             }
-
             this->sub_chunks_[sub_index] = sb;
         }
+
+        auto d3d_key = bl::chunk_key{chunk_key::Data3D, this->pos_};
+        std::string d3d_raw = load_raw(level.db(), d3d_key);
+        if (!this->d3d_.load(d3d_raw.data(), d3d_raw.size())) {
+            throw std::runtime_error("Can not parse sub chunk content. " + d3d_key.to_string());
+        }
+
         // TODO: load others (actor data3d block entities.etc)
         loaded_ = true;
         return true;
     }
+    int chunk::get_height(int cx, int cz) { return this->d3d_.height(cx, cz); }
 
 }  // namespace bl

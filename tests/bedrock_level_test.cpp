@@ -63,15 +63,22 @@ TEST(BedrockLevel, ReadBlock) {
         auto b = level.get_block({0, i, 0}, 0);
         printf("%d: %s\n", i, b.name.c_str());
     }
-    //    for (int y = 110; y < 130; y++) {
-    //        for (int x = 0; x < 16; x++) {
-    //            for (int z = 0; z < 16; z++) {
-    //                auto b = level.get_block(block_pos(x, y, z), 0);
-    //                printf("%20s ", b.name.c_str());
-    //            }
-    //            printf("\n");
-    //        }
-    //        printf("======================================\n");
-    //    }
     printf("\n");
+}
+
+TEST(BedrockLevel, ReadHeight) {
+    using namespace bl;
+    bl::bedrock_level level;
+    EXPECT_TRUE(level.open("../data/worlds/a"));
+    auto *chunk = level.get_chunk({0, 0, 0});
+    if (!chunk) {
+        BL_ERROR("Can not load chunk");
+        return;
+    }
+    for (int i = 0; i < 16; i++) {
+        for (int j = 0; j < 16; j++) {
+            printf("%02d ", chunk->get_height(i, j));
+        }
+        printf("\n");
+    }
 }

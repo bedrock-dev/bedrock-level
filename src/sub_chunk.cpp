@@ -49,7 +49,6 @@ namespace bl {
                 }
                 read += r;
             }
-            BL_LOGGER("Palettes size is %zu", layer->palettes.size());
             return true;
         }
 

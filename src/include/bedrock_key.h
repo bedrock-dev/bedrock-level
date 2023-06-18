@@ -35,9 +35,9 @@ namespace bl {
 
         block_pos(int xx, int yy, int zz) : x(xx), y(yy), z(zz) {}
 
-        chunk_pos to_chunk_pos() const;
+        [[nodiscard]] chunk_pos to_chunk_pos() const;
 
-        chunk_pos in_chunk_offset() const;
+        [[nodiscard]] chunk_pos in_chunk_offset() const;
     };
 
     struct chunk_key {
