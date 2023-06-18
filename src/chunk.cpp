@@ -30,6 +30,13 @@ namespace bl {
         }
     }  // namespace
 
+    bool chunk::valid_in_chunk_pos(int cx, int y, int cz, int dim) {
+        if (cx < 0 || cx > 15 || cz < 0 || cz > 15 || dim < 0 || dim > 2) return false;
+        int min_h[]{-64, 0, 0};
+        int max_h[]{319, 127, 255};
+        return y >= min_h[dim] && y <= max_h[dim];
+    }
+
     void chunk::map_y_to_subchunk(int y, int &index, int &offset) {
         index = y < 0 ? (y - 15) / 16 : y / 16;
         offset = y % 16;
@@ -43,7 +50,7 @@ namespace bl {
      * @param cz 区块内z
      * @return
      */
-    block_info bl::chunk::get_block(int cx, int y, int cz) {
+    block_info chunk::get_block(int cx, int y, int cz) {
         int index;
         int offset;
         map_y_to_subchunk(y, index, offset);
@@ -54,8 +61,9 @@ namespace bl {
         return it->second.get_block(cx, offset, cz);
     }
 
-    bool chunk::load_data(bedrock_level &level) {
-        if (this->loaded()) return true;
+    biome chunk::get_biome(int cx, int y, int cz) { return this->d3d_.get_biome(cx, y, cz); }
+    void chunk::load_data(bedrock_level &level) {
+        if (this->loaded()) return;
         BL_LOGGER("Try load chunk %s", this->pos_.to_string().c_str());
         auto &db = level.db();
         for (auto sub_index : this->sub_chunk_indexes_) {
@@ -77,8 +85,8 @@ namespace bl {
 
         // TODO: load others (actor data3d block entities.etc)
         loaded_ = true;
-        return true;
     }
+
     int chunk::get_height(int cx, int cz) { return this->d3d_.height(cx, cz); }
 
 }  // namespace bl

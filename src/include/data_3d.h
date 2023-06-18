@@ -14,6 +14,7 @@
 namespace bl {
 
     enum biome {
+        none = 0L,
         plains = 1L,
         desert = 2L,
         extreme_hills = 3L,
@@ -116,9 +117,11 @@ namespace bl {
             return this->height_map_;
         }
 
+        biome get_biome(int cx, int y, int cz);
+
        private:
         std::array<int16_t, 256> height_map_;
-        int biome_info_;  // TODO
+        std::vector<std::array<biome, 4096>> biomes_;
     };
 
 }  // namespace bl

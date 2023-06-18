@@ -21,8 +21,13 @@ namespace bl {
     class chunk {
        public:
         friend class bedrock_level;
+        static bool valid_in_chunk_pos(int cx, int y, int cz, int dim);
+        static void map_y_to_subchunk(int y, int &index, int &offset);
 
+       public:
         block_info get_block(int cx, int y, int cz);
+
+        biome get_biome(int cx, int y, int cz);
 
         int get_height(int cx, int cz);
 
@@ -32,10 +37,8 @@ namespace bl {
 
         inline bool loaded() const { return this->loaded_; }
 
-        static void map_y_to_subchunk(int y, int &index, int &offset);
-
        private:
-        bool load_data(bedrock_level &level);
+        void load_data(bedrock_level &level);
 
         bool loaded_{false};
         std::map<int, sub_chunk> sub_chunks_;
