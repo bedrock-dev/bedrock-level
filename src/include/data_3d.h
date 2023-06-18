@@ -13,7 +13,7 @@
 
 namespace bl {
 
-    enum class biome {
+    enum biome {
         ocean                            = 0,
         plains                           = 1,
         desert                           = 2,
