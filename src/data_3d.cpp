@@ -67,8 +67,27 @@ namespace bl {
         index += 512;
         while (index < len) {
             int read = 0;
-            this->biomes_.push_back(load_subchunk_biome(data + index, read));
+            auto sub_chunk_biome = load_subchunk_biome(data + index, read);
+            for (int y = 0; y < 16; y++) {
+                auto layer = std::array<std::array<biome, 16>, 16>{};
+                for (int x = 0; x < 16; x++) {
+                    for (int z = 0; z < 16; z++) {
+                        layer[x][z] = sub_chunk_biome[x * 256 + z * 16 + y];
+                    }
+                }
+                this->biomes_.push_back(layer);
+            }
             index += read;
+        }
+        if (this->biomes_.size() == 384) {
+            this->dim = 0;
+        } else if (this->biomes_.size() == 256) {
+            this->dim = 2;
+        } else if (this->biomes_.size() == 128) {
+            this->dim = 1;
+        } else {
+            BL_ERROR("Invalid Biome layer size");
+            return false;
         }
         return true;
     }
@@ -82,14 +101,30 @@ namespace bl {
         }
     }
     biome data_3d::get_biome(int cx, int y, int cz) {
-        int index;
-        int cy;
-        chunk::map_y_to_subchunk(y, index, cy);
-        if (index > this->biomes_.size()) {
-            return none;
+        if (dim == 0) y += 64;
+        if (y > this->biomes_.size()) {
+            return biome::none;
         }
-        
-        return this->biomes_[index][cy + cz * 16 + cx * 256];
+        return this->biomes_[y][cx][cz];
+    }
+    std::array<std::array<biome, 16>, 16> data_3d::get_biome_y(int y) {
+        if (dim == 0) y += 64;
+        if (y > this->biomes_.size()) {
+            return {};
+        }
+        return this->biomes_[y];
     }
 
+    std::array<std::array<biome, 16>, 16> data_3d::top_biome_map() {
+        //
+        std::array<std::array<biome, 16>, 16> res{};
+        return res;
+    }
+    biome data_3d::get_top_biome(int cx, int cz) {
+        int y = (int)this->biomes_.size() - 1;
+        while (y >= 0 && this->biomes_[y][cx][cz] == none) {
+            y--;
+        }
+        return y < 0 ? biome::none : this->biomes_[y][cx][cz];
+    }
 }  // namespace bl

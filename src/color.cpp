@@ -61,9 +61,9 @@ namespace bl {
         for (int i = 0; i < h; i++) {
             for (int j = 0; j < w; j++) {
                 auto color = b[i / ppi][j / ppi];
-                data[3 * (j * h + i)] = color.r;
-                data[3 * (j * h + i) + 1] = color.g;
-                data[3 * (j * h + i) + 2] = color.b;
+                data[3 * (j + i * w)] = color.r;
+                data[3 * (j + i * w) + 1] = color.g;
+                data[3 * (j + i * w) + 2] = color.b;
             }
         }
 

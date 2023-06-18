@@ -121,11 +121,17 @@ namespace bl {
 
         biome get_biome(int cx, int y, int cz);
 
+        std::array<std::array<biome, 16>, 16> get_biome_y(int y);
+
+        biome get_top_biome(int cx, int cz);
+
+        std::array<std::array<biome, 16>, 16> top_biome_map();
+
        private:
         std::array<int16_t, 256> height_map_;
-        std::vector<std::array<biome, 4096>> biomes_;
+        std::vector<std::array<std::array<biome, 16>, 16>> biomes_;
+        int dim{0};
     };
-
 }  // namespace bl
 
 #endif  // BEDROCK_LEVEL_DATA_3D_H
