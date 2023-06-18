@@ -29,6 +29,10 @@ namespace bl {
 
         biome get_biome(int cx, int y, int cz);
 
+        std::array<std::array<biome, 16>, 16> get_biome_y(int y);
+
+        biome get_top_biome(int cx, int cz);
+
         int get_height(int cx, int cz);
 
         explicit chunk(const chunk_pos &pos) : pos_(pos), loaded_(false){};

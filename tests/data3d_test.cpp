@@ -31,7 +31,7 @@ TEST(Data3d, BiomeRead) {
                 c[x][z] = bl::get_biome_color(b);
             }
         }
-        bl::export_image(c, 10, "./png/" + std::to_string(y) + ".png");
+        bl::export_image(c, 10, "./png/" + std::to_string(y + 64) + ".png");
     }
 }
 

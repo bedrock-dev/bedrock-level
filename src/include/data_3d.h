@@ -111,9 +111,7 @@ namespace bl {
         bool load(const byte_t *data, size_t len);
         void dump_to_file(FILE *fp) const;
 
-        inline int height(int16_t x, int16_t z) {
-            return this->height_map_[static_cast<size_t>((x << 4u) + z)] - int16_t{64};
-        }
+        inline int height(int x, int z) { return this->height_map_[x * 16 + z] - int16_t{64}; }
 
         [[nodiscard]] inline std::array<int16_t, 256> height_map() const {
             return this->height_map_;
@@ -124,8 +122,6 @@ namespace bl {
         std::array<std::array<biome, 16>, 16> get_biome_y(int y);
 
         biome get_top_biome(int cx, int cz);
-
-        std::array<std::array<biome, 16>, 16> top_biome_map();
 
        private:
         std::array<int16_t, 256> height_map_;

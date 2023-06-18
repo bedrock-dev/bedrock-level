@@ -39,6 +39,13 @@ namespace bl {
 
         [[nodiscard]] chunk_pos in_chunk_offset() const;
     };
+    struct vec3 {
+        float x{};
+        float y{};
+        float z{};
+
+        vec3(float xx, float yy, float zz) : x(xx), y(yy), z(zz) {}
+    };
 
     struct chunk_key {
         [[nodiscard]] std::string to_string() const;

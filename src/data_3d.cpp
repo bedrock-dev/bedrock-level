@@ -107,6 +107,7 @@ namespace bl {
         }
         return this->biomes_[y][cx][cz];
     }
+
     std::array<std::array<biome, 16>, 16> data_3d::get_biome_y(int y) {
         if (dim == 0) y += 64;
         if (y > this->biomes_.size()) {
@@ -115,11 +116,6 @@ namespace bl {
         return this->biomes_[y];
     }
 
-    std::array<std::array<biome, 16>, 16> data_3d::top_biome_map() {
-        //
-        std::array<std::array<biome, 16>, 16> res{};
-        return res;
-    }
     biome data_3d::get_top_biome(int cx, int cz) {
         int y = (int)this->biomes_.size() - 1;
         while (y >= 0 && this->biomes_[y][cx][cz] == none) {

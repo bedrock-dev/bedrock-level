@@ -88,5 +88,9 @@ namespace bl {
     }
 
     int chunk::get_height(int cx, int cz) { return this->d3d_.height(cx, cz); }
+    biome chunk::get_top_biome(int cx, int cz) { return this->d3d_.get_top_biome(cx, cz); }
+    std::array<std::array<biome, 16>, 16> chunk::get_biome_y(int y) {
+        return this->d3d_.get_biome_y(y);
+    }
 
 }  // namespace bl
