@@ -88,7 +88,7 @@ namespace bl {
         if (index > this->biomes_.size()) {
             return none;
         }
-
+        
         return this->biomes_[index][cy + cz * 16 + cx * 256];
     }
 

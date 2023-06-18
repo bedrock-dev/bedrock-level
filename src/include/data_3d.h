@@ -13,7 +13,8 @@
 
 namespace bl {
 
-    enum class biome {
+    // clang-format off
+    enum biome {
         ocean                            = 0,
         plains                           = 1,
         desert                           = 2,
@@ -100,8 +101,10 @@ namespace bl {
         deep_dark                        = 190,
         mangrove_swamp                   = 191,
         cherry_groves                    = 192,
+        none                             = 255,
         LEN,
     };
+    // clang-format on
 
     class data_3d {
        public:
