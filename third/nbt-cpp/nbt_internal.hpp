@@ -1,7 +1,7 @@
 #ifndef NBT_INTERNAL_HEAD_BFGUDYHGVWCEARSTYJGHI
 #define NBT_INTERNAL_HEAD_BFGUDYHGVWCEARSTYJGHI
 
-#include <nbt.hpp>
+#include "nbt-cpp/nbt.hpp"
 
 namespace nbt {
 

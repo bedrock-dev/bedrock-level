@@ -3,8 +3,7 @@
 //
 
 #include <gtest/gtest.h>
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
+#include "stb/stb_image_write.h"
 #include "utils.h"
 
 TEST(StbImage, WritePNG) {
@@ -12,7 +11,6 @@ TEST(StbImage, WritePNG) {
     const int w = 60;
     const int h = 160;
     std::vector<unsigned char> data(c * w * h, 0);
-
     for (int y = 0; y < w; y++) {
         for (int x = 0; x < h; x++) {
             data[3 * (y * h + x)] = 0;

@@ -14,7 +14,7 @@
 #include "leveldb/db.h"
 #include "leveldb/filter_policy.h"
 #include "leveldb/zlib_compressor.h"
-#include "nbt.hpp"
+#include "nbt-cpp/nbt.hpp"
 
 namespace bl {
 

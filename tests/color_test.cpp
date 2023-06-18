@@ -8,5 +8,18 @@
 TEST(Color, readColorPalette) {
     bl::init_biome_color_palette_from_file(
         R"(C:\Users\xhy\dev\bedrock-level\data\colors\biome.json)");
-    auto color = bl::get_biome_color(bl::ocean);
+}
+
+TEST(Color, exportImage) {
+    bl::init_biome_color_palette_from_file(
+        R"(C:\Users\xhy\dev\bedrock-level\data\colors\biome.json)");
+    std::vector<std::vector<bl::biome>> b(40, std::vector<bl::biome>(60, bl::biome::cherry_groves));
+    b[12][32] = bl::biome::ocean;
+    std::vector<std::vector<bl::color>> c(40, std::vector<bl::color>(60, bl::color()));
+    for (int i = 0; i < b.size(); i++) {
+        for (int j = 0; j < b[0].size(); j++) {
+            c[i][j] = bl::get_biome_color(b[i][j]);
+        }
+    }
+    bl::export_image(c, 10, "a.png");
 }

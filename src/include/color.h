@@ -19,6 +19,9 @@ namespace bl {
 
     bool init_biome_color_palette_from_file(const std::string& filename);
 
+    [[maybe_unused]] void export_image(const std::vector<std::vector<color>>& c, int ppi,
+                                       const std::string& name);
+
 }  // namespace bl
 
 #endif  // BEDROCK_LEVEL_COLOR_H
