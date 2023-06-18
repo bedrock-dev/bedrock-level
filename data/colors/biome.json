@@ -1,66 +1,604 @@
 {
-  "mushroom_fields": { "r": 250, "g": 145, "b": 248 },
-  "deep_frozen_ocean": { "r": 52, "g": 120, "b": 162 },
-  "deep_cold_ocean": { "r": 0, "g": 71, "b": 133 },
-  "deep_ocean": { "r": 3, "g": 0, "b": 158 },
-  "deep_lukewarm_ocean": { "r": 38, "g": 0, "b": 143 },
-  "frozen_ocean": { "r": 32, "g": 175, "b": 255 },
-  "cold_ocean": { "r": 0, "g": 123, "b": 255 },
-  "ocean": { "r": 0, "g": 0, "b": 255 },
-  "warm_ocean": { "r": 100, "g": 0, "b": 255 },
-  "lukewarm_ocean": { "r": 76, "g": 0, "b": 255 },
-  "frozen_river": { "r": 166, "g": 212, "b": 255 },
-  "river": { "r": 77, "g": 130, "b": 255 },
-  "swamp": { "r": 93, "g": 187, "b": 142 },
-  "snowy_plains": { "r": 255, "g": 255, "b": 255 },
-  "ice_spikes": { "r": 200, "g": 238, "b": 254 },
-  "snowy_taiga": { "r": 209, "g": 255, "b": 211 },
-  "plains": { "r": 115, "g": 228, "b": 63 },
-  "forest": { "r": 0, "g": 153, "b": 3 },
-  "taiga": { "r": 69, "g": 113, "b": 25 },
-  "old_growth_spruce_taiga": { "r": 52, "g": 80, "b": 17 },
-  "old_growth_pine_taiga": { "r": 68, "g": 77, "b": 0 },
-  "sunflower_plains": { "r": 166, "g": 255, "b": 0 },
-  "flower_forest": { "r": 119, "g": 188, "b": 1 },
-  "birch_forest": { "r": 106, "g": 198, "b": 91 },
-  "old_growth_birch_forest": { "r": 89, "g": 228, "b": 90 },
-  "dark_forest": { "r": 1, "g": 116, "b": 1 },
-  "savanna": { "r": 179, "g": 242, "b": 61 },
-  "jungle": { "r": 0, "g": 255, "b": 0 },
-  "eroded_badlands": { "r": 184, "g": 80, "b": 0 },
-  "badlands": { "r": 255, "g": 111, "b": 0 },
-  "wooded_badlands": { "r": 219, "g": 139, "b": 0 },
-  "stony_shore": { "r": 102, "g": 102, "b": 102 },
-  "snowy_beach": { "r": 214, "g": 218, "b": 170 },
-  "beach": { "r": 255, "g": 249, "b": 138 },
-  "desert": { "r": 255, "g": 255, "b": 0 },
-  "windswept_savanna": { "r": 171, "g": 219, "b": 81 },
-  "sparse_jungle": { "r": 128, "g": 255, "b": 0 },
-  "snowy_slopes": { "r": 138, "g": 202, "b": 234 },
-  "grove": { "r": 175, "g": 175, "b": 228 },
-  "savanna_plateau": { "r": 128, "g": 171, "b": 48 },
-  "windswept_gravelly_hills": { "r": 129, "g": 150, "b": 152 },
-  "windswept_hills": { "r": 105, "g": 142, "b": 145 },
-  "windswept_forest": { "r": 66, "g": 123, "b": 95 },
-  "meadow": { "r": 210, "g": 255, "b": 61 },
-  "jagged_peaks": { "r": 215, "g": 172, "b": 211 },
-  "frozen_peaks": { "r": 222, "g": 222, "b": 222 },
-  "stony_peaks": { "r": 173, "g": 191, "b": 225 },
-  "bamboo_jungle": { "r": 0, "g": 255, "b": 87 },
-  "mangrove_swamp": { "r": 39, "g": 84, "b": 66 },
-  "deep_dark": { "r": 8, "g": 39, "b": 31 },
-  "cherry_grove": { "r": 220, "g": 138, "b": 221},
-  "soul_sand_valley": { "r": 140, "g": 132, "b": 108 },
-  "nether_wastes": { "r": 163, "g": 62, "b": 62 },
-  "crimson_forest": { "r": 219, "g": 60, "b": 46 },
-  "warped_forest": { "r": 68, "g": 171, "b": 171 },
-  "basalt_deltas": { "r": 79, "g": 73, "b": 66 },
-  "the_end": { "r": 252, "g": 244, "b": 121 },
-  "small_end_islands": { "r": 234, "g": 247, "b": 52 },
-  "end_midlands": { "r": 170, "g": 179, "b": 55 },
-  "end_highlands": { "r": 112, "g": 117, "b": 46 },
-  "end_barrens": { "r": 199, "g": 204, "b": 137 },
-  "the_void": { "r": 0, "g": 0, "b": 0 },
-  "lush_caves": { "r": 112, "g": 255, "b": 79 },
-  "dripstone_caves": { "r": 140, "g": 124, "b": 0 }
+    "ocean": {
+        "rgb": [
+            0,
+            0,
+            112
+        ]
+    },
+    "plains": {
+        "rgb": [
+            141,
+            179,
+            96
+        ]
+    },
+    "desert": {
+        "rgb": [
+            250,
+            148,
+            24
+        ]
+    },
+    "extreme_hills": {
+        "rgb": [
+            96,
+            96,
+            96
+        ]
+    },
+    "forest": {
+        "rgb": [
+            5,
+            102,
+            33
+        ]
+    },
+    "taiga": {
+        "rgb": [
+            11,
+            106,
+            95
+        ]
+    },
+    "swampland": {
+        "rgb": [
+            7,
+            249,
+            178
+        ]
+    },
+    "river": {
+        "rgb": [
+            0,
+            0,
+            255
+        ]
+    },
+    "hell": {
+        "rgb": [
+            87,
+            37,
+            38
+        ]
+    },
+    "the_end": {
+        "rgb": [
+            128,
+            128,
+            255
+        ]
+    },
+    "legacy_frozen_ocean": {
+        "rgb": [
+            112,
+            112,
+            214
+        ]
+    },
+    "frozen_river": {
+        "rgb": [
+            160,
+            160,
+            255
+        ]
+    },
+    "ice_plains": {
+        "rgb": [
+            255,
+            255,
+            255
+        ]
+    },
+    "ice_mountains": {
+        "rgb": [
+            160,
+            160,
+            160
+        ]
+    },
+    "mushroom_island": {
+        "rgb": [
+            255,
+            0,
+            255
+        ]
+    },
+    "mushroom_island_shore": {
+        "rgb": [
+            160,
+            0,
+            255
+        ]
+    },
+    "beach": {
+        "rgb": [
+            250,
+            222,
+            85
+        ]
+    },
+    "desert_hills": {
+        "rgb": [
+            210,
+            95,
+            18
+        ]
+    },
+    "forest_hills": {
+        "rgb": [
+            34,
+            85,
+            28
+        ]
+    },
+    "taiga_hills": {
+        "rgb": [
+            22,
+            57,
+            51
+        ]
+    },
+    "extreme_hills_edge": {
+        "rgb": [
+            114,
+            120,
+            154
+        ]
+    },
+    "jungle": {
+        "rgb": [
+            80,
+            123,
+            10
+        ]
+    },
+    "jungle_hills": {
+        "rgb": [
+            44,
+            66,
+            5
+        ]
+    },
+    "jungle_edge": {
+        "rgb": [
+            96,
+            147,
+            15
+        ]
+    },
+    "deep_ocean": {
+        "rgb": [
+            0,
+            0,
+            48
+        ]
+    },
+    "stone_beach": {
+        "rgb": [
+            162,
+            162,
+            132
+        ]
+    },
+    "cold_beach": {
+        "rgb": [
+            250,
+            240,
+            192
+        ]
+    },
+    "birch_forest": {
+        "rgb": [
+            48,
+            116,
+            68
+        ]
+    },
+    "birch_forest_hills": {
+        "rgb": [
+            31,
+            95,
+            50
+        ]
+    },
+    "roofed_forest": {
+        "rgb": [
+            64,
+            81,
+            26
+        ]
+    },
+    "cold_taiga": {
+        "rgb": [
+            49,
+            85,
+            74
+        ]
+    },
+    "cold_taiga_hills": {
+        "rgb": [
+            36,
+            63,
+            54
+        ]
+    },
+    "mega_taiga": {
+        "rgb": [
+            89,
+            102,
+            81
+        ]
+    },
+    "mega_taiga_hills": {
+        "rgb": [
+            69,
+            79,
+            62
+        ]
+    },
+    "extreme_hills_plus_trees": {
+        "rgb": [
+            91,
+            115,
+            82
+        ]
+    },
+    "savanna": {
+        "rgb": [
+            189,
+            178,
+            95
+        ]
+    },
+    "savanna_plateau": {
+        "rgb": [
+            167,
+            157,
+            100
+        ]
+    },
+    "mesa": {
+        "rgb": [
+            217,
+            69,
+            21
+        ]
+    },
+    "mesa_plateau_stone": {
+        "rgb": [
+            176,
+            151,
+            101
+        ]
+    },
+    "mesa_plateau": {
+        "rgb": [
+            202,
+            140,
+            101
+        ]
+    },
+    "warm_ocean": {
+        "rgb": [
+            0,
+            0,
+            172
+        ]
+    },
+    "deep_warm_ocean": {
+        "rgb": [
+            0,
+            0,
+            80
+        ]
+    },
+    "lukewarm_ocean": {
+        "rgb": [
+            0,
+            0,
+            144
+        ]
+    },
+    "deep_lukewarm_ocean": {
+        "rgb": [
+            0,
+            0,
+            64
+        ]
+    },
+    "cold_ocean": {
+        "rgb": [
+            32,
+            32,
+            112
+        ]
+    },
+    "deep_cold_ocean": {
+        "rgb": [
+            32,
+            32,
+            56
+        ]
+    },
+    "frozen_ocean": {
+        "rgb": [
+            112,
+            112,
+            214
+        ]
+    },
+    "deep_frozen_ocean": {
+        "rgb": [
+            64,
+            64,
+            144
+        ]
+    },
+    "bamboo_jungle": {
+        "rgb": [
+            132,
+            149,
+            0
+        ]
+    },
+    "bamboo_jungle_hills": {
+        "rgb": [
+            92,
+            108,
+            4
+        ]
+    },
+    "sunflower_plains": {
+        "rgb": [
+            181,
+            219,
+            136
+        ]
+    },
+    "desert_mutated": {
+        "rgb": [
+            255,
+            188,
+            64
+        ]
+    },
+    "extreme_hills_mutated": {
+        "rgb": [
+            136,
+            136,
+            136
+        ]
+    },
+    "flower_forest": {
+        "rgb": [
+            45,
+            142,
+            73
+        ]
+    },
+    "taiga_mutated": {
+        "rgb": [
+            51,
+            146,
+            135
+        ]
+    },
+    "swampland_mutated": {
+        "rgb": [
+            47,
+            255,
+            218
+        ]
+    },
+    "jungle_mutated": {
+        "rgb": [
+            120,
+            163,
+            50
+        ]
+    },
+    "jungle_edge_mutated": {
+        "rgb": [
+            136,
+            187,
+            55
+        ]
+    },
+    "birch_forest_mutated": {
+        "rgb": [
+            88,
+            156,
+            108
+        ]
+    },
+    "birch_forest_hills_mutated": {
+        "rgb": [
+            71,
+            135,
+            90
+        ]
+    },
+    "roofed_forest_mutated": {
+        "rgb": [
+            104,
+            121,
+            66
+        ]
+    },
+    "cold_taiga_mutated": {
+        "rgb": [
+            89,
+            125,
+            114
+        ]
+    },
+    "redwood_taiga_mutated": {
+        "rgb": [
+            129,
+            142,
+            121
+        ]
+    },
+    "redwood_taiga_hills_mutated": {
+        "rgb": [
+            109,
+            119,
+            102
+        ]
+    },
+    "extreme_hills_plus_trees_mutated": {
+        "rgb": [
+            131,
+            155,
+            122
+        ]
+    },
+    "savanna_mutated": {
+        "rgb": [
+            229,
+            218,
+            135
+        ]
+    },
+    "savanna_plateau_mutated": {
+        "rgb": [
+            207,
+            197,
+            140
+        ]
+    },
+    "mesa_bryce": {
+        "rgb": [
+            255,
+            109,
+            61
+        ]
+    },
+    "mesa_plateau_stone_mutated": {
+        "rgb": [
+            216,
+            191,
+            141
+        ]
+    },
+    "mesa_plateau_mutated": {
+        "rgb": [
+            242,
+            180,
+            141
+        ]
+    },
+    "ice_plains_spikes": {
+        "rgb": [
+            180,
+            220,
+            220
+        ]
+    },
+    "soulsand_valley": {
+        "rgb": [
+            77,
+            58,
+            46
+        ]
+    },
+    "crimson_forest": {
+        "rgb": [
+            152,
+            26,
+            17
+        ]
+    },
+    "warped_forest": {
+        "rgb": [
+            73,
+            144,
+            123
+        ]
+    },
+    "basalt_deltas": {
+        "rgb": [
+            100,
+            95,
+            99
+        ]
+    },
+    "lofty_peaks": {
+        "rgb": [
+            220,
+            220,
+            200
+        ]
+    },
+    "snow_capped_peaks": {
+        "rgb": [
+            176,
+            179,
+            206
+        ]
+    },
+    "snowy_slopes": {
+        "rgb": [
+            196,
+            196,
+            196
+        ]
+    },
+    "mountain_grove": {
+        "rgb": [
+            71,
+            114,
+            108
+        ]
+    },
+    "mountain_meadow": {
+        "rgb": [
+            96,
+            164,
+            69
+        ]
+    },
+    "lush_caves": {
+        "rgb": [
+            40,
+            60,
+            0
+        ]
+    },
+    "dripstone_caves": {
+        "rgb": [
+            78,
+            48,
+            18
+        ]
+    },
+    "stony_peaks": {
+        "rgb": [
+            123,
+            143,
+            116
+        ]
+    },
+    "deep_dark": {
+        "rgb": [
+            3,
+            31,
+            41
+        ]
+    },
+    "mangrove_swamp": {
+        "rgb": [
+            44,
+            204,
+            142
+        ]
+    },
+    "cherry_groves": {
+        "rgb": [
+            255,
+            145,
+            200
+        ]
+    }
 }
