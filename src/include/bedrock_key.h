@@ -12,6 +12,7 @@
 
 namespace bl {
 
+    struct block_pos;
     struct chunk_pos {
         int32_t x{0};
         int32_t z{0};
@@ -26,6 +27,11 @@ namespace bl {
         bool operator==(const chunk_pos &p) const;
 
         bool operator<(const chunk_pos &rhs) const;
+
+        [[nodiscard]] std::tuple<int32_t, int32_t> y_range() const;
+
+        [[nodiscard]] block_pos min_pos() const;
+        [[nodiscard]] block_pos max_pos() const;
     };
 
     struct block_pos {

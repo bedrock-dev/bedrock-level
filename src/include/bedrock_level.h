@@ -4,11 +4,11 @@
 
 #ifndef BEDROCK_LEVEL_BEDROCK_LEVEL_H
 #define BEDROCK_LEVEL_BEDROCK_LEVEL_H
-
 #include <functional>
 #include <map>
 #include <optional>
 #include <string>
+#include <tuple>
 
 #include "bedrock_key.h"
 #include "chunk.h"
@@ -36,6 +36,12 @@ namespace bl {
         chunk *get_chunk(const chunk_pos &cp);
 
         block_info get_block(const bl::block_pos &pos, int dim);
+
+        [[nodiscard]] std::tuple<chunk_pos, chunk_pos> get_range(int dim) const;
+
+        [[nodiscard]] inline size_t size_in_chunk() const {
+            return this->chunk_data_cache_.size();
+        };
 
        private:
         bool is_open_{false};

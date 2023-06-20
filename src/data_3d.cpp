@@ -60,7 +60,7 @@ namespace bl {
     bool data_3d::load(const byte_t *data, size_t len) {
         int index = 0;
         if (len < 512) {
-            BL_LOGGER("Invalid Data3d format");
+            BL_ERROR("Invalid Data3d format");
             return false;
         }
         memcpy(this->height_map_.data(), data, 512);

@@ -57,7 +57,7 @@ function(create_app name files)
     target_link_libraries(${name} PRIVATE bedrock-level)
 endfunction(create_app)
 
-create_app(level_dumper app/bedrock_level_dumper.cpp)
+create_app(biome_png app/biome_png.cpp)
 
 #testing
 

@@ -175,6 +175,22 @@ namespace bl {
         return this->x == p.x && this->dim == p.dim && this->z == p.z;
     }
 
+    block_pos chunk_pos::min_pos() const {
+        auto [y, _] = this->y_range();
+        return {this->x * 16, y, this->z * 16};
+    }
+    block_pos chunk_pos::max_pos() const {
+        auto [_, y] = this->y_range();
+        return {this->x * 16 + 15, y, this->z * 16 + 15};
+    }
+
+    std::tuple<int32_t, int32_t> chunk_pos::y_range() const {
+        if (this->dim == 0) return {-64, 319};
+        if (this->dim == 1) return {0, 127};
+        if (this->dim == 2) return {0, 255};
+        return {-1, -1};
+    }
+
     std::string chunk_key::to_string() const {
         auto type_info =
             chunk_key_to_str(type) + "(" + std::to_string(static_cast<int>(type)) + ")";

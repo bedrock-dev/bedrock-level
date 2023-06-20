@@ -82,3 +82,10 @@ TEST(BedrockLevel, ReadHeight) {
         printf("\n");
     }
 }
+
+TEST(BedrockLevel, getRange) {
+    bl::bedrock_level level;
+    EXPECT_TRUE(level.open("../data/worlds/a"));
+    auto [mi, ma] = level.get_range(0);
+    BL_ERROR("%s -- %s", mi.to_string().c_str(), ma.to_string().c_str());
+}

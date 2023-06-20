@@ -24,7 +24,7 @@ namespace bl {
             std::string raw;
             auto r = db->Get(leveldb::ReadOptions(), key.to_raw(), &raw);
             if (!r.ok()) {
-                throw std::runtime_error("Can not read sub chunk content. " + key.to_string());
+                BL_ERROR("[LevelDB] Can not read data . %s", key.to_string().c_str());
             }
             return raw;
         }
@@ -64,7 +64,7 @@ namespace bl {
     biome chunk::get_biome(int cx, int y, int cz) { return this->d3d_.get_biome(cx, y, cz); }
     void chunk::load_data(bedrock_level &level) {
         if (this->loaded()) return;
-        BL_LOGGER("Try load chunk %s", this->pos_.to_string().c_str());
+        //        BL_LOGGER("Try load chunk %s", this->pos_.to_string().c_str());
         auto &db = level.db();
         for (auto sub_index : this->sub_chunk_indexes_) {
             auto terrain_key = bl::chunk_key{chunk_key::SubChunkTerrain, this->pos_, sub_index};
@@ -80,7 +80,8 @@ namespace bl {
         auto d3d_key = bl::chunk_key{chunk_key::Data3D, this->pos_};
         std::string d3d_raw = load_raw(level.db(), d3d_key);
         if (!this->d3d_.load(d3d_raw.data(), d3d_raw.size())) {
-            throw std::runtime_error("Can not parse sub chunk content. " + d3d_key.to_string());
+            BL_ERROR("Can not parse sub chunk content. : %s", d3d_key.to_string().c_str());
+            return;
         }
 
         // TODO: load others (actor data3d block entities.etc)

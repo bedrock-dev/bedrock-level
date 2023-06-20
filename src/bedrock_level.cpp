@@ -26,6 +26,7 @@ namespace bl {
         auto res = this->read_level_dat() && this->read_db();
         if (!res) return false;
         this->cache_keys();
+        this->is_open_ = true;
         return true;
     }
 
@@ -134,5 +135,19 @@ namespace bl {
         auto *ch = this->get_chunk(cp);
         if (!ch) return {};
         return ch->get_block(off.x, pos.y, off.z);
+    }
+    std::tuple<chunk_pos, chunk_pos> bedrock_level::get_range(int dim) const {
+        int32_t minX{INT32_MAX};
+        int32_t minZ{INT32_MAX};
+        int32_t maxX{INT32_MIN};
+        int32_t maxZ{INT32_MIN};
+        for (auto &kv : this->chunk_data_cache_) {
+            if (kv.first.dim != dim) continue;
+            minX = std::min(minX, kv.first.x);
+            minZ = std::min(minZ, kv.first.z);
+            maxX = std::max(maxX, kv.first.x);
+            maxZ = std::max(maxZ, kv.first.z);
+        }
+        return {{minX, minZ, dim}, {maxX, maxZ, dim}};
     }
 }  // namespace bl
