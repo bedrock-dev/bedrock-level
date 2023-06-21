@@ -95,3 +95,5 @@ create_test(chunk_test tests/chunk_test.cpp)
 create_test(stb_image_test tests/stb_image_test.cpp)
 create_test(color_test tests/color_test.cpp)
 
+create_test(level_dat_test tests/level_dat_test.cpp)
+

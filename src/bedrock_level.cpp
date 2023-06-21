@@ -24,35 +24,11 @@ namespace bl {
 
     bool bedrock_level::open(const std::string &root) {
         this->root_name_ = root;
-        auto res = this->read_level_dat() && this->read_db();
+        auto res = this->dat_.load(this->root_name_ + "/" + LEVEL_DATA) && this->read_db();
         if (!res) return false;
         this->cache_keys();
         this->is_open_ = true;
         return this->is_open_;
-    }
-
-    bool bedrock_level::read_level_dat() {
-        using namespace nbt;
-        const std::string level_data_path = this->root_name_ + "/" + LEVEL_DATA;
-        std::ifstream dat(level_data_path);
-        if (!dat) {
-            BL_ERROR("Can not read dat file %s", level_data_path.c_str());
-            return false;
-        }
-        try {
-            char header[8];
-            dat.read(header, 8);
-            nbt::tags::compound_tag root;
-            dat >> contexts::bedrock_disk >> root;
-            this->level_dat_ = dynamic_cast<tags::compound_tag *>(root.value.at("").get());
-            if (!this->level_dat_) {
-                BL_ERROR("Invalid level.dat Format");
-            }
-        } catch (const std::exception &e) {
-            BL_ERROR("Invalid level.dat Format: %s", e.what());
-            return false;
-        }
-        return true;
     }
 
     bool bedrock_level::read_db() {  // NOLINT
@@ -157,14 +133,4 @@ namespace bl {
         return {{minX, minZ, dim}, {maxX, maxZ, dim}};
     }
 
-    void bedrock_level::dump_level_dat() const { this->level_dat_->write(std::cout); }
-    block_pos bedrock_level::get_spawn_position() {
-        if (!this->level_dat_) {
-            BL_ERROR("Invalid TAG");
-            return {0, 0, 0};
-        }
-        using namespace nbt;
-
-        return {0, 0, 0};
-    }
 }  // namespace bl

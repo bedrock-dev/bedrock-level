@@ -12,6 +12,7 @@
 
 #include "bedrock_key.h"
 #include "chunk.h"
+#include "level_dat.h"
 #include "leveldb/db.h"
 #include "nbt-cpp/nbt.hpp"
 
@@ -43,24 +44,22 @@ namespace bl {
             return this->chunk_data_cache_.size();
         };
 
-        [[nodiscard]] block_pos get_spawn_position();
-
-        void dump_level_dat() const;
+        level_dat &dat() { return this->dat_; }
 
        private:
         bool is_open_{false};
-        leveldb::DB *db_{nullptr};
-        std::string root_name_;
 
-        nbt::tags::compound_tag *level_dat_;
+        level_dat dat_;
+
+        leveldb::DB *db_{nullptr};
+
+        std::string root_name_;
 
         std::map<chunk_pos, chunk *> chunk_data_cache_;
 
         void cache_keys();
 
        private:
-        bool read_level_dat();
-
         bool read_db();
 
         static const std::string LEVEL_DATA;
