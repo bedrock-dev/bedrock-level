@@ -9,9 +9,9 @@
 #include "data_3d.h"
 namespace bl {
     struct color {
-        uint8_t r{0};
-        uint8_t g{0};
-        uint8_t b{0};
+        uint8_t r{255};
+        uint8_t g{255};
+        uint8_t b{255};
     };
 
     //    std::array<color, biome::LEN> biome_color_palette();

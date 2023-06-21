@@ -10,6 +10,29 @@
 #include "sub_chunk.h"
 #include "utils.h"
 
+const std::string root = R"(C:\Users\xhy\dev\bedrock-level\data\worlds\a)";
+
+TEST(BedrockLevel, DataFile) {
+    bl::bedrock_level level;
+    if (!level.open(root)) {
+        BL_ERROR("Can not open file %s", root.c_str());
+        return;
+    }
+
+    level.dump_level_dat();
+}
+
+TEST(BedrockLevel, SpawnPosition) {
+    bl::bedrock_level level;
+    if (!level.open(root)) {
+        BL_ERROR("Can not open file %s", root.c_str());
+        return;
+    }
+
+    auto b = level.get_spawn_position();
+    BL_LOGGER("%d %d %d", b.x, b.y, b.z);
+}
+
 TEST(BedrockLevel, TraverseKey) {
     using namespace bl;
     bl::bedrock_level level;

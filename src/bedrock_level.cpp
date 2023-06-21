@@ -5,6 +5,7 @@
 #include "bedrock_level.h"
 
 #include <fstream>
+#include <iostream>
 
 #include "bedrock_key.h"
 #include "bit_tools.h"
@@ -27,7 +28,7 @@ namespace bl {
         if (!res) return false;
         this->cache_keys();
         this->is_open_ = true;
-        return true;
+        return this->is_open_;
     }
 
     bool bedrock_level::read_level_dat() {
@@ -41,7 +42,12 @@ namespace bl {
         try {
             char header[8];
             dat.read(header, 8);
-            dat >> contexts::bedrock_disk >> this->level_dat_;
+            nbt::tags::compound_tag root;
+            dat >> contexts::bedrock_disk >> root;
+            this->level_dat_ = dynamic_cast<tags::compound_tag *>(root.value.at("").get());
+            if (!this->level_dat_) {
+                BL_ERROR("Invalid level.dat Format");
+            }
         } catch (const std::exception &e) {
             BL_ERROR("Invalid level.dat Format: %s", e.what());
             return false;
@@ -149,5 +155,16 @@ namespace bl {
             maxZ = std::max(maxZ, kv.first.z);
         }
         return {{minX, minZ, dim}, {maxX, maxZ, dim}};
+    }
+
+    void bedrock_level::dump_level_dat() const { this->level_dat_->write(std::cout); }
+    block_pos bedrock_level::get_spawn_position() {
+        if (!this->level_dat_) {
+            BL_ERROR("Invalid TAG");
+            return {0, 0, 0};
+        }
+        using namespace nbt;
+
+        return {0, 0, 0};
     }
 }  // namespace bl

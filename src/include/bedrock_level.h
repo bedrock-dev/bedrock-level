@@ -43,12 +43,16 @@ namespace bl {
             return this->chunk_data_cache_.size();
         };
 
+        [[nodiscard]] block_pos get_spawn_position();
+
+        void dump_level_dat() const;
+
        private:
         bool is_open_{false};
         leveldb::DB *db_{nullptr};
         std::string root_name_;
 
-        nbt::tags::compound_tag level_dat_;
+        nbt::tags::compound_tag *level_dat_;
 
         std::map<chunk_pos, chunk *> chunk_data_cache_;
 

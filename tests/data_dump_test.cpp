@@ -11,7 +11,8 @@
 #include "bedrock_level.h"
 #include "utils.h"
 
-const std::string TEST_WORLD_ROOT = R"(C:\Users\xhy\dev\bedrock-level\data\worlds\a)";
+const std::string TEST_WORLD_ROOT =
+    R"(C:\Users\xhy\AppData\Local\Packages\Microsoft.MinecraftUWP_8wekyb3d8bbwe\LocalState\games\com.mojang\minecraftWorlds\UJ2RZHWAAAA=)";
 const std::string DUMP_ROOT = R"(C:\Users\xhy\dev\bedrock-level\data\dumps\)";
 
 TEST(BedrockLevel, SimpleOpen) {

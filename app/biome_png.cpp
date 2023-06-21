@@ -9,11 +9,12 @@
 int main() {
     bl::init_biome_color_palette_from_file(
         R"(C:\Users\xhy\dev\bedrock-level\data\colors\biome.json)");
+    //
+    //    const std::string level =
+    //        R"(C:\Users\xhy\AppData\Local\Packages\Microsoft.MinecraftUWP_8wekyb3d8bbwe\LocalState\games\com.mojang\minecraftWorlds\UJ2RZHWAAAA=)";
 
-    const std::string level =
-        R"(C:\Users\xhy\AppData\Local\Packages\Microsoft.MinecraftUWP_8wekyb3d8bbwe\LocalState\games\com.mojang\minecraftWorlds\UJ2RZHWAAAA=)";
+    const std::string level = R"(C:\Users\xhy\Desktop\b)";
 
-    //    const std::string level = R"(C:\Users\xhy\Desktop\t)";
     bl::bedrock_level l;
     l.open(level);
     if (!l.is_open()) {
