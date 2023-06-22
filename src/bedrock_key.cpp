@@ -175,20 +175,26 @@ namespace bl {
         return this->x == p.x && this->dim == p.dim && this->z == p.z;
     }
 
-    block_pos chunk_pos::min_pos() const {
-        auto [y, _] = this->y_range();
+    block_pos chunk_pos::get_min_pos() const {
+        auto [y, _] = this->get_y_range();
         return {this->x * 16, y, this->z * 16};
     }
-    block_pos chunk_pos::max_pos() const {
-        auto [_, y] = this->y_range();
+    block_pos chunk_pos::get_max_pos() const {
+        auto [_, y] = this->get_y_range();
         return {this->x * 16 + 15, y, this->z * 16 + 15};
     }
 
-    std::tuple<int32_t, int32_t> chunk_pos::y_range() const {
+    std::tuple<int32_t, int32_t> chunk_pos::get_y_range() const {
         if (this->dim == 0) return {-64, 319};
         if (this->dim == 1) return {0, 127};
         if (this->dim == 2) return {0, 255};
-        return {-1, -1};
+        return {0, -1};
+    }
+    std::tuple<int8_t , int8_t> chunk_pos::get_subchunk_index_range() const {
+        if (this->dim == 0) return {-4, 19};
+        if (this->dim == 1) return {0, 7};
+        if (this->dim == 2) return {0, 15};
+        return {0, -1};
     }
 
     std::string chunk_key::to_string() const {

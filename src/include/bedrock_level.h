@@ -32,15 +32,13 @@ namespace bl {
 
         ~bedrock_level();
 
-        void for_each_chunk_pos(const std::function<void(const chunk_pos &cp)> &f);
-
         chunk *get_chunk(const chunk_pos &cp);
 
         block_info get_block(const bl::block_pos &pos, int dim);
 
         [[nodiscard]] std::tuple<chunk_pos, chunk_pos> get_range(int dim) const;
 
-        [[nodiscard]] inline size_t size_in_chunk() const {
+        [[nodiscard]] inline size_t cached_chunk_size() const {
             return this->chunk_data_cache_.size();
         };
 

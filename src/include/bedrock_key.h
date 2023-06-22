@@ -28,10 +28,12 @@ namespace bl {
 
         bool operator<(const chunk_pos &rhs) const;
 
-        [[nodiscard]] std::tuple<int32_t, int32_t> y_range() const;
+        [[nodiscard]] std::tuple<int32_t, int32_t> get_y_range() const;
 
-        [[nodiscard]] block_pos min_pos() const;
-        [[nodiscard]] block_pos max_pos() const;
+        [[nodiscard]] std::tuple<int8_t, int8_t> get_subchunk_index_range() const;
+
+        [[nodiscard]] block_pos get_min_pos() const;
+        [[nodiscard]] block_pos get_max_pos() const;
     };
 
     struct block_pos {

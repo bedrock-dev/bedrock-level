@@ -24,10 +24,8 @@ namespace bl {
 
     bool bedrock_level::open(const std::string &root) {
         this->root_name_ = root;
-        auto res = this->dat_.load(this->root_name_ + "/" + LEVEL_DATA) && this->read_db();
-        if (!res) return false;
-        this->cache_keys();
-        this->is_open_ = true;
+        this->is_open_ = this->dat_.load(this->root_name_ + "/" + LEVEL_DATA) && this->read_db();
+        //        this->cache_keys();
         return this->is_open_;
     }
 
@@ -93,20 +91,20 @@ namespace bl {
             BL_ERROR("Invalid Chunk position %s", cp.to_string().c_str());
             return nullptr;
         }
+
         auto it = this->chunk_data_cache_.find(cp);
-        if (it == this->chunk_data_cache_.end()) {
-            return nullptr;
-        } else {
-            // lazy load
-            it->second->load_data(*this);
+        if (it != this->chunk_data_cache_.end()) {
             return it->second;
         }
-    }
 
-    void bedrock_level::for_each_chunk_pos(const std::function<void(const chunk_pos &)> &f) {
-        for (auto &kv : this->chunk_data_cache_) {
-            f(kv.first);
+        auto *ch = new bl::chunk(cp);
+        ch->load_data(*this);
+        if (ch->loaded()) {
+            this->chunk_data_cache_[cp] = ch;
+            return ch;
         }
+        delete ch;
+        return nullptr;
     }
 
     block_info bedrock_level::get_block(const block_pos &pos, int dim) {

@@ -20,13 +20,9 @@ namespace bl {
      */
 
     namespace {
-        std::string load_raw(leveldb::DB *&db, const chunk_key &key) {
-            std::string raw;
+        bool load_raw(leveldb::DB *&db, const chunk_key &key, std::string &raw) {
             auto r = db->Get(leveldb::ReadOptions(), key.to_raw(), &raw);
-            if (!r.ok()) {
-                BL_ERROR("[LevelDB] Can not read data . %s", key.to_string().c_str());
-            }
-            return raw;
+            return r.ok();
         }
     }  // namespace
 
@@ -66,26 +62,37 @@ namespace bl {
         if (this->loaded()) return;
         //        BL_LOGGER("Try load chunk %s", this->pos_.to_string().c_str());
         auto &db = level.db();
-        for (auto sub_index : this->sub_chunk_indexes_) {
-            auto terrain_key = bl::chunk_key{chunk_key::SubChunkTerrain, this->pos_, sub_index};
-            auto raw = load_raw(level.db(), terrain_key);
-            bl::sub_chunk sb;
-            if (!sb.load(raw.data(), raw.size())) {
-                throw std::runtime_error("Can not parse sub chunk content. " +
-                                         terrain_key.to_string());
-            }
-            this->sub_chunks_[sub_index] = sb;
-        }
 
-        auto d3d_key = bl::chunk_key{chunk_key::Data3D, this->pos_};
-        std::string d3d_raw = load_raw(level.db(), d3d_key);
-        if (!this->d3d_.load(d3d_raw.data(), d3d_raw.size())) {
-            BL_ERROR("Can not parse sub chunk content. : %s", d3d_key.to_string().c_str());
+        auto [min_index, max_index] = this->pos_.get_subchunk_index_range();
+        // load all sub chunks
+        for (auto sub_index = min_index; sub_index <= max_index; sub_index++) {
+            auto terrain_key = bl::chunk_key{chunk_key::SubChunkTerrain, this->pos_, sub_index};
+            std::string raw;
+            if (load_raw(level.db(), terrain_key, raw)) {
+                bl::sub_chunk sb;
+                if (!sb.load(raw.data(), raw.size())) {
+                    BL_ERROR("Can not parse sub chunk content. %s",
+                             terrain_key.to_string().c_str());
+                } else {
+                    this->sub_chunks_[sub_index] = sb;
+                }
+            }
+        }
+        if (this->sub_chunks_.empty()) {
+            // 没有key实锤了(应该不会出现没有方块数据但是有群系信息的区块)
             return;
         }
 
+        auto d3d_key = bl::chunk_key{chunk_key::Data3D, this->pos_};
+        std::string d3d_raw;
+        if (load_raw(level.db(), d3d_key, d3d_raw) &&
+            this->d3d_.load(d3d_raw.data(), d3d_raw.size())) {
+            this->loaded_ = true;
+        } else {
+            BL_ERROR("Can not load Data3D data %s", this->pos_.to_string().c_str());
+        }
+        this->loaded_ = true;
         // TODO: load others (actor data3d block entities.etc)
-        loaded_ = true;
     }
 
     int chunk::get_height(int cx, int cz) { return this->d3d_.height(cx, cz); }
