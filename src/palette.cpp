@@ -218,7 +218,6 @@ namespace bl::palette {
 
     compound_tag::~compound_tag() {
         for (auto &kv : this->value) {
-            BL_ERROR("Delete Key");
             delete kv.second;
         }
     }

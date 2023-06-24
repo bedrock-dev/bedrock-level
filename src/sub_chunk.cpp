@@ -43,7 +43,8 @@ namespace bl {
                 int r = 0;
                 auto *tag = bl::palette::read_one_palette(stream + read, r);
                 if (tag) {
-                    layer->palettes.push_back(tag);
+                    delete tag;
+                    layer->palettes.push_back(nullptr);
                 } else {
                     throw std::runtime_error("Error read palette");
                 }
@@ -52,30 +53,30 @@ namespace bl {
             return true;
         }
 
-        bool read_one_layer(sub_chunk *sub_chunk, const byte_t *stream, size_t len, int &read) {
+        bool read_one_layer(bl::sub_chunk::layer *layer, const byte_t *stream, size_t len,
+                            int &read) {
             read = 0;
             constexpr auto BLOCK_NUM = 16 * 16 * 16;
-            if (!sub_chunk || !stream) return false;
-            bl::sub_chunk::layer layer;
+            if (!layer || !stream) return false;
             auto layer_header = stream[0];
             read++;
-            layer.type = layer_header & 0x1;
-            layer.bits = layer_header >> 1u;
+            layer->type = layer_header & 0x1;
+            layer->bits = layer_header >> 1u;
 
-            if (layer.bits != 0) {
-                int block_per_word = 32 / layer.bits;
+            if (layer->bits != 0) {
+                int block_per_word = 32 / layer->bits;
                 auto wordCount = BLOCK_NUM / block_per_word;
                 if (BLOCK_NUM % block_per_word != 0) wordCount++;
-                layer.blocks.resize(BLOCK_NUM);
+                layer->blocks.resize(BLOCK_NUM);
                 int position = 0;
                 for (int wordi = 0; wordi < wordCount; wordi++) {
                     auto word = *reinterpret_cast<const int *>(stream + read + wordi * 4);
                     //                    endian_swap(word);
                     for (int block = 0; block < block_per_word; block++) {
-                        int state = (word >> ((position % block_per_word) * layer.bits)) &
-                                    ((1 << layer.bits) - 1);
-                        if (position < layer.blocks.size()) {
-                            layer.blocks[position] = state;
+                        int state = (word >> ((position % block_per_word) * layer->bits)) &
+                                    ((1 << layer->bits) - 1);
+                        if (position < layer->blocks.size()) {
+                            layer->blocks[position] = state;
                         }
                         position++;
                     }
@@ -84,9 +85,9 @@ namespace bl {
                 read += wordCount << 2;
                 int palette_len = *reinterpret_cast<const int *>(stream + read);
                 //                endian_swap(palette_len);
-                layer.palette_len = palette_len;
-                for (auto i : layer.blocks) {
-                    if (i >= layer.palette_len) {
+                layer->palette_len = palette_len;
+                for (auto i : layer->blocks) {
+                    if (i >= layer->palette_len) {
                         BL_ERROR("Invalid block state %d", i);
                     }
                 }
@@ -96,14 +97,13 @@ namespace bl {
 
             } else {
                 // uniform
-                layer.blocks = std::vector<uint16_t>(4096, 0);
-                layer.palette_len = 1;
+                layer->blocks = std::vector<uint16_t>(4096, 0);
+                layer->palette_len = 1;
             }
             // palette header
             int palette_read = 0;
-            read_palettes(&layer, stream + read, layer.palette_len, len - read, palette_read);
+            read_palettes(layer, stream + read, layer->palette_len, len - read, palette_read);
             read += palette_read;
-            sub_chunk->push_back_layer(layer);
             return true;
         }
     }  // namespace
@@ -114,7 +114,8 @@ namespace bl {
         if (!read_header(this, data, read)) return false;
         idx += read;
         for (auto i = 0; i < (int)this->layers_num_; i++) {
-            if (!read_one_layer(this, data + idx, len - idx, read)) {
+            this->layers_.emplace_back();
+            if (!read_one_layer(&this->layers_.back(), data + idx, len - idx, read)) {
                 BL_ERROR("can not read layer %d", i);
                 return false;
             }
@@ -177,5 +178,8 @@ namespace bl {
 
     sub_chunk::layer::~layer() {
         // TODO
+        for (auto &p : this->palettes) {
+            delete p;
+        }
     }
 }  // namespace bl

@@ -20,13 +20,14 @@ int main() {
     level.set_cache(false);
 
     auto spawn_pos = level.dat().spawn_position();
-    auto cp = bl::chunk_pos{-80, 3, 0};
-
+    auto cp = spawn_pos.to_chunk_pos();
+    cp.dim = 0;
     auto *chunk = level.get_chunk(cp);
     if (chunk) {
         delete chunk;
         BL_LOGGER("Chunk valid!");
     }
+
     //    auto center_chunk_pos = spawn_pos.to_chunk_pos();
 
     //    const int DIM = 0;

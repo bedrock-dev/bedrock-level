@@ -54,10 +54,8 @@ namespace bl::palette {
     };
 
     struct compound_tag : public abstract_tag {
-        compound_tag() = delete;
-
         explicit compound_tag(const std::string &key) : abstract_tag(key) {}
-
+        compound_tag() : compound_tag("") {}
         [[nodiscard]] tag_type type() const override { return Compound; }
 
         void write(std::ostream &o, int indent) override {

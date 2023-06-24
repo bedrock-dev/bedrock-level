@@ -8,6 +8,7 @@
 #include <array>
 #include <cstdint>
 #include <cstdio>
+#include <memory>
 #include <vector>
 
 #include "palette.h"
@@ -20,10 +21,10 @@ namespace bl {
     class sub_chunk {
        public:
         struct layer {
-            uint8_t bits;
-            uint8_t type;
-            uint32_t palette_len;
-            std::vector<uint16_t> blocks;
+            uint8_t bits{};
+            uint8_t type{};
+            uint32_t palette_len{};
+            std::vector<uint16_t> blocks{};
             std::vector<palette::compound_tag *> palettes;
 
             ~layer();
