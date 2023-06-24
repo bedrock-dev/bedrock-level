@@ -43,6 +43,16 @@ namespace bl {
         };
 
         level_dat &dat() { return this->dat_; }
+        // 开关内部缓存
+
+        inline void set_cache(bool enable) {
+            this->enable_cache_ = enable;
+            if (!this->enable_cache_) {
+                for (auto &kv : this->chunk_data_cache_) {
+                    delete kv.second;
+                }
+            }
+        }
 
        private:
         bool is_open_{false};
@@ -59,6 +69,8 @@ namespace bl {
 
        private:
         bool read_db();
+
+        bool enable_cache_{true};
 
         static const std::string LEVEL_DATA;
         static const std::string LEVEL_DB;

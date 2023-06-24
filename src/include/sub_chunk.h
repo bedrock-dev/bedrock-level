@@ -25,6 +25,8 @@ namespace bl {
             uint32_t palette_len;
             std::vector<uint16_t> blocks;
             std::vector<palette::compound_tag *> palettes;
+
+            ~layer();
         };
 
         block_info get_block(int rx, int ry, int rz);

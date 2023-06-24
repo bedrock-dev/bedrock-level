@@ -175,4 +175,7 @@ namespace bl {
         return {dynamic_cast<bl::palette::string_tag *>(id->second)->value};
     }
 
+    sub_chunk::layer::~layer() {
+        // TODO
+    }
 }  // namespace bl

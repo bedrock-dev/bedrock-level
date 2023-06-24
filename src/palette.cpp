@@ -165,10 +165,11 @@ namespace bl::palette {
         auto r = read_nbt(data, read);
         if (!r || r->type() != tag_type::Compound) {
             BL_ERROR("Invalid palette format");
+            delete r;
+            return nullptr;
         } else {
             return dynamic_cast<compound_tag *>(r);
         }
-        return nullptr;
     }
 
     std::string tag_type_to_str(tag_type type) {
@@ -215,4 +216,15 @@ namespace bl::palette {
         return res;
     }
 
+    compound_tag::~compound_tag() {
+        for (auto &kv : this->value) {
+            BL_ERROR("Delete Key");
+            delete kv.second;
+        }
+    }
+    list_tag::~list_tag() {
+        for (auto tag : this->value) {
+            delete tag;
+        }
+    }
 }  // namespace bl::palette

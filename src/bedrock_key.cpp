@@ -4,8 +4,9 @@
 
 #include "bedrock_key.h"
 
-#include "utils.h"
+#include <random>
 
+#include "utils.h"
 namespace bl {
 
     const chunk_key chunk_key::INVALID_CHUNK_KEY = chunk_key{chunk_key::Unknown, 0, 0, 0, 0};
@@ -190,11 +191,16 @@ namespace bl {
         if (this->dim == 2) return {0, 255};
         return {0, -1};
     }
-    std::tuple<int8_t , int8_t> chunk_pos::get_subchunk_index_range() const {
+    std::tuple<int8_t, int8_t> chunk_pos::get_subchunk_index_range() const {
         if (this->dim == 0) return {-4, 19};
         if (this->dim == 1) return {0, 7};
         if (this->dim == 2) return {0, 15};
         return {0, -1};
+    }
+    bool chunk_pos::is_slime() const {
+        auto seed = (x * 0x1f1f1f1fu) ^ (uint32_t)z;
+        std::mt19937 mt(seed);
+        return mt() % 10 == 0;
     }
 
     std::string chunk_key::to_string() const {

@@ -6,14 +6,13 @@
 #define BEDROCK_LEVEL_PALETTE_H
 
 #include <map>
-#include <vector>
 #include <ostream>
 #include <string>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include "utils.h"
-
 
 namespace bl::palette {
 
@@ -34,7 +33,7 @@ namespace bl::palette {
     std::string tag_type_to_str(tag_type type);
 
     struct abstract_tag {
-    public:
+       public:
         explicit abstract_tag(std::string key) : key_(std::move(key)) {}
 
         [[nodiscard]] virtual tag_type type() const = 0;
@@ -48,7 +47,9 @@ namespace bl::palette {
 
         [[nodiscard]] std::string key() const { return this->key_; }
 
-    protected:
+        virtual ~abstract_tag() = default;
+
+       protected:
         std::string key_;
     };
 
@@ -62,7 +63,7 @@ namespace bl::palette {
         void write(std::ostream &o, int indent) override {
             abstract_tag::write(o, indent);
             o << "{\n";
-            for (auto &kv: this->value) {
+            for (auto &kv : this->value) {
                 kv.second->write(o, indent + 4);
             }
 
@@ -71,6 +72,8 @@ namespace bl::palette {
             }
             o << "}\n";
         }
+
+        ~compound_tag() override;
 
         std::map<std::string, abstract_tag *> value;
     };
@@ -87,6 +90,7 @@ namespace bl::palette {
             o << "'" << this->value << "'" << std::endl;
         }
 
+        ~string_tag() override = default;
         std::string value;
     };
 
@@ -101,7 +105,7 @@ namespace bl::palette {
             abstract_tag::write(o, indent);
             o << this->value << std::endl;
         }
-
+        ~int_tag() override = default;
         int32_t value{};
     };
 
@@ -116,7 +120,7 @@ namespace bl::palette {
             abstract_tag::write(o, indent);
             o << this->value << std::endl;
         }
-
+        ~short_tag() override = default;
         int16_t value{};
     };
 
@@ -131,10 +135,10 @@ namespace bl::palette {
             abstract_tag::write(o, indent);
             o << this->value << std::endl;
         }
+        ~long_tag() override = default;
 
         int64_t value{};
     };
-
 
     struct float_tag : public abstract_tag {
         float_tag() = delete;
@@ -147,10 +151,9 @@ namespace bl::palette {
             abstract_tag::write(o, indent);
             o << this->value << std::endl;
         }
-
+        ~float_tag() override = default;
         float value{};
     };
-
 
     struct double_tag : public abstract_tag {
         double_tag() = delete;
@@ -163,10 +166,10 @@ namespace bl::palette {
             abstract_tag::write(o, indent);
             o << this->value << std::endl;
         }
+        ~double_tag() override = default;
 
         double value{};
     };
-
 
     struct byte_tag : public abstract_tag {
         byte_tag() = delete;
@@ -179,7 +182,7 @@ namespace bl::palette {
             abstract_tag::write(o, indent);
             o << static_cast<int>(this->value) << std::endl;
         }
-
+        ~byte_tag() override = default;
         uint8_t value{};
     };
 
@@ -194,7 +197,7 @@ namespace bl::palette {
             abstract_tag::write(o, indent);
             o << "[" << this->size << "] ";
             o << "{\n";
-            for (auto &tag: this->value) {
+            for (auto &tag : this->value) {
                 tag->write(o, indent + 4);
             }
             if (indent != 0) {
@@ -202,11 +205,10 @@ namespace bl::palette {
             }
             o << "}\n";
         }
-
+        ~list_tag() override;
         std::vector<abstract_tag *> value;
         int32_t size{0};
     };
-
 
     [[maybe_unused]] compound_tag *read_one_palette(const byte_t *data, int &read);
 

@@ -92,18 +92,25 @@ namespace bl {
             return nullptr;
         }
 
-        auto it = this->chunk_data_cache_.find(cp);
-        if (it != this->chunk_data_cache_.end()) {
-            return it->second;
+        if (this->enable_cache_) {
+            auto it = this->chunk_data_cache_.find(cp);
+            if (it != this->chunk_data_cache_.end()) {
+                return it->second;
+            }
+
+            goto L;
         }
+    L:
 
         auto *ch = new bl::chunk(cp);
         ch->load_data(*this);
         if (ch->loaded()) {
-            this->chunk_data_cache_[cp] = ch;
+            if (this->enable_cache_) {
+                this->chunk_data_cache_[cp] = ch;
+            }
             return ch;
         }
-        delete ch;
+        //        delete ch;
         return nullptr;
     }
 

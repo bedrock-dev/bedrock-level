@@ -60,8 +60,6 @@ namespace bl {
     biome chunk::get_biome(int cx, int y, int cz) { return this->d3d_.get_biome(cx, y, cz); }
     void chunk::load_data(bedrock_level &level) {
         if (this->loaded()) return;
-        //        BL_LOGGER("Try load chunk %s", this->pos_.to_string().c_str());
-        auto &db = level.db();
 
         auto [min_index, max_index] = this->pos_.get_subchunk_index_range();
         // load all sub chunks
@@ -91,6 +89,7 @@ namespace bl {
         } else {
             BL_ERROR("Can not load Data3D data %s", this->pos_.to_string().c_str());
         }
+
         this->loaded_ = true;
         // TODO: load others (actor data3d block entities.etc)
     }

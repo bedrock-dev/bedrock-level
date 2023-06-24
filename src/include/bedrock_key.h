@@ -34,6 +34,8 @@ namespace bl {
 
         [[nodiscard]] block_pos get_min_pos() const;
         [[nodiscard]] block_pos get_max_pos() const;
+
+        bool is_slime() const;
     };
 
     struct block_pos {

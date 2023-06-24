@@ -20,3 +20,10 @@ TEST(Palette, readPendingTick) {
         p->write(std::cout, 0);
     }
 }
+
+TEST(Palette, memoryFree) {
+    using namespace bl::palette;
+    auto* t = new compound_tag("key");
+    t->value["x"] = new int_tag("name");
+    delete t;
+}

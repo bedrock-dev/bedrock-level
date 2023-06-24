@@ -14,7 +14,7 @@
 namespace bl {
 
     // clang-format off
-    enum biome {
+    enum biome  {
         ocean                            = 0,
         plains                           = 1,
         desert                           = 2,
@@ -104,30 +104,32 @@ namespace bl {
         none                             = 255,
         LEN,
     };
-    // clang-format on
+// clang-format on
 
-    class data_3d {
-       public:
-        bool load(const byte_t *data, size_t len);
-        void dump_to_file(FILE *fp) const;
+class data_3d {
+   public:
+    bool load(const byte_t *data, size_t len);
+    void dump_to_file(FILE *fp) const;
 
-        inline int height(int x, int z) { return this->height_map_[x * 16 + z] - int16_t{64}; }
+    inline int height(int x, int z) {
+        return this->height_map_[x * 16 + z] - int16_t{64};
+    }
 
-        [[nodiscard]] inline std::array<int16_t, 256> height_map() const {
-            return this->height_map_;
-        }
+    [[nodiscard]] inline std::array<int16_t, 256> height_map() const {
+        return this->height_map_;
+    }
 
-        biome get_biome(int cx, int y, int cz);
+    biome get_biome(int cx, int y, int cz);
 
-        std::array<std::array<biome, 16>, 16> get_biome_y(int y);
+    std::array<std::array<biome, 16>, 16> get_biome_y(int y);
 
-        biome get_top_biome(int cx, int cz);
+    biome get_top_biome(int cx, int cz);
 
-       private:
-        std::array<int16_t, 256> height_map_;
-        std::vector<std::array<std::array<biome, 16>, 16>> biomes_;
-        int dim{0};
-    };
+   private:
+    std::array<int16_t, 256> height_map_;
+    std::vector<std::array<std::array<biome, 16>, 16>> biomes_;
+    int dim{0};
+};
 }  // namespace bl
 
 #endif  // BEDROCK_LEVEL_DATA_3D_H
