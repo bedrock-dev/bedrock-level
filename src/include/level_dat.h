@@ -16,17 +16,18 @@ namespace bl {
         [[nodiscard]] inline uint64_t storage_version() const { return this->storage_version_; }
         [[nodiscard]] inline std::string level_name() const { return this->level_name_; }
 
-        [[nodiscard]] const nbt::tags::compound_tag* root() const { return this->root_; }
+        [[nodiscard]] const nbt::tags::compound_tag& root() const { return this->root_; }
+        ~level_dat();
 
        private:
         bool preload_data();
+
+       private:
         bool loaded_{false};
         block_pos spawn_position_{0, 0, 0};
-        //        uint64_t seed_{0};
         std::string level_name_;
         int storage_version_{10};
-        nbt::tags::compound_tag* root_{nullptr};
-        //  Add others if needed
+        nbt::tags::compound_tag root_;
     };
 }  // namespace bl
 

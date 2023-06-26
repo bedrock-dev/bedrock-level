@@ -14,3 +14,10 @@ TEST(LevelDat, Load) {
     BL_LOGGER("Level name: %s", dat.level_name().c_str());
     BL_LOGGER("Storage Version: %d", dat.storage_version());
 }
+
+TEST(LevelDat, MemoryFree) {
+    const std::string path = R"(C:\Users\xhy\dev\bedrock-level\data\worlds\a\level.dat)";
+    auto *dat = new bl::level_dat;
+    EXPECT_TRUE(dat->load(path));
+    delete dat;
+}

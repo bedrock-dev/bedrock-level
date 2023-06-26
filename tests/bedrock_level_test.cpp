@@ -78,3 +78,10 @@ TEST(BedrockLevel, getRange) {
     auto [mi, ma] = level.get_range(0);
     BL_ERROR("%s -- %s", mi.to_string().c_str(), ma.to_string().c_str());
 }
+TEST(BedrockLevel, CloseAndOpen) {
+    bl::bedrock_level level;
+    EXPECT_TRUE(level.open(root));
+    level.close();
+    EXPECT_TRUE(level.open(root));
+    level.close();
+}

@@ -8,8 +8,6 @@
 
 namespace bl::palette {
 
-#define MEM_CHECK(ptr) Assert(data + 1, "Memory out of bound.")
-
     namespace {
         int read_string(const byte_t *data, std::string &val) {
             uint16_t len = *reinterpret_cast<const uint16_t *>(data);

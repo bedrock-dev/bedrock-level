@@ -66,7 +66,7 @@ namespace bl {
             BL_ERROR("Invalid Data3d format");
             return false;
         }
-
+        
         memcpy(this->height_map_.data(), data, 512);
         index += 512;
         while (index < len) {

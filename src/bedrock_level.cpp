@@ -25,7 +25,6 @@ namespace bl {
     bool bedrock_level::open(const std::string &root) {
         this->root_name_ = root;
         this->is_open_ = this->dat_.load(this->root_name_ + "/" + LEVEL_DATA) && this->read_db();
-        //        this->cache_keys();
         return this->is_open_;
     }
 
@@ -44,7 +43,7 @@ namespace bl {
         return status.ok();
     }
 
-    bedrock_level::~bedrock_level() { delete this->db_; };
+    bedrock_level::~bedrock_level() { this->close(); };
 
     void bedrock_level::cache_keys() {
         leveldb::Iterator *it = db_->NewIterator(leveldb::ReadOptions());
@@ -52,36 +51,22 @@ namespace bl {
             auto raw_key = it->key().ToString();
             auto ck = bl::chunk_key::parse(it->key().ToString());
             if (ck.valid()) {
-                auto r = this->chunk_data_cache_.find(ck.cp);
-                if (r == this->chunk_data_cache_.end()) {
-                    auto *ch = new bl::chunk(ck.cp);
-                    if (ck.type == chunk_key::SubChunkTerrain) {
-                        ch->sub_chunk_indexes_.insert(ck.y_index);
-                    }
-                    this->chunk_data_cache_.insert(std::make_pair(ck.cp, ch));
-                } else {
-                    if (ck.type == chunk_key::SubChunkTerrain) {
-                        r->second->sub_chunk_indexes_.insert(ck.y_index);
-                    }
-                }
+            }
+
+            auto actor_key = bl::actor_key::parse(it->key().ToString());
+            if (actor_key.valid()) {
                 continue;
             }
 
-            //            auto actor_key = bl::actor_key::parse(it->key().ToString());
-            //            if (actor_key.valid()) {
-            //                continue;
-            //            }
-            //
-            //            auto digest_key = bl::actor_digest_key::parse(it->key().ToString());
-            //            if (digest_key.valid()) {
-            //                continue;
-            //            }
-            //
-            //            auto village_key = bl::village_key::parse(it->key().ToString());
-            //            if (village_key.valid()) {
-            //                continue;
-            //
-            //            }
+            auto digest_key = bl::actor_digest_key::parse(it->key().ToString());
+            if (digest_key.valid()) {
+                continue;
+            }
+
+            auto village_key = bl::village_key::parse(it->key().ToString());
+            if (village_key.valid()) {
+                continue;
+            }
         }
         delete it;
     }
@@ -110,7 +95,7 @@ namespace bl {
             }
             return ch;
         }
-        //        delete ch;
+        delete ch;
         return nullptr;
     }
 
@@ -123,6 +108,7 @@ namespace bl {
         if (!ch) return {};
         return ch->get_block(off.x, pos.y, off.z);
     }
+
     std::tuple<chunk_pos, chunk_pos> bedrock_level::get_range(int dim) const {
         int32_t minX{INT32_MAX};
         int32_t minZ{INT32_MAX};
@@ -136,6 +122,15 @@ namespace bl {
             maxZ = std::max(maxZ, kv.first.z);
         }
         return {{minX, minZ, dim}, {maxX, maxZ, dim}};
+    }
+    void bedrock_level::close() {
+        for (auto &kv : this->chunk_data_cache_) {
+            delete kv.second;
+        }
+        BL_LOGGER("Release Database");
+        delete this->db_;
+        this->db_ = nullptr;
+        this->is_open_ = false;
     }
 
 }  // namespace bl

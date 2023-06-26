@@ -28,9 +28,7 @@ namespace bl {
 
         leveldb::DB *&db() { return this->db_; }
 
-        inline void close() {}
-
-        ~bedrock_level();
+        void close();
 
         chunk *get_chunk(const chunk_pos &cp);
 
@@ -54,6 +52,8 @@ namespace bl {
             }
         }
 
+        ~bedrock_level();
+
        private:
         bool is_open_{false};
 
@@ -71,6 +71,8 @@ namespace bl {
         bool read_db();
 
         bool enable_cache_{true};
+
+        //        std::unordered_set<actor_key> keys_;
 
         static const std::string LEVEL_DATA;
         static const std::string LEVEL_DB;

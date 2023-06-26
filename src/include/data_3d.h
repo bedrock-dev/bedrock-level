@@ -111,7 +111,7 @@ namespace bl {
         bool load(const byte_t *data, size_t len);
         void dump_to_file(FILE *fp) const;
 
-        inline int height(int x, int z) { return this->height_map_[x * 16 + z]; }
+        inline int height(int x, int z) { return this->height_map_[x + z * 16]; }
 
         [[nodiscard]] inline std::array<int16_t, 256> height_map() const {
             return this->height_map_;

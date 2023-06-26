@@ -20,8 +20,8 @@ namespace bl {
      */
 
     namespace {
-        bool load_raw(leveldb::DB *&db, const chunk_key &key, std::string &raw) {
-            auto r = db->Get(leveldb::ReadOptions(), key.to_raw(), &raw);
+        bool load_raw(leveldb::DB *&db, const std::string &raw_key, std::string &raw) {
+            auto r = db->Get(leveldb::ReadOptions(), raw_key, &raw);
             return r.ok();
         }
     }  // namespace
@@ -58,40 +58,50 @@ namespace bl {
     }
 
     biome chunk::get_biome(int cx, int y, int cz) { return this->d3d_.get_biome(cx, y, cz); }
-    void chunk::load_data(bedrock_level &level) {
-        if (this->loaded()) return;
 
+    bool chunk::load_actor_digest(bedrock_level &level) {
+        bl::actor_digest_key key{this->pos_};
+        std::string raw;
+        // 没啥要解析的，不用管错误
+        load_raw(level.db(), key.to_raw(), raw);
+        this->actor_digest_list_.load(raw);
+        return false;
+    }
+
+    bool chunk::load_subchunks_(bedrock_level &level) {
         auto [min_index, max_index] = this->pos_.get_subchunk_index_range();
-        // load all sub chunks
         for (auto sub_index = min_index; sub_index <= max_index; sub_index++) {
+            // load all sub chunks
             auto terrain_key = bl::chunk_key{chunk_key::SubChunkTerrain, this->pos_, sub_index};
             std::string raw;
-            if (load_raw(level.db(), terrain_key, raw)) {
+            if (load_raw(level.db(), terrain_key.to_raw(), raw)) {
                 bl::sub_chunk sb;
                 if (!sb.load(raw.data(), raw.size())) {
-                    BL_ERROR("Can not parse sub chunk content. %s",
-                             terrain_key.to_string().c_str());
+                    return false;
                 } else {
                     this->sub_chunks_[sub_index] = sb;
                 }
             }
         }
-        if (this->sub_chunks_.empty()) {
-            // 没有key实锤了(应该不会出现没有方块数据但是有群系信息的区块)
-            return;
-        }
 
+        return true;
+    }
+    bool chunk::load_d3d(bedrock_level &level) {
         auto d3d_key = bl::chunk_key{chunk_key::Data3D, this->pos_};
         std::string d3d_raw;
-        if (load_raw(level.db(), d3d_key, d3d_raw) &&
+        if (load_raw(level.db(), d3d_key.to_raw(), d3d_raw) &&
             this->d3d_.load(d3d_raw.data(), d3d_raw.size())) {
-            this->loaded_ = true;
+            return true;
         } else {
-            BL_ERROR("Can not load Data3D data %s", this->pos_.to_string().c_str());
+            //            BL_ERROR("Can not load Data3D data %s", this->pos_.to_string().c_str());
+            return false;
         }
+    }
 
-        this->loaded_ = true;
-        // TODO: load others (actor data3d block entities.etc)
+    void chunk::load_data(bedrock_level &level) {
+        if (this->loaded()) return;
+        this->loaded_ =
+            this->load_subchunks_(level) && this->load_d3d(level) && this->load_actor_digest(level);
     }
 
     int chunk::get_height(int cx, int cz) { return this->d3d_.height(cx, cz); }

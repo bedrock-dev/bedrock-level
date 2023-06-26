@@ -66,10 +66,23 @@ namespace bl {
         if (key.size() == 16) {
             res.cp.dim = *reinterpret_cast<const int32_t *>(key.data() + 12);
         }
-
         return res;
     }
 
+    std::string actor_digest_key::to_string() const { return this->cp.to_string(); }
+    std::string actor_digest_key::to_raw() const {
+        if (!this->cp.valid()) return "";
+        size_t sz = 8;
+        if (cp.dim != 0) sz = 12;
+        std::string res = "digp";
+        std::string r(sz, '\0');
+        memcpy(r.data(), &cp.x, 4);
+        memcpy(r.data() + 4, &cp.z, 4);
+        if (this->cp.dim != 0) {
+            memcpy(r.data() + 8, &cp.dim, 4);
+        }
+        return res + r;
+    }
     village_key village_key::parse(const std::string &key) {
         village_key res;
         if (key.size() < 46) return res;
@@ -235,8 +248,6 @@ namespace bl {
     }
 
     std::string actor_key::to_string() const { return std::to_string(this->actor_uid); }
-
-    std::string actor_digest_key::to_string() const { return this->cp.to_string(); }
 
     std::string village_key::to_string() const {
         return this->uuid + "," + village_key_type_to_str(this->type);

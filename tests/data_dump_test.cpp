@@ -11,8 +11,7 @@
 #include "bedrock_level.h"
 #include "utils.h"
 
-const std::string TEST_WORLD_ROOT =
-    R"(C:\Users\xhy\AppData\Local\Packages\Microsoft.MinecraftUWP_8wekyb3d8bbwe\LocalState\games\com.mojang\minecraftWorlds\UJ2RZHWAAAA=)";
+const std::string TEST_WORLD_ROOT = R"(C:\Users\xhy\Desktop\SAC_survival)";
 const std::string DUMP_ROOT = R"(C:\Users\xhy\dev\bedrock-level\data\dumps\)";
 
 TEST(BedrockLevel, SimpleOpen) {
@@ -164,6 +163,23 @@ TEST(BedrockLevel, ExportRandomTick) {
         if (k.type == chunk_key::RandomTicks) {
             utils::write_file(DUMP_ROOT + "rt/" + std::to_string(k.cp.x) + "_" +
                                   std::to_string(k.cp.z) + ".rt.palette",
+                              it->value().data(), it->value().size());
+        }
+    }
+    delete it;
+    level.close();
+}
+TEST(BedrockLevel, DumpActorDigits) {
+    using namespace bl;
+    bl::bedrock_level level;
+    EXPECT_TRUE(level.open(TEST_WORLD_ROOT));
+    auto *db = level.db();
+    auto *it = db->NewIterator(leveldb::ReadOptions());
+    for (it->SeekToFirst(); it->Valid(); it->Next()) {
+        auto k = bl::chunk_key::parse(it->key().ToString());
+        if (k.type == chunk_key::ActorDigestVersion && it->value().size() > 1) {
+            utils::write_file(DUMP_ROOT + "actor_digits/" + std::to_string(k.cp.x) + "_" +
+                                  std::to_string(k.cp.z) + ".actor_digits",
                               it->value().data(), it->value().size());
         }
     }

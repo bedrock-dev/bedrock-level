@@ -30,6 +30,11 @@ namespace bl {
             if (!sub_chunk || !stream) return false;
             // assert that stream is long enough
             sub_chunk->set_version(stream[0]);
+            // 暂时跳过旧版本
+            if (stream[0] != 9) {
+                return false;
+            }
+
             sub_chunk->set_layers_num(stream[1]);
             sub_chunk->set_y_index(static_cast<int8_t>(stream[2]));
             read = 3;

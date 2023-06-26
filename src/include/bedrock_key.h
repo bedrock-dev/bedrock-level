@@ -35,7 +35,7 @@ namespace bl {
         [[nodiscard]] block_pos get_min_pos() const;
         [[nodiscard]] block_pos get_max_pos() const;
 
-        bool is_slime() const;
+        [[nodiscard]] bool is_slime() const;
     };
 
     struct block_pos {
@@ -121,6 +121,8 @@ namespace bl {
         [[nodiscard]] inline bool valid() const { return this->cp.valid(); }
 
         [[nodiscard]] std::string to_string() const;
+
+        [[nodiscard]] std::string to_raw() const;
     };
 
     struct village_key {

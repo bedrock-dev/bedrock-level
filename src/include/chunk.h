@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "actor.h"
 #include "bedrock_key.h"
 #include "data_3d.h"
 #include "sub_chunk.h"
@@ -33,23 +34,35 @@ namespace bl {
 
         biome get_top_biome(int cx, int cz);
 
+        std::vector<std::string> &get_actor_list() {
+            return this->actor_digest_list_.actor_digests_;
+        }
+
         int get_height(int cx, int cz);
 
         explicit chunk(const chunk_pos &pos) : pos_(pos), loaded_(false){};
 
         chunk() = delete;
 
-        inline bool loaded() const { return this->loaded_; }
+        [[nodiscard]] inline bool loaded() const { return this->loaded_; }
 
        private:
+        bool load_subchunks_(bedrock_level &level);
+
+        bool load_d3d(bedrock_level &level);
+
+        bool load_actor_digest(bedrock_level &level);
+
         void load_data(bedrock_level &level);
 
         bool loaded_{false};
-        std::map<int, sub_chunk> sub_chunks_;
-        // lighted
         const chunk_pos pos_;
-        std::unordered_set<int8_t> sub_chunk_indexes_;
+        // sub_chunks
+        std::map<int, sub_chunk> sub_chunks_;
+        // biome and height map
         data_3d d3d_{};
+        // actor digest
+        bl::actor_digest_list actor_digest_list_;
     };
 }  // namespace bl
 

@@ -34,6 +34,8 @@ namespace bl::palette {
 
     struct abstract_tag {
        public:
+        abstract_tag(const abstract_tag &) = delete;
+        abstract_tag &operator=(abstract_tag &) = delete;
         explicit abstract_tag(std::string key) : key_(std::move(key)) {}
 
         [[nodiscard]] virtual tag_type type() const = 0;
