@@ -38,6 +38,8 @@ namespace bl {
             return this->actor_digest_list_.actor_digests_;
         }
 
+        [[nodiscard]] bl::chunk_pos get_pos() const;
+
         int get_height(int cx, int cz);
 
         explicit chunk(const chunk_pos &pos) : pos_(pos), loaded_(false){};
@@ -46,12 +48,21 @@ namespace bl {
 
         [[nodiscard]] inline bool loaded() const { return this->loaded_; }
 
+        std::vector<bl::palette::compound_tag *> block_entities() { return this->block_entities_; }
+        std::vector<bl::palette::compound_tag *> pending_ticks() { return this->pending_ticks_; }
+
+        ~chunk();
+
        private:
         bool load_subchunks_(bedrock_level &level);
 
         bool load_d3d(bedrock_level &level);
 
         bool load_actor_digest(bedrock_level &level);
+
+        bool load_pending_ticks(bedrock_level &level);
+
+        bool load_block_entities(bedrock_level &level);
 
         void load_data(bedrock_level &level);
 
@@ -63,6 +74,9 @@ namespace bl {
         data_3d d3d_{};
         // actor digest
         bl::actor_digest_list actor_digest_list_;
+        // block entities
+        std::vector<bl::palette::compound_tag *> block_entities_;
+        std::vector<bl::palette::compound_tag *> pending_ticks_;
     };
 }  // namespace bl
 

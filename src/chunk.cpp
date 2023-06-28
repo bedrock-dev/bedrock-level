@@ -78,9 +78,8 @@ namespace bl {
                 bl::sub_chunk sb;
                 if (!sb.load(raw.data(), raw.size())) {
                     return false;
-                } else {
-                    this->sub_chunks_[sub_index] = sb;
                 }
+                this->sub_chunks_[sub_index] = sb;
             }
         }
 
@@ -97,17 +96,45 @@ namespace bl {
             return false;
         }
     }
+    bool chunk::load_pending_ticks(bedrock_level &level) {
+        auto pt_key = bl::chunk_key{chunk_key::PendingTicks, this->pos_};
+        std::string block_entity_raw;
+        if (load_raw(level.db(), pt_key.to_raw(), block_entity_raw) && !block_entity_raw.empty()) {
+            this->pending_ticks_ =
+                palette::read_palette_to_end(block_entity_raw.data(), block_entity_raw.size());
+        }
+        return true;
+    }
+    bool chunk::load_block_entities(bedrock_level &level) {
+        auto be_key = bl::chunk_key{chunk_key::BlockEntity, this->pos_};
+        std::string block_entity_raw;
+        if (load_raw(level.db(), be_key.to_raw(), block_entity_raw) && !block_entity_raw.empty()) {
+            this->block_entities_ =
+                palette::read_palette_to_end(block_entity_raw.data(), block_entity_raw.size());
+        }
+
+        return true;
+    }
 
     void chunk::load_data(bedrock_level &level) {
         if (this->loaded()) return;
-        this->loaded_ =
-            this->load_subchunks_(level) && this->load_d3d(level) && this->load_actor_digest(level);
+        auto l1 = this->load_subchunks_(level);
+        auto l2 = this->load_d3d(level);
+        this->load_actor_digest(level);
+        this->load_block_entities(level);
+        this->load_pending_ticks(level);
+        this->loaded_ = l1 && l2;
     }
 
     int chunk::get_height(int cx, int cz) { return this->d3d_.height(cx, cz); }
     biome chunk::get_top_biome(int cx, int cz) { return this->d3d_.get_top_biome(cx, cz); }
     std::array<std::array<biome, 16>, 16> chunk::get_biome_y(int y) {
         return this->d3d_.get_biome_y(y);
+    }
+    bl::chunk_pos chunk::get_pos() const { return this->pos_; }
+    chunk::~chunk() {
+        for (auto i : this->pending_ticks_) delete i;
+        for (auto i : this->block_entities_) delete i;
     }
 
 }  // namespace bl

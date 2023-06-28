@@ -205,11 +205,11 @@ namespace bl::palette {
         std::vector<compound_tag *> res;
         while (ptr < len) {
             int read;
-            res.push_back(read_one_palette(data, read));
+            res.push_back(read_one_palette(data + ptr, read));
             ptr += read;
         }
         if (ptr != len) {
-            BL_ERROR("Remain bytes found.");
+            BL_ERROR("Remain bytes found (%d).", (int)len - (int)ptr);
         }
         return res;
     }
