@@ -48,8 +48,7 @@ namespace bl {
                 int r = 0;
                 auto *tag = bl::palette::read_one_palette(stream + read, r);
                 if (tag) {
-                    delete tag;
-                    layer->palettes.push_back(nullptr);
+                    layer->palettes.push_back(tag);
                 } else {
                     throw std::runtime_error("Error read palette");
                 }
@@ -97,11 +96,7 @@ namespace bl {
                     }
                 }
                 read += 4;
-
-                //
-
-            } else {
-                // uniform
+            } else {  // uniform
                 layer->blocks = std::vector<uint16_t>(4096, 0);
                 layer->palette_len = 1;
             }
@@ -119,8 +114,8 @@ namespace bl {
         if (!read_header(this, data, read)) return false;
         idx += read;
         for (auto i = 0; i < (int)this->layers_num_; i++) {
-            this->layers_.emplace_back();
-            if (!read_one_layer(&this->layers_.back(), data + idx, len - idx, read)) {
+            this->layers_.push_back(new layer());
+            if (!read_one_layer(this->layers_.back(), data + idx, len - idx, read)) {
                 BL_ERROR("can not read layer %d", i);
                 return false;
             }
@@ -130,33 +125,33 @@ namespace bl {
     }
 
     void sub_chunk::dump_to_file(FILE *fp) const {
-        fprintf(fp, "Version : %u\n", this->version_);
-        fprintf(fp, "Y index : %d\n", this->y_index_);
-        fprintf(fp, "Layers  : %u\n", this->layers_num_);
-        fprintf(fp, "===========================================\n");
-        size_t index = 0;
-        for (auto &layer : this->layers_) {
-            fprintf(fp, "Layer %zu:\n", index);
-            fprintf(fp, "Bits per block: %d\n", layer.bits);
-            fprintf(fp, "Palette type: %d\n", layer.type);
-            fprintf(fp, "Palette len: %d\n", layer.palette_len);
-            for (auto y = 0; y < 16; y++) {
-                printf("Y = %d\n", y);
-                for (auto z = 0; z < 16; z++) {
-                    for (auto x = 0; x < 16; x++) {
-                        auto idx = x * 256 + z * 16 + y;
-                        printf("%02d ", layer.blocks[idx]);
-                    }
-                    printf("\n");
-                }
-                printf("==============================\n");
-            }
-            for (auto palette : layer.palettes) {
-                palette->write(std::cout, 0);
-            }
-
-            ++index;
-        }
+        //        fprintf(fp, "Version : %u\n", this->version_);
+        //        fprintf(fp, "Y index : %d\n", this->y_index_);
+        //        fprintf(fp, "Layers  : %u\n", this->layers_num_);
+        //        fprintf(fp, "===========================================\n");
+        //        size_t index = 0;
+        //        for (auto &layer : this->layers_) {
+        //            fprintf(fp, "Layer %zu:\n", index);
+        //            fprintf(fp, "Bits per block: %d\n", layer.bits);
+        //            fprintf(fp, "Palette type: %d\n", layer.type);
+        //            fprintf(fp, "Palette len: %d\n", layer.palette_len);
+        //            for (auto y = 0; y < 16; y++) {
+        //                printf("Y = %d\n", y);
+        //                for (auto z = 0; z < 16; z++) {
+        //                    for (auto x = 0; x < 16; x++) {
+        //                        auto idx = x * 256 + z * 16 + y;
+        //                        printf("%02d ", layer.blocks[idx]);
+        //                    }
+        //                    printf("\n");
+        //                }
+        //                printf("==============================\n");
+        //            }
+        //            for (auto palette : layer.palettes) {
+        //                palette->write(std::cout, 0);
+        //            }
+        //
+        //            ++index;
+        //        }
     }
 
     block_info sub_chunk::get_block(int rx, int ry, int rz) {
@@ -164,16 +159,17 @@ namespace bl {
             BL_ERROR("Invalid in chunk position %d %d %d", rx, ry, rz);
             return {};
         }
-        //        BL_LOGGER("Read in sub chunk position %d %d %d", rx, ry, rz);
-        auto idx = ry + rz * 16 + rx * 256;
-        auto block = this->layers_[0].blocks[idx];
 
-        if (block >= this->layers_[0].palettes.size()) {
+        auto idx = ry + rz * 16 + rx * 256;
+        auto block = this->layers_[0]->blocks[idx];
+
+        if (block >= this->layers_[0]->palettes.size() || block < 0) {
             BL_ERROR("Invalid block index with value %d", block);
             return {};
         }
 
-        auto *palette = this->layers_[0].palettes[block];
+        auto &palette = this->layers_[0]->palettes[block];
+
         auto id = palette->value.find("name");
         if (id == palette->value.end()) {
             return {};
@@ -181,10 +177,20 @@ namespace bl {
         return {dynamic_cast<bl::palette::string_tag *>(id->second)->value};
     }
 
-    sub_chunk::layer::~layer() {
-        // TODO
-        for (auto &p : this->palettes) {
-            delete p;
+    palette::compound_tag *sub_chunk::get_block_raw(int rx, int ry, int rz) {
+        if (rx < 0 || rx > 15 || ry < 0 || ry > 15 || rz < 0 || rz > 15) {
+            BL_ERROR("Invalid in chunk position %d %d %d", rx, ry, rz);
+            return nullptr;
         }
+
+        auto idx = ry + rz * 16 + rx * 256;
+        auto block = this->layers_[0]->blocks[idx];
+
+        if (block >= this->layers_[0]->palettes.size() || block < 0) {
+            BL_ERROR("Invalid block index with value %d", block);
+            return nullptr;
+        }
+
+        return this->layers_[0]->palettes[block];
     }
 }  // namespace bl

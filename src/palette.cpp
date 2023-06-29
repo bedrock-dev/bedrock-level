@@ -214,11 +214,6 @@ namespace bl::palette {
         return res;
     }
 
-    compound_tag::~compound_tag() {
-        for (auto &kv : this->value) {
-            delete kv.second;
-        }
-    }
     list_tag::~list_tag() {
         for (auto tag : this->value) {
             delete tag;

@@ -66,14 +66,13 @@ namespace bl {
             BL_ERROR("Invalid Data3d format");
             return false;
         }
-        
+
         memcpy(this->height_map_.data(), data, 512);
         index += 512;
         while (index < len) {
             int read = 0;
 
             auto sub_chunk_biome = load_subchunk_biome(data + index, read, len);
-            //            BL_LOGGER("size is %d", sub_chunk_biome.size());
             for (int y = 0; y < 16; y++) {
                 auto layer = std::array<std::array<biome, 16>, 16>{};
                 for (int x = 0; x < 16; x++) {

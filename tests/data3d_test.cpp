@@ -9,11 +9,20 @@
 #include "utils.h"
 
 TEST(Data3d, BasicRead) {
-    auto data = bl::utils::read_file("../data/dumps/data3d/0_0.data3d");
+    auto data = bl::utils::read_file("../data/dumps/data3d/0_-1.data3d");
     EXPECT_TRUE(data.size() > 512);
     bl::data_3d d3d{};
     d3d.load(data.data(), data.size());
 }
+
+TEST(Data3d, MemoryFree) {
+    auto data = bl::utils::read_file("../data/dumps/data3d/0_-1.data3d");
+    EXPECT_TRUE(data.size() > 512);
+    auto *d = new bl::data_3d;
+    d->load(data.data(), data.size());
+    delete d;
+}
+
 TEST(Data3d, BiomeRead) {
     bl::init_biome_color_palette_from_file(
         R"(C:\Users\xhy\dev\bedrock-level\data\colors\biome.json)");
@@ -39,7 +48,7 @@ TEST(Data3d, TopBiomeRead) {
     bl::init_biome_color_palette_from_file(
         R"(C:\Users\xhy\dev\bedrock-level\data\colors\biome.json)");
 
-    auto data = bl::utils::read_file("../data/dumps/data3d/1_1.data3d");
+    auto data = bl::utils::read_file("../data/dumps/data3d/1_-1.data3d");
     EXPECT_TRUE(data.size() > 512);
     bl::data_3d d3d{};
     d3d.load(data.data(), data.size());

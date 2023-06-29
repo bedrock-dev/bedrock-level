@@ -21,16 +21,17 @@ namespace bl {
     class sub_chunk {
        public:
         struct layer {
+            layer() = default;
             uint8_t bits{};
             uint8_t type{};
             uint32_t palette_len{};
             std::vector<uint16_t> blocks{};
-            std::vector<palette::compound_tag *> palettes;
-
-            ~layer();
+            std::vector<bl::palette::compound_tag *> palettes;
         };
 
         block_info get_block(int rx, int ry, int rz);
+
+        palette::compound_tag *get_block_raw(int rx, int ry, int rz);
 
         sub_chunk() = default;
 
@@ -43,16 +44,15 @@ namespace bl {
         bool load(const byte_t *data, size_t len);
 
         // for develop
-
         void dump_to_file(FILE *fp) const;
 
-        void push_back_layer(const layer &layer) { this->layers_.push_back(layer); }
-
        private:
+        void push_back_layer(layer *layer) { this->layers_.push_back(layer); }
+
         uint8_t version_{0xff};
         int y_index_{0};
         uint8_t layers_num_{0xff};
-        std::vector<layer> layers_;
+        std::vector<layer *> layers_;
     };
 }  // namespace bl
 

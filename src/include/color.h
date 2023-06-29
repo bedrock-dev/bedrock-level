@@ -17,7 +17,13 @@ namespace bl {
     //    std::array<color, biome::LEN> biome_color_palette();
     [[maybe_unused]] color get_biome_color(biome b);
 
+    color get_block_color(const std::string& name);
+
     bool init_biome_color_palette_from_file(const std::string& filename);
+
+    bool init_block_color_palette_from_file(const std::string& filename);
+
+
 
     [[maybe_unused]] void export_image(const std::vector<std::vector<color>>& c, int ppi,
                                        const std::string& name);

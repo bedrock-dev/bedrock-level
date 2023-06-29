@@ -9,6 +9,10 @@ TEST(Color, readColorPalette) {
     bl::init_biome_color_palette_from_file(
         R"(C:\Users\xhy\dev\bedrock-level\data\colors\biome.json)");
 }
+TEST(Color, readBlockPalette) {
+    bl::init_block_color_palette_from_file(
+        R"(C:\Users\xhy\dev\bedrock-level\data\colors\block.json)");
+}
 
 TEST(Color, exportImage) {
     bl::init_biome_color_palette_from_file(

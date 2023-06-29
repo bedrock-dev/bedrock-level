@@ -45,34 +45,35 @@ namespace bl {
 
     bedrock_level::~bedrock_level() { this->close(); };
 
-    void bedrock_level::cache_keys() {
-        leveldb::Iterator *it = db_->NewIterator(leveldb::ReadOptions());
-        for (it->SeekToFirst(); it->Valid(); it->Next()) {
-            auto raw_key = it->key().ToString();
-            auto ck = bl::chunk_key::parse(it->key().ToString());
-            if (ck.valid()) {
-            }
-
-            auto actor_key = bl::actor_key::parse(it->key().ToString());
-            if (actor_key.valid()) {
-                continue;
-            }
-
-            auto digest_key = bl::actor_digest_key::parse(it->key().ToString());
-            if (digest_key.valid()) {
-                continue;
-            }
-
-            auto village_key = bl::village_key::parse(it->key().ToString());
-            if (village_key.valid()) {
-                continue;
-            }
-        }
-        delete it;
-    }
+    //    void bedrock_level::cache_keys() {
+    //        leveldb::Iterator *it = db_->NewIterator(leveldb::ReadOptions());
+    //        for (it->SeekToFirst(); it->Valid(); it->Next()) {
+    //            auto raw_key = it->key().ToString();
+    //            auto ck = bl::chunk_key::parse(it->key().ToString());
+    //            if (ck.valid()) {
+    //            }
+    //
+    //            auto actor_key = bl::actor_key::parse(it->key().ToString());
+    //            if (actor_key.valid()) {
+    //                continue;
+    //            }
+    //
+    //            auto digest_key = bl::actor_digest_key::parse(it->key().ToString());
+    //            if (digest_key.valid()) {
+    //                continue;
+    //            }
+    //
+    //            auto village_key = bl::village_key::parse(it->key().ToString());
+    //            if (village_key.valid()) {
+    //                continue;
+    //            }
+    //        }
+    //        delete it;
+    //    }
 
     chunk *bedrock_level::get_chunk(const chunk_pos &cp) {
         if (!this->is_open()) {
+            BL_ERROR("Level is not opened.");
             return nullptr;
         }
 
@@ -80,53 +81,22 @@ namespace bl {
             BL_ERROR("Invalid Chunk position %s", cp.to_string().c_str());
             return nullptr;
         }
-
         if (this->enable_cache_) {
             auto it = this->chunk_data_cache_.find(cp);
             if (it != this->chunk_data_cache_.end()) {
                 return it->second;
+            } else {
+                auto *ch = this->read_chunk_from_db(cp);
+                if (ch) {
+                    this->chunk_data_cache_[cp] = ch;
+                }
+                return ch;
             }
-
-            goto L;
+        } else {
+            return this->read_chunk_from_db(cp);
         }
-    L:
-        
-        auto *ch = new bl::chunk(cp);
-        ch->load_data(*this);
-        if (ch->loaded()) {
-            if (this->enable_cache_) {
-                this->chunk_data_cache_[cp] = ch;
-            }
-            return ch;
-        }
-        delete ch;
-        return nullptr;
     }
 
-    block_info bedrock_level::get_block(const block_pos &pos, int dim) {
-        auto cp = pos.to_chunk_pos();
-        cp.dim = dim;
-        if (!cp.valid()) return {};
-        auto off = pos.in_chunk_offset();
-        auto *ch = this->get_chunk(cp);
-        if (!ch) return {};
-        return ch->get_block(off.x, pos.y, off.z);
-    }
-
-    std::tuple<chunk_pos, chunk_pos> bedrock_level::get_range(int dim) const {
-        int32_t minX{INT32_MAX};
-        int32_t minZ{INT32_MAX};
-        int32_t maxX{INT32_MIN};
-        int32_t maxZ{INT32_MIN};
-        for (auto &kv : this->chunk_data_cache_) {
-            if (kv.first.dim != dim) continue;
-            minX = std::min(minX, kv.first.x);
-            minZ = std::min(minZ, kv.first.z);
-            maxX = std::max(maxX, kv.first.x);
-            maxZ = std::max(maxZ, kv.first.z);
-        }
-        return {{minX, minZ, dim}, {maxX, maxZ, dim}};
-    }
     void bedrock_level::close() {
         for (auto &kv : this->chunk_data_cache_) {
             delete kv.second;
@@ -135,6 +105,28 @@ namespace bl {
         delete this->db_;
         this->db_ = nullptr;
         this->is_open_ = false;
+    }
+
+    void bedrock_level::set_cache(bool enable) {
+        this->enable_cache_ = enable;
+        if (!this->enable_cache_) {
+            this->clear_cache();
+        }
+    }
+
+    chunk *bedrock_level::read_chunk_from_db(const chunk_pos &cp) {
+        auto *chunk = new bl::chunk(cp);
+        if (!chunk->load_data(*this)) {
+            delete chunk;
+            return nullptr;
+        } else {
+            return chunk;
+        }
+    }
+
+    void bedrock_level::clear_cache() {
+        for (auto &kv : this->chunk_data_cache_) delete kv.second;
+        this->chunk_data_cache_.clear();
     }
 
 }  // namespace bl
