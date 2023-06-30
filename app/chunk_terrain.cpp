@@ -14,7 +14,6 @@ int main() {
     auto cp = spawn_pos.to_chunk_pos();
 
     cp.dim = 0;
-
     auto *chunk = level.get_chunk(cp);
 
     if (!chunk) {
@@ -22,7 +21,9 @@ int main() {
         return 0;
     }
 
-    chunk->get_block_raw(0, 0, 0)->write(std::cout, 0);
+    for (int i = 0; i < 64; i++) {
+        chunk->get_block_raw(0, i, 0)->write(std::cout, 0);
+    }
 
     delete chunk;
 

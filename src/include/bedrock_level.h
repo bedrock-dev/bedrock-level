@@ -63,7 +63,7 @@ namespace bl {
          * 关闭时，会清空内容
          * @param enable
          */
-        inline void set_cache(bool enable);
+        void set_cache(bool enable);
 
         ~bedrock_level();
 

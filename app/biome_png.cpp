@@ -22,7 +22,7 @@ int main() {
 
     auto center_chunk_pos = bl::chunk_pos{0, 0, 0};
     const int DIM = 0;
-    const int R = 30;
+    const int R = 0;
     auto minP = bl::chunk_pos{center_chunk_pos.x - R, center_chunk_pos.z - R, DIM};
     auto maxP = bl::chunk_pos{center_chunk_pos.x + R, center_chunk_pos.z + R, DIM};
     const int W = maxP.x - minP.x + 1;
@@ -37,8 +37,7 @@ int main() {
                 for (int xx = 0; xx < 16; xx++) {
                     for (int zz = 0; zz < 16; zz++) {
                         auto name = chunk->get_top_block(xx, zz);
-
-                        cm[sz + zz][sx + xx] = bl::get_block_color(name.name);
+                        cm[sz + zz][sx + xx] = chunk->get_top_block_color(xx, zz);
                         //
                     }
                 }

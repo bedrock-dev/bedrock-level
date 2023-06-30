@@ -49,8 +49,8 @@ TEST(BedrockLevel, ReadBlock) {
     bl::bedrock_level level;
     EXPECT_TRUE(level.open("../data/worlds/a"));
     for (int i = -64; i < 64; i++) {
-        auto b = level.get_block({0, i, 0}, 0);
-        printf("%d: %s\n", i, b.name.c_str());
+        //        auto b = level.get_block({0, i, 0}, 0);
+        //        printf("%d: %s\n", i, b.name.c_str());
     }
     printf("\n");
 }

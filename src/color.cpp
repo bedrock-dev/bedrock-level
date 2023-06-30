@@ -9,12 +9,14 @@
 #include <unordered_map>
 
 #include "json/json.hpp"
+#include "palette.h"
 #include "stb/stb_image_write.h"
 
 namespace bl {
     namespace {
 
         std::unordered_map<biome, bl::color> biome_color_map;
+        // key 是palette的raw形态
         std::unordered_map<std::string, bl::color> block_color_map;
     }  // namespace
 
@@ -22,9 +24,13 @@ namespace bl {
         auto it = biome_color_map.find(b);
         return it == biome_color_map.end() ? bl::color() : it->second;
     }
-    color get_block_color(const std::string& name) {
+    color get_block_color_from_snbt(const std::string& name) {
         auto it = block_color_map.find(name);
-        return it == block_color_map.end() ? bl::color() : it->second;
+        if (it == block_color_map.end()) {
+            BL_LOGGER("%s   not found!", name.c_str());
+            return {};
+        }
+        return it->second;
     }
 
     bool init_biome_color_palette_from_file(const std::string& filename) {
@@ -65,7 +71,7 @@ namespace bl {
             nlohmann::json j;
             f >> j;
             for (auto& item : j) {
-                auto name = item["name"].get<std::string>();
+                using namespace bl::palette;
                 //                std::cout << name << std::endl;
                 auto extra_data = item["extra_data"];
                 if (extra_data.contains("color")) {
@@ -74,13 +80,53 @@ namespace bl {
                     c.r = static_cast<uint8_t>(rgb[0].get<double>() * 255.0);
                     c.g = static_cast<uint8_t>(rgb[1].get<double>() * 255.0);
                     c.b = static_cast<uint8_t>(rgb[2].get<double>() * 255.0);
-                    //                    std::cout << (int)c.r << " " << (int)c.g << " " <<
-                    //                    (int)c.b << std::endl;
-                    //                if (!block_color_map.count(name))
-                    block_color_map[name] = c;
+
+                    auto* root = new compound_tag("");
+                    //                    auto* version_key = new int_tag("version");
+                    //                    version_key->value = item["version"].get<int>();
+                    //                    root->put(version_key);
+                    auto* name_key = new string_tag("name");
+                    name_key->value = item["name"].get<std::string>();
+
+                    auto* stat_tag = new compound_tag("states");
+
+                    if (item.contains("states")) {
+                        for (auto& [k, v] : item["states"].items()) {
+                            if (v.type() == nlohmann::json::value_t::string) {
+                                auto* t = new string_tag(k);
+                                t->value = v.get<std::string>();
+                                stat_tag->put(t);
+                            } else if (v.type() == nlohmann::json::value_t::boolean) {
+                                auto* t = new byte_tag(k);
+                                t->value = v.get<bool>();
+                                stat_tag->put(t);
+                            } else if (v.type() == nlohmann::json::value_t::number_float) {
+                                auto* t = new float_tag(k);
+                                t->value = v.get<float>();
+                                stat_tag->put(t);
+                            } else if (v.type() == nlohmann::json::value_t::number_integer) {
+                                auto* t = new int_tag(k);
+                                t->value = v.get<int>();
+                                stat_tag->put(t);
+
+                            } else if (v.type() == nlohmann::json::value_t::number_unsigned) {
+                                auto* t = new int_tag(k);
+                                t->value = v.get<unsigned>();
+                                stat_tag->put(t);
+                            }
+                        }
+                    }
+
+                    root->put(name_key);
+                    root->put(stat_tag);
+
+                    std::stringstream ss;
+                    root->write(ss, 0);
+
+                    block_color_map[ss.str()] = c;
+                    delete root;
                 }
             }
-
         } catch (std::exception& e) {
             std::cout << "Err: " << e.what() << std::endl;
             return false;
@@ -106,5 +152,6 @@ namespace bl {
 
         stbi_write_png(name.c_str(), w, h, c, data.data(), 0);
     }
+    std::unordered_map<std::string, bl::color>& get_block_color_table() { return block_color_map; }
 
 }  // namespace bl

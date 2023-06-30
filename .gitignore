@@ -35,8 +35,8 @@
 
 .vscode
 .idea/*
-build
-build/*
+.build-debug
+.build-debug/*
 .cache
 .cache/*
 data/worlds/*

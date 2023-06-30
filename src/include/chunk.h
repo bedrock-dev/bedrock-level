@@ -12,9 +12,9 @@
 
 #include "actor.h"
 #include "bedrock_key.h"
+#include "color.h"
 #include "data_3d.h"
 #include "sub_chunk.h"
-
 namespace bl {
 
     class bedrock_level;
@@ -31,6 +31,10 @@ namespace bl {
         block_info get_top_block(int cx, int cz);
 
         palette::compound_tag *get_block_raw(int cx, int y, int cz);
+
+        bl::color get_block_color(int cx, int y, int cz);
+
+        bl::color get_top_block_color(int cx, int cz);
 
         biome get_biome(int cx, int y, int cz);
 

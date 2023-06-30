@@ -62,6 +62,7 @@ create_app(biome_png app/biome_png.cpp)
 create_app(chunk_terrain app/chunk_terrain.cpp)
 create_app(demo app/demo.cpp)
 
+create_app(block_color_analysis app/block_color_analysis.cpp)
 #testing
 
 
