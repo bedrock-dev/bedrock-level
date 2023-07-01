@@ -27,6 +27,8 @@ namespace bl {
             uint32_t palette_len{};
             std::vector<uint16_t> blocks{};
             std::vector<bl::palette::compound_tag *> palettes;
+
+            ~layer();
         };
 
         block_info get_block(int rx, int ry, int rz);
@@ -45,6 +47,8 @@ namespace bl {
 
         // for develop
         void dump_to_file(FILE *fp) const;
+
+        ~sub_chunk();
 
        private:
         void push_back_layer(layer *layer) { this->layers_.push_back(layer); }

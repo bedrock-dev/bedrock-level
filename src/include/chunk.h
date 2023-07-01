@@ -32,6 +32,8 @@ namespace bl {
 
         palette::compound_tag *get_block_raw(int cx, int y, int cz);
 
+        palette::compound_tag *get_top_block_raw(int cx, int cz);
+
         bl::color get_block_color(int cx, int y, int cz);
 
         bl::color get_top_block_color(int cx, int cz);

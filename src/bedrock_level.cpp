@@ -14,10 +14,17 @@
 #include "leveldb/comparator.h"
 #include "leveldb/db.h"
 #include "leveldb/filter_policy.h"
+#include "leveldb/write_batch.h"
 #include "leveldb/zlib_compressor.h"
 #include "nbt-cpp/nbt.hpp"
 
 namespace bl {
+    namespace {
+        bool load_raw(leveldb::DB *&db, const std::string &raw_key, std::string &raw) {
+            auto r = db->Get(leveldb::ReadOptions(), raw_key, &raw);
+            return r.ok();
+        }
+    }  // namespace
 
     const std::string bedrock_level::LEVEL_DATA = "level.dat";
     const std::string bedrock_level::LEVEL_DB = "db";
@@ -129,4 +136,36 @@ namespace bl {
         this->chunk_data_cache_.clear();
     }
 
+    actor *bedrock_level::load_actor(const std::string &raw_uid) {
+        const auto key = "actorprefix" + raw_uid;
+        std::string raw_data;
+        if (!load_raw(this->db_, key, raw_data)) return nullptr;
+        auto ac = new actor;
+        if (!ac->load(raw_data.data(), raw_data.size())) {
+            delete ac;
+            return nullptr;
+        } else {
+            return ac;
+        }
+    }
+    bool bedrock_level::remove_chunk(const chunk_pos &cp) {
+        leveldb::WriteBatch batch;
+        for (int8_t i = -4; i <= 20; i++) {
+            bl::chunk_key key{chunk_key::SubChunkTerrain, cp, i};
+            batch.Delete(key.to_raw());
+        }
+        bl::chunk_key pt_key{chunk_key::PendingTicks, cp};
+        bl::chunk_key block_actor_key{chunk_key::BlockEntity, cp};
+        bl::chunk_key d3d_key{chunk_key::Data3D, cp};
+        bl::chunk_key d2d_key{chunk_key::Data2D, cp};
+        batch.Delete(pt_key.to_raw());
+        batch.Delete(block_actor_key.to_raw());
+        batch.Delete(d3d_key.to_raw());
+        batch.Delete(d2d_key.to_raw());
+
+        auto s = this->db_->Write(leveldb::WriteOptions(), &batch);
+        //        还需要删除实体
+        BL_LOGGER("Remove chunk %s = %d\n", cp.to_string().c_str(), s.ok());
+        return s.ok();
+    }
 }  // namespace bl

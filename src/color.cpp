@@ -27,7 +27,6 @@ namespace bl {
     color get_block_color_from_snbt(const std::string& name) {
         auto it = block_color_map.find(name);
         if (it == block_color_map.end()) {
-            BL_LOGGER("%s   not found!", name.c_str());
             return {};
         }
         return it->second;
@@ -80,16 +79,12 @@ namespace bl {
                     c.r = static_cast<uint8_t>(rgb[0].get<double>() * 255.0);
                     c.g = static_cast<uint8_t>(rgb[1].get<double>() * 255.0);
                     c.b = static_cast<uint8_t>(rgb[2].get<double>() * 255.0);
+                    c.a = static_cast<uint8_t>(rgb[3].get<double>() * 255.0);
 
                     auto* root = new compound_tag("");
-                    //                    auto* version_key = new int_tag("version");
-                    //                    version_key->value = item["version"].get<int>();
-                    //                    root->put(version_key);
                     auto* name_key = new string_tag("name");
                     name_key->value = item["name"].get<std::string>();
-
                     auto* stat_tag = new compound_tag("states");
-
                     if (item.contains("states")) {
                         for (auto& [k, v] : item["states"].items()) {
                             if (v.type() == nlohmann::json::value_t::string) {
@@ -116,14 +111,10 @@ namespace bl {
                             }
                         }
                     }
-
                     root->put(name_key);
                     root->put(stat_tag);
 
-                    std::stringstream ss;
-                    root->write(ss, 0);
-
-                    block_color_map[ss.str()] = c;
+                    block_color_map[root->to_raw()] = c;
                     delete root;
                 }
             }

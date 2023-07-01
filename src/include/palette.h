@@ -16,7 +16,7 @@
 
 namespace bl::palette {
 
-    // TOOD: 使用模板重写这个库
+    // TODD: 使用模板重写这个库
     enum tag_type : int8_t {
         End = 0,
         Byte = 1,
@@ -38,6 +38,12 @@ namespace bl::palette {
         explicit abstract_tag(std::string key) : key_(std::move(key)) {}
 
         abstract_tag(const abstract_tag &tag) = default;
+
+        [[nodiscard]] std::string to_readable_string() const {
+            std::stringstream s;
+            this->write(s, 0);
+            return s.str();
+        }
 
         abstract_tag &operator=(const abstract_tag &tag) = default;
 
@@ -62,7 +68,7 @@ namespace bl::palette {
         [[nodiscard]] virtual std::string payload_to_raw() const = 0;
 
        public:
-        virtual void write(std::ostream &o, int indent) {
+        virtual void write(std::ostream &o, int indent) const {
             if (indent != 0) {
                 o << std::string(indent, ' ');
             }
@@ -108,7 +114,7 @@ namespace bl::palette {
 
         [[nodiscard]] tag_type type() const override { return Compound; }
 
-        void write(std::ostream &o, int indent) override {
+        void write(std::ostream &o, int indent) const override {
             abstract_tag::write(o, indent);
             o << "{\n";
             for (auto &kv : this->value) {
@@ -177,7 +183,7 @@ namespace bl::palette {
 
         [[nodiscard]] tag_type type() const override { return String; }
 
-        void write(std::ostream &o, int indent) override {
+        void write(std::ostream &o, int indent) const override {
             abstract_tag::write(o, indent);
             o << "'" << this->value << "'" << std::endl;
         }
@@ -206,7 +212,7 @@ namespace bl::palette {
 
         [[nodiscard]] tag_type type() const override { return Int; }
 
-        void write(std::ostream &o, int indent) override {
+        void write(std::ostream &o, int indent) const override {
             abstract_tag::write(o, indent);
             o << this->value << std::endl;
         }
@@ -236,7 +242,7 @@ namespace bl::palette {
 
         [[nodiscard]] tag_type type() const override { return Short; }
 
-        void write(std::ostream &o, int indent) override {
+        void write(std::ostream &o, int indent) const override {
             abstract_tag::write(o, indent);
             o << this->value << std::endl;
         }
@@ -268,7 +274,7 @@ namespace bl::palette {
 
         [[nodiscard]] tag_type type() const override { return Long; }
 
-        void write(std::ostream &o, int indent) override {
+        void write(std::ostream &o, int indent) const override {
             abstract_tag::write(o, indent);
             o << this->value << std::endl;
         }
@@ -300,7 +306,7 @@ namespace bl::palette {
 
         [[nodiscard]] tag_type type() const override { return Float; }
 
-        void write(std::ostream &o, int indent) override {
+        void write(std::ostream &o, int indent) const override {
             abstract_tag::write(o, indent);
             o << this->value << std::endl;
         }
@@ -331,7 +337,7 @@ namespace bl::palette {
 
         [[nodiscard]] tag_type type() const override { return Double; }
 
-        void write(std::ostream &o, int indent) override {
+        void write(std::ostream &o, int indent) const override {
             abstract_tag::write(o, indent);
             o << this->value << std::endl;
         }
@@ -364,7 +370,7 @@ namespace bl::palette {
 
         [[nodiscard]] tag_type type() const override { return Byte; }
 
-        void write(std::ostream &o, int indent) override {
+        void write(std::ostream &o, int indent) const override {
             abstract_tag::write(o, indent);
             o << static_cast<int>(this->value) << std::endl;
         }
@@ -410,7 +416,7 @@ namespace bl::palette {
 
         [[nodiscard]] tag_type type() const override { return List; }
 
-        void write(std::ostream &o, int indent) override {
+        void write(std::ostream &o, int indent) const override {
             abstract_tag::write(o, indent);
             o << "[" << this->size << "] ";
             o << "{\n";

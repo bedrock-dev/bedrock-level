@@ -40,6 +40,8 @@ namespace bl {
 
         chunk *get_chunk(const chunk_pos &cp);
 
+        bool remove_chunk(const chunk_pos &cp);
+
         //        block_info get_block(const bl::block_pos &pos, int dim);
 
         //        [[nodiscard]] std::tuple<chunk_pos, chunk_pos> get_range(int dim) const;
@@ -64,6 +66,8 @@ namespace bl {
          * @param enable
          */
         void set_cache(bool enable);
+
+        actor *load_actor(const std::string &raw_uid);
 
         ~bedrock_level();
 

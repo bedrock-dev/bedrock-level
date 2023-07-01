@@ -13,9 +13,10 @@ namespace bl {
         uint8_t r{0};
         uint8_t g{0};
         uint8_t b{0};
-        inline int32_t hex() const {
-            return (static_cast<int32_t>(r) << 16) | (static_cast<int32_t>(g) << 8) |
-                   (static_cast<int32_t>(b));
+        uint8_t a{255};
+        [[nodiscard]] inline int32_t hex() const {
+            return (static_cast<int32_t>(r) << 24) | (static_cast<int32_t>(g) << 16) |
+                   (static_cast<int32_t>(b) << 6) | static_cast<int32_t>(a);
         }
     };
 

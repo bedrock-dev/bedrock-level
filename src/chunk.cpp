@@ -63,7 +63,11 @@ namespace bl {
         auto [min_y, _] = this->pos_.get_y_range();
         return this->get_block(cx, height + min_y - 1, cz);
     }
-
+    palette::compound_tag *chunk::get_top_block_raw(int cx, int cz) {
+        auto height = this->get_height(cx, cz);
+        auto [min_y, _] = this->pos_.get_y_range();
+        return this->get_block_raw(cx, height + min_y - 1, cz);
+    }
     palette::compound_tag *chunk::get_block_raw(int cx, int y, int cz) {
         int index;
         int offset;
@@ -160,22 +164,18 @@ namespace bl {
         for (auto &sub : this->sub_chunks_) {
             delete sub.second;
         }
+        for (auto &p : this->pending_ticks_) delete p;
+        for (auto &p : this->block_entities_) delete p;
     }
+
     bl::color chunk::get_block_color(int cx, int y, int cz) {
         auto *raw = this->get_block_raw(cx, y, cz);
         if (!raw) return {};
-        auto *copy = dynamic_cast<palette::compound_tag *>(raw->copy());
-        if (!copy) return {};
-        copy->remove("version");
-        std::stringstream ss;
-        copy->write(ss, 0);
-        delete copy;
-        return get_block_color_from_snbt(ss.str());
+        return get_block_color_from_snbt(raw->to_raw());
     }
     bl::color chunk::get_top_block_color(int cx, int cz) {
         auto height = this->get_height(cx, cz);
         auto [min_y, _] = this->pos_.get_y_range();
         return this->get_block_color(cx, height + min_y - 1, cz);
     }
-
 }  // namespace bl

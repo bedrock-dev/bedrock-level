@@ -48,6 +48,7 @@ namespace bl {
                 int r = 0;
                 auto *tag = bl::palette::read_one_palette(stream + read, r);
                 if (tag) {
+                    tag->remove("version");  // remove version tag(为了颜色表的兼容性)
                     layer->palettes.push_back(tag);
                 } else {
                     throw std::runtime_error("Error read palette");
@@ -192,5 +193,13 @@ namespace bl {
         }
 
         return this->layers_[0]->palettes[block];
+    }
+    sub_chunk::~sub_chunk() {
+        for (auto &layer : this->layers_) {
+            delete layer;
+        }
+    }
+    sub_chunk::layer::~layer() {
+        for (auto &p : this->palettes) delete p;
     }
 }  // namespace bl

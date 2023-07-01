@@ -21,8 +21,14 @@ int main() {
         return 0;
     }
 
-    for (int i = 0; i < 64; i++) {
-        chunk->get_block_raw(0, i, 0)->write(std::cout, 0);
+    auto &list = chunk->get_actor_list();
+    std::cout << list.size();
+    for (auto &uid : list) {
+        auto *ac = level.load_actor(uid);
+        if (ac) {
+            ac->dump();
+        }
+        delete ac;
     }
 
     delete chunk;
