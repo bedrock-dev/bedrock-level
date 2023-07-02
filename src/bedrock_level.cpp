@@ -162,7 +162,7 @@ namespace bl {
         batch.Delete(block_actor_key.to_raw());
         batch.Delete(d3d_key.to_raw());
         batch.Delete(d2d_key.to_raw());
-
+        
         auto s = this->db_->Write(leveldb::WriteOptions(), &batch);
         //        还需要删除实体
         BL_LOGGER("Remove chunk %s = %d\n", cp.to_string().c_str(), s.ok());

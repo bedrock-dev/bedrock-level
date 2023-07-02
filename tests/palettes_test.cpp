@@ -44,3 +44,22 @@ TEST(Palette, MemoryFree) {
         delete p;
     }
 }
+
+TEST(Palete, ToRaw) {
+    using namespace bl::palette;
+    auto data = bl::utils::read_file(
+        R"(C:\Users\xhy\dev\bedrock-level\data\dumps\actors\144115188092633088.palette)");
+    int r = 0;
+    auto* nbt = bl::palette::read_one_palette(data.data(), r);
+    auto raw = nbt->to_raw();
+    BL_LOGGER("raw size is %zu nbt data size is %zu", raw.size(), data.size());
+    bl::utils::write_file("demo.nbt", raw.data(), raw.size());
+}
+
+TEST(Palete, ToRaw2) {
+    using namespace bl::palette;
+    auto data = bl::utils::read_file(R"(demo.nbt)");
+    int r = 0;
+    auto* nbt = bl::palette::read_one_palette(data.data(), r);
+    nbt->write(std::cout, 0);
+}

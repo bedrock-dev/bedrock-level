@@ -391,7 +391,7 @@ namespace bl::palette {
             const size_t N = 1;
             std::string res(N, '\0');
             memcpy(res.data(), &this->value, N);
-            return this->type_to_raw() + this->key_to_raw() + res;
+            return res;
         }
     };
 
