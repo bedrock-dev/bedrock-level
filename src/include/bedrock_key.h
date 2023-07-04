@@ -126,7 +126,7 @@ namespace bl {
     };
 
     struct village_key {
-        enum key_type { INFO, DWELLERS, PLAYERS, POI, Unknown };
+        enum key_type { INFO = 0, DWELLERS = 1, PLAYERS = 2, POI = 3, Unknown };
 
         static std::string village_key_type_to_str(key_type t);
 
@@ -137,6 +137,8 @@ namespace bl {
         [[nodiscard]] std::string to_string() const;
 
         static village_key parse(const std::string &key);
+
+        [[nodiscard]] std::string to_raw() const;
 
         std::string uuid;
         key_type type{Unknown};

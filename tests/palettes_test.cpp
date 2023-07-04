@@ -5,7 +5,6 @@
 #include <gtest/gtest.h>
 
 #include <fstream>
-#include <nbt-cpp/nbt.hpp>
 
 #include "palette.h"
 #include "utils.h"

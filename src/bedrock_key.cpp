@@ -89,6 +89,7 @@ namespace bl {
         if (key.rfind("VILLAGE_", 0) != 0) return res;
         res.uuid = std::string(key.begin() + 8, key.begin() + 44);  // uuid
         std::string type_str = std::string(key.data() + 45);
+        BL_LOGGER("type: [%s]", type_str.c_str());
         if (type_str == "DWELLERS") {
             res.type = DWELLERS;
         } else if (type_str == "INFO") {
@@ -102,7 +103,10 @@ namespace bl {
         }
         return res;
     }
-
+    std::string village_key::to_raw() const {
+        if (!this->valid()) return {};
+        return "VILLAGE_" + this->uuid + "_" + village_key_type_to_str(this->type);
+    }
     std::string village_key::village_key_type_to_str(village_key::key_type t) {
         switch (t) {
             case INFO:

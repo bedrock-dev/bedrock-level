@@ -33,20 +33,9 @@ add_library(bedrock-level
         )
 
 
-add_library(nbt-cpp
-        third/nbt-cpp/nbt.cpp
-        third/nbt-cpp/nbt_internal.hpp
-        third/nbt-cpp/nbt.hpp
-        )
-
-#add_library(stb-image
-#        third/stb/stb_image_write.h
-#        )
-
 target_link_libraries(bedrock-level
         ${PROJECT_SOURCE_DIR}/libs/libleveldb.a
         ${PROJECT_SOURCE_DIR}/libs/libz.a
-        nbt-cpp
         )
 
 

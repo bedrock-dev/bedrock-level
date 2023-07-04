@@ -37,3 +37,12 @@ TEST(ChunkKey, Convert) {
     EXPECT_TRUE(cov.type == key.type);
     EXPECT_TRUE(cov.y_index == key.y_index);
 }
+
+TEST(VillageKey, Convert) {
+    const std::string raw_id = "VILLAGE_241c7732-221a-4266-9fe9-cdd40d9bdeb0_INFO";
+    bl::village_key key = bl::village_key::parse(raw_id);
+    EXPECT_TRUE(key.valid());
+    EXPECT_TRUE(key.uuid == "241c7732-221a-4266-9fe9-cdd40d9bdeb0");
+    EXPECT_TRUE(key.type == bl::village_key::INFO);
+    EXPECT_TRUE(key.to_raw() == raw_id);
+}

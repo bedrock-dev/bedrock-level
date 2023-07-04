@@ -6,32 +6,20 @@
 
 #include "bedrock_level.h"
 int main() {
-    const std::string path = R"(C:\Users\xhy\Desktop\t)";
+    const std::string path = R"(C:\Users\xhy\Desktop\SAC_survival)";
     auto level = bl::bedrock_level();
     level.open(path);
-
-    auto spawn_pos = level.dat().spawn_position();
-    auto cp = spawn_pos.to_chunk_pos();
-
-    cp.dim = 0;
-    auto *chunk = level.get_chunk(cp);
-
-    if (!chunk) {
-        BL_LOGGER("can not read chunk");
-        return 0;
-    }
-
-    auto &list = chunk->get_actor_list();
-    std::cout << list.size();
-    for (auto &uid : list) {
-        auto *ac = level.load_actor(uid);
-        if (ac) {
-            ac->dump();
+    level.load_global_data();
+    auto &vs = level.village_list();
+    for (auto &kv : vs) {
+        std::cout << kv.first << "\n";
+        int z = 0;
+        for (auto &p : kv.second) {
+            std::cout << z;
+            p->write(std::cout, 0);
+            z++;
         }
-        delete ac;
     }
-
-    delete chunk;
 
     return 0;
 }

@@ -4,31 +4,38 @@
 
 #ifndef BEDROCK_LEVEL_GLOBAL_H
 #define BEDROCK_LEVEL_GLOBAL_H
-
-
+#include "bedrock_key.h"
+#include "memory"
+#include "palette.h"
 namespace bl {
-    class autonomous_entities {
+    class autonomous_entities {};
 
-    };
+    class biome_data {};
 
-    class biome_data {
-
-    };
-
-    class level_chunk_metadata_dictionary {
-
-    };
-
+    class level_chunk_metadata_dictionary {};
 
     class village_data {
+       public:
+        void reset(const std::unordered_map<
+                   std::string, std::array<bl::palette::compound_tag*, 4>>& data);
+        void append_village(const bl::village_key& key, const std::string& value);
 
+       private:
+        std::unordered_map<std::string, std::array<bl::palette::compound_tag*, 4>> data_;
     };
 
-}
+    class player_data {
+       public:
+        void reset(const std::unordered_map<std::string, bl::palette::compound_tag*>& data);
 
-class global_data {
+        void append_player(const std::string& key, const std::string& value);
 
-};
+       private:
+        std::unordered_map<std::string, bl::palette::compound_tag*> data_;
+    };
 
+}  // namespace bl
 
-#endif //BEDROCK_LEVEL_GLOBAL_H
+class global_data {};
+
+#endif  // BEDROCK_LEVEL_GLOBAL_H

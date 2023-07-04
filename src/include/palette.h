@@ -51,7 +51,7 @@ namespace bl::palette {
         [[nodiscard]] virtual tag_type type() const = 0;
 
         [[nodiscard]] virtual std::string value_string() const = 0;
-        virtual abstract_tag *copy() = 0;
+        [[nodiscard]] virtual abstract_tag *copy() const = 0;
 
         /**
          *
@@ -150,7 +150,7 @@ namespace bl::palette {
             return it == this->value.end() ? nullptr : it->second;
         }
 
-        abstract_tag *copy() override {
+        abstract_tag *copy() const override {
             auto *res = new compound_tag(this->key_);
             for (auto &kv : this->value) {
                 res->put(kv.second->copy());
@@ -189,7 +189,7 @@ namespace bl::palette {
         }
         [[nodiscard]] std::string value_string() const override { return this->value; };
 
-        abstract_tag *copy() override {
+        abstract_tag *copy() const override {
             auto *res = new string_tag(this->key_);
             res->value = this->value;
             return res;
@@ -219,7 +219,7 @@ namespace bl::palette {
         [[nodiscard]] std::string value_string() const override {
             return std::to_string(this->value);
         };
-        abstract_tag *copy() override {
+        abstract_tag *copy() const override {
             auto *res = new int_tag(this->key_);
             res->value = this->value;
             return res;
@@ -252,7 +252,7 @@ namespace bl::palette {
         }
         ~short_tag() override = default;
 
-        abstract_tag *copy() override {
+        abstract_tag *copy() const override {
             auto *res = new short_tag(this->key_);
             res->value = this->value;
             return res;
@@ -282,7 +282,7 @@ namespace bl::palette {
         [[nodiscard]] std::string value_string() const override {
             return std::to_string(this->value);
         };
-        abstract_tag *copy() override {
+        abstract_tag *copy() const override {
             auto *res = new long_tag(this->key_);
             res->value = this->value;
             return res;
@@ -314,7 +314,7 @@ namespace bl::palette {
         [[nodiscard]] std::string value_string() const override {
             return std::to_string(this->value);
         }
-        abstract_tag *copy() override {
+        abstract_tag *copy() const override {
             auto *res = new float_tag(this->key_);
             res->value = this->value;
             return res;
@@ -346,7 +346,7 @@ namespace bl::palette {
             return std::to_string(this->value);
         }
 
-        abstract_tag *copy() override {
+        abstract_tag *copy() const override {
             auto *res = new double_tag(this->key_);
             res->value = this->value;
             return res;
@@ -377,7 +377,7 @@ namespace bl::palette {
         [[nodiscard]] std::string value_string() const override {
             return std::to_string(this->value);
         }
-        abstract_tag *copy() override {
+        abstract_tag *copy() const override {
             auto *res = new byte_tag(this->key_);
             res->value = this->value;
             return res;
@@ -428,7 +428,7 @@ namespace bl::palette {
             }
             o << "}\n";
         }
-        abstract_tag *copy() override {
+        abstract_tag *copy() const override {
             auto *res = new list_tag(this->key_);
             res->size = this->size;
             for (auto &item : this->value) {

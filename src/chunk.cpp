@@ -153,6 +153,7 @@ namespace bl {
         return this->loaded_;
     }
 
+    // 从0开始的数据
     int chunk::get_height(int cx, int cz) { return this->d3d_.height(cx, cz); }
     biome chunk::get_top_biome(int cx, int cz) { return this->d3d_.get_top_biome(cx, cz); }
 

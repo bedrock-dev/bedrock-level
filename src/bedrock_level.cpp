@@ -16,7 +16,6 @@
 #include "leveldb/filter_policy.h"
 #include "leveldb/write_batch.h"
 #include "leveldb/zlib_compressor.h"
-#include "nbt-cpp/nbt.hpp"
 
 namespace bl {
     namespace {
@@ -31,7 +30,8 @@ namespace bl {
 
     bool bedrock_level::open(const std::string &root) {
         this->root_name_ = root;
-        this->is_open_ = this->dat_.load(this->root_name_ + "/" + LEVEL_DATA) && this->read_db();
+        this->is_open_ =
+            this->dat_.load_from_file(this->root_name_ + "/" + LEVEL_DATA) && this->read_db();
         return this->is_open_;
     }
 
@@ -51,32 +51,6 @@ namespace bl {
     }
 
     bedrock_level::~bedrock_level() { this->close(); };
-
-    //    void bedrock_level::cache_keys() {
-    //        leveldb::Iterator *it = db_->NewIterator(leveldb::ReadOptions());
-    //        for (it->SeekToFirst(); it->Valid(); it->Next()) {
-    //            auto raw_key = it->key().ToString();
-    //            auto ck = bl::chunk_key::parse(it->key().ToString());
-    //            if (ck.valid()) {
-    //            }
-    //
-    //            auto actor_key = bl::actor_key::parse(it->key().ToString());
-    //            if (actor_key.valid()) {
-    //                continue;
-    //            }
-    //
-    //            auto digest_key = bl::actor_digest_key::parse(it->key().ToString());
-    //            if (digest_key.valid()) {
-    //                continue;
-    //            }
-    //
-    //            auto village_key = bl::village_key::parse(it->key().ToString());
-    //            if (village_key.valid()) {
-    //                continue;
-    //            }
-    //        }
-    //        delete it;
-    //    }
 
     chunk *bedrock_level::get_chunk(const chunk_pos &cp) {
         if (!this->is_open()) {
@@ -162,10 +136,34 @@ namespace bl {
         batch.Delete(block_actor_key.to_raw());
         batch.Delete(d3d_key.to_raw());
         batch.Delete(d2d_key.to_raw());
-        
+
         auto s = this->db_->Write(leveldb::WriteOptions(), &batch);
         //        还需要删除实体
         BL_LOGGER("Remove chunk %s = %d\n", cp.to_string().c_str(), s.ok());
         return s.ok();
+    }
+    void bedrock_level::foreach_global_keys(
+        const std::function<void(const std::string &, const std::string &)> &f) {
+        auto *it = this->db_->NewIterator(leveldb::ReadOptions());
+        for (it->SeekToFirst(); it->Valid(); it->Next()) {
+            auto ck = bl::chunk_key::parse(it->key().ToString());
+            if (ck.valid()) continue;
+            auto actor_key = bl::actor_key::parse(it->key().ToString());
+            if (actor_key.valid()) continue;
+            f(it->key().ToString(), it->value().ToString());
+        }
+        delete it;
+    }
+    void bedrock_level::load_global_data() {
+        this->foreach_global_keys([this](const std::string &key, const std::string &value) {
+            if (key.find("player") != std::string::npos) {
+                this->player_list_.append_player(key, value);
+            } else {
+                bl::village_key vk = village_key::parse(key);
+                if (vk.valid()) {
+                    this->village_list_.append_village(vk, value);
+                }
+            }
+        });
     }
 }  // namespace bl

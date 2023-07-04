@@ -12,9 +12,9 @@
 
 #include "bedrock_key.h"
 #include "chunk.h"
+#include "global.h"
 #include "level_dat.h"
 #include "leveldb/db.h"
-#include "nbt-cpp/nbt.hpp"
 
 namespace bl {
 
@@ -30,7 +30,6 @@ namespace bl {
          * @param root 存档根目录，即level.dat所在的目录
          * @return
          */
-
         bool open(const std::string &root);
 
         // 返回db的引用
@@ -40,11 +39,9 @@ namespace bl {
 
         chunk *get_chunk(const chunk_pos &cp);
 
-        bool remove_chunk(const chunk_pos &cp);
+        player_data &player_list() { return this->player_list_; }
 
-        //        block_info get_block(const bl::block_pos &pos, int dim);
-
-        //        [[nodiscard]] std::tuple<chunk_pos, chunk_pos> get_range(int dim) const;
+        bl::village_data &village_list() { return this->village_list_; }
 
         /**
          * 获取缓存的区块的的数量
@@ -70,6 +67,13 @@ namespace bl {
         actor *load_actor(const std::string &raw_uid);
 
         ~bedrock_level();
+
+        void foreach_global_keys(
+            const std::function<void(const std::string &, const std::string &)> &f);
+
+        void load_global_data();
+        // write
+        bool remove_chunk(const chunk_pos &cp);
 
        private:
         /**
@@ -97,6 +101,8 @@ namespace bl {
 
         bool enable_cache_{false};
 
+        bl::player_data player_list_;
+        bl::village_data village_list_;
         static const std::string LEVEL_DATA;
         static const std::string LEVEL_DB;
     };
