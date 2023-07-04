@@ -18,6 +18,13 @@ namespace bl {
             this->data_[key.uuid][static_cast<int>(key.type)] = nbt;
         }
     }
+    village_data::~village_data() {
+        for (auto& vill : this->data_) {
+            for (auto& v : vill.second) {
+                delete v;
+            }
+        }
+    }
 
     void player_data::reset(
         const std::unordered_map<std::string, bl::palette::compound_tag*>& data) {
@@ -31,6 +38,11 @@ namespace bl {
         auto* nbt = bl::palette::read_one_palette(value.data(), read);
         if (read == value.size() && nbt) {
             this->data_[key] = nbt;
+        }
+    }
+    player_data::~player_data() {
+        for (auto& kv : this->data_) {
+            delete kv.second;
         }
     }
 }  // namespace bl

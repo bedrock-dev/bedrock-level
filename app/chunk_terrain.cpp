@@ -10,7 +10,7 @@ int main() {
     auto level = bl::bedrock_level();
     level.open(path);
     level.load_global_data();
-    auto &vs = level.village_list();
+    auto &vs = level.village_list().data();
     for (auto &kv : vs) {
         std::cout << kv.first << "\n";
         int z = 0;

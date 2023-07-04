@@ -60,8 +60,9 @@ namespace bl {
     void level_dat::set_nbt(bl::palette::compound_tag *root) {
         if (!root) return;
         delete this->root_;
-        this->root_ = root_;
+        this->root_ = root;
         this->preload_data();
     }
     std::string level_dat::to_raw() const { return this->header_ + this->root_->to_raw(); }
+    level_dat::~level_dat() { delete this->root_; }
 }  // namespace bl

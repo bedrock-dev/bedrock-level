@@ -26,6 +26,7 @@ namespace bl {
 
         [[nodiscard]] std::string to_raw() const;
 
+        ~level_dat();
        private:
         bool preload_data();
 
