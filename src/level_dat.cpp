@@ -44,7 +44,7 @@ namespace bl {
 
         return true;
     }
-
+    
     bool level_dat::load_from_raw_data(const std::vector<byte_t> &data) {
         using namespace bl::palette;
         if (data.size() <= 8) return false;

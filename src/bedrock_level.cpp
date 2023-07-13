@@ -82,7 +82,6 @@ namespace bl {
         for (auto &kv : this->chunk_data_cache_) {
             delete kv.second;
         }
-        BL_LOGGER("Release Database");
         delete this->db_;
         this->db_ = nullptr;
         this->is_open_ = false;
@@ -123,23 +122,37 @@ namespace bl {
         }
     }
     bool bedrock_level::remove_chunk(const chunk_pos &cp) {
+        // remove new chunk  actors
         leveldb::WriteBatch batch;
-        for (int8_t i = -4; i <= 20; i++) {
-            bl::chunk_key key{chunk_key::SubChunkTerrain, cp, i};
-            batch.Delete(key.to_raw());
+        bl::actor_digest_key key{cp};
+        std::string raw;
+        // 没啥要解析的，不用管错误
+        if (load_raw(this->db_, key.to_raw(), raw)) {
+            bl::actor_digest_list ads;
+            ads.load(raw);
+            for (auto &uid : ads.actor_digests_) {
+                batch.Delete("actorprefix" + uid);
+            }
         }
-        bl::chunk_key pt_key{chunk_key::PendingTicks, cp};
-        bl::chunk_key block_actor_key{chunk_key::BlockEntity, cp};
-        bl::chunk_key d3d_key{chunk_key::Data3D, cp};
-        bl::chunk_key d2d_key{chunk_key::Data2D, cp};
-        batch.Delete(pt_key.to_raw());
-        batch.Delete(block_actor_key.to_raw());
-        batch.Delete(d3d_key.to_raw());
-        batch.Delete(d2d_key.to_raw());
 
+        // terrain
+        for (int8_t i = -4; i <= 20; i++) {
+            bl::chunk_key terrain_key{chunk_key::SubChunkTerrain, cp, i};
+            batch.Delete(terrain_key.to_raw());
+        }
+        // others
+        for (int i = 43; i <= 65; i++) {
+            auto t = static_cast<chunk_key::key_type>(i);
+            if (t != chunk_key::SubChunkTerrain) {
+                auto dk = bl::chunk_key{t, cp};
+                batch.Delete(dk.to_raw());
+            }
+        }
+
+        // version
+        bl::chunk_key version_key{chunk_key::VersionOld, cp};
+        batch.Delete(version_key.to_raw());
         auto s = this->db_->Write(leveldb::WriteOptions(), &batch);
-        //        还需要删除实体
-        BL_LOGGER("Remove chunk %s = %d\n", cp.to_string().c_str(), s.ok());
         return s.ok();
     }
     void bedrock_level::foreach_global_keys(
@@ -154,6 +167,7 @@ namespace bl {
         }
         delete it;
     }
+
     void bedrock_level::load_global_data() {
         this->foreach_global_keys([this](const std::string &key, const std::string &value) {
             if (key.find("player") != std::string::npos) {

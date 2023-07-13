@@ -14,14 +14,12 @@
 #include <iostream>
 #include <sstream>
 
+#include "color.h"
 #include "palette.h"
 
 namespace bl {
 
     namespace {
-        inline void endian_swap(int &x) {
-            x = (x >> 24) | ((x << 8) & 0x00FF0000) | ((x >> 8) & 0x0000FF00) | (x << 24);
-        }
 
         // sub chunk layout
         // https://user-images.githubusercontent.com/13713600/148380033-6223ac76-54b7-472c-a355-5923b87cb7c5.png
@@ -29,15 +27,25 @@ namespace bl {
         bool read_header(sub_chunk *sub_chunk, const byte_t *stream, int &read) {
             if (!sub_chunk || !stream) return false;
             // assert that stream is long enough
-            sub_chunk->set_version(stream[0]);
-            // 暂时跳过旧版本
-            if (stream[0] != 9) {
+            auto version = stream[0];
+            if (version != 8        // 1.2~1.17
+                && version != 9) {  // 1.18+
+                BL_LOGGER("Unsupported sub chunk version: %u", stream[0]);
                 return false;
             }
-
+            sub_chunk->set_version(version);
             sub_chunk->set_layers_num(stream[1]);
-            sub_chunk->set_y_index(static_cast<int8_t>(stream[2]));
-            read = 3;
+            read = 2;
+            // y-index for version 9
+            if (version == 9) {
+                int8_t y_index = stream[2];
+                if (y_index != sub_chunk->y_index()) {
+                    BL_ERROR("Invalid Y index value(new(%d)  != default(%d))", y_index,
+                             sub_chunk->y_index());
+                }
+                sub_chunk->set_y_index(y_index);
+                read++;
+            }
             return true;
         }
 
@@ -48,10 +56,11 @@ namespace bl {
                 int r = 0;
                 auto *tag = bl::palette::read_one_palette(stream + read, r);
                 if (tag) {
-                    tag->remove("version");  // remove version tag(为了颜色表的兼容性)
+                    tag->remove("version");  // remove version tag(compatibility for color table)
                     layer->palettes.push_back(tag);
                 } else {
-                    throw std::runtime_error("Error read palette");
+                    BL_ERROR("Can not read block palette");
+                    return false;
                 }
                 read += r;
             }
@@ -67,7 +76,6 @@ namespace bl {
             read++;
             layer->type = layer_header & 0x1;
             layer->bits = layer_header >> 1u;
-
             if (layer->bits != 0) {
                 int block_per_word = 32 / layer->bits;
                 auto wordCount = BLOCK_NUM / block_per_word;
@@ -89,13 +97,7 @@ namespace bl {
 
                 read += wordCount << 2;
                 int palette_len = *reinterpret_cast<const int *>(stream + read);
-                //                endian_swap(palette_len);
                 layer->palette_len = palette_len;
-                for (auto i : layer->blocks) {
-                    if (i >= layer->palette_len) {
-                        BL_ERROR("Invalid block state %d", i);
-                    }
-                }
                 read += 4;
             } else {  // uniform
                 layer->blocks = std::vector<uint16_t>(4096, 0);
@@ -175,7 +177,9 @@ namespace bl {
         if (id == palette->value.end()) {
             return {};
         }
-        return {dynamic_cast<bl::palette::string_tag *>(id->second)->value};
+
+        return {dynamic_cast<bl::palette::string_tag *>(id->second)->value,
+                bl::get_block_color_from_SNBT(palette->to_raw())};
     }
 
     palette::compound_tag *sub_chunk::get_block_raw(int rx, int ry, int rz) {

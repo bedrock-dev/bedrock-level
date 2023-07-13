@@ -169,6 +169,25 @@ TEST(BedrockLevel, ExportRandomTick) {
     delete it;
     level.close();
 }
+
+TEST(BedrockLevel, ExportHSA) {
+    using namespace bl;
+    bl::bedrock_level level;
+    EXPECT_TRUE(level.open(TEST_WORLD_ROOT));
+    auto *db = level.db();
+    auto *it = db->NewIterator(leveldb::ReadOptions());
+    for (it->SeekToFirst(); it->Valid(); it->Next()) {
+        auto k = bl::chunk_key::parse(it->key().ToString());
+        if (k.type == chunk_key::HardCodedSpawnAreas) {
+            utils::write_file(DUMP_ROOT + "hsa/" + std::to_string(k.cp.x) + "_" +
+                                  std::to_string(k.cp.z) + ".hsa.data",
+                              it->value().data(), it->value().size());
+        }
+    }
+    delete it;
+    level.close();
+}
+
 TEST(BedrockLevel, DumpActorDigits) {
     using namespace bl;
     bl::bedrock_level level;

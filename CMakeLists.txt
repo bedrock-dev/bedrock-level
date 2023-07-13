@@ -30,6 +30,7 @@ add_library(bedrock-level
         src/global.cpp
         src/color.cpp
         src/level_dat.cpp
+        src/nbt.cpp
         )
 
 
@@ -79,13 +80,13 @@ create_test(utils_test tests/utils_test.cpp)
 create_test(bit_tools_test tests/bit_tools_test.cpp)
 create_test(data3d_test tests/data3d_test.cpp)
 create_test(data_dump_level_test tests/data_dump_test.cpp)
-create_test(nbt_test tests/palettes_test.cpp)
+create_test(palette_test tests/palettes_test.cpp)
 create_test(actor_test tests/actor_test.cpp)
 create_test(key_test tests/key_test.cpp)
 create_test(bedrock_level_test tests/bedrock_level_test.cpp)
 create_test(chunk_test tests/chunk_test.cpp)
 create_test(stb_image_test tests/stb_image_test.cpp)
 create_test(color_test tests/color_test.cpp)
-
 create_test(level_dat_test tests/level_dat_test.cpp)
+#create_test(nbt_test tests/nbt_test.cpp)
 

@@ -24,9 +24,11 @@ namespace bl {
         auto it = biome_color_map.find(b);
         return it == biome_color_map.end() ? bl::color() : it->second;
     }
-    color get_block_color_from_snbt(const std::string& name) {
+    color get_block_color_from_SNBT(const std::string& name) {
         auto it = block_color_map.find(name);
         if (it == block_color_map.end()) {
+            //            BL_ERROR("unknown key: %s", name.c_str());
+
             return {};
         }
         return it->second;

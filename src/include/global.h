@@ -35,7 +35,7 @@ namespace bl {
         void reset(const std::unordered_map<std::string, bl::palette::compound_tag*>& data);
 
         void append_player(const std::string& key, const std::string& value);
-        inline std::unordered_map<std::string, bl::palette::compound_tag*> data() {
+        inline std::unordered_map<std::string, bl::palette::compound_tag*>& data() {
             return this->data_;
         };
         ~player_data();

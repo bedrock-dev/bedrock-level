@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <memory>
 
+#include "bedrock_key.h"
 #include "chunk.h"
 #include "utils.h"
 
@@ -60,7 +61,7 @@ namespace bl {
             return res;
         }
     }  // namespace
-    bool data_3d::load(const byte_t *data, size_t len) {
+    bool biome3d::load_from_d3d(const byte_t *data, size_t len) {
         int index = 0;
         if (len < 512) {
             BL_ERROR("Invalid Data3d format");
@@ -71,7 +72,6 @@ namespace bl {
         index += 512;
         while (index < len) {
             int read = 0;
-
             auto sub_chunk_biome = load_subchunk_biome(data + index, read, len);
             for (int y = 0; y < 16; y++) {
                 auto layer = std::array<std::array<biome, 16>, 16>{};
@@ -84,48 +84,56 @@ namespace bl {
             }
             index += read;
         }
-        if (this->biomes_.size() == 384) {
-            this->dim = 0;
-        } else if (this->biomes_.size() == 256) {
-            this->dim = 2;
-        } else if (this->biomes_.size() == 128) {
-            this->dim = 1;
-        } else {
-            BL_ERROR("Invalid Biome layer size");
-            return false;
-        }
         return true;
     }
 
-    void data_3d::dump_to_file(FILE *fp) const {
-        for (int i = 0; i < 256; i++) {
-            fprintf(fp, "%03d ", this->height_map_[i] - 64);
-            if (i % 16 == 15) {
-                fprintf(fp, "\n");
-            }
+    biome biome3d::get_biome(int cx, int y, int cz) {
+        if (this->version_ == Old) {
+            return this->biomes_.empty() ? bl::biome::none : this->biomes_[0][cx][cz];
         }
-    }
-    biome data_3d::get_biome(int cx, int y, int cz) {
-        if (dim == 0) y += 64;
-        if (y > this->biomes_.size()) {
+        auto [my, _] = pos_.get_y_range(this->version_);
+        y += my;
+        if (y > this->biomes_.size() || y < 0) {
             return biome::none;
         }
         return this->biomes_[y][cx][cz];
     }
 
-    std::array<std::array<biome, 16>, 16> data_3d::get_biome_y(int y) {
-        if (dim == 0) y += 64;
+    std::array<std::array<biome, 16>, 16> biome3d::get_biome_y(int y) {
+        if (this->version_ == Old) {
+            return this->biomes_.empty() ? std::array<std::array<biome, 16>, 16>()
+                                         : this->biomes_[0];
+        }
+        auto [my, _] = pos_.get_y_range(this->version_);
+        y += my;
         if (y > this->biomes_.size()) {
             return {};
         }
         return this->biomes_[y];
     }
 
-    biome data_3d::get_top_biome(int cx, int cz) {
+    biome biome3d::get_top_biome(int cx, int cz) {
+        if (this->version_ == Old) return this->get_biome(cx, 0, cz);
         int y = (int)this->biomes_.size() - 1;
         while (y >= 0 && this->biomes_[y][cx][cz] == none) {
             y--;
         }
         return y < 0 ? biome::none : this->biomes_[y][cx][cz];
     }
+    bool biome3d::load_from_d2d(const byte_t *data, size_t len) {
+        if (len != 768) {  // height map: 512bytes biome: 256 * 4 = 1024 bytes
+            BL_ERROR("Invalid Data2d format (%zu)", len);
+            return false;
+        }
+        memcpy(this->height_map_.data(), data, 512);
+        auto layer = std::array<std::array<biome, 16>, 16>{};
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
+                layer[x][z] = static_cast<biome>(data[512 + x + 16 * z]);
+            }
+        }
+        this->biomes_.push_back(layer);
+        return true;
+    }
+
 }  // namespace bl

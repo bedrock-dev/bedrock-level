@@ -12,28 +12,34 @@
 
 namespace bl {
 
+    enum ChunkVersion {
+        Old = 0,  // 1.12~1.17
+        New = 1   // 1.8+
+    };
+
     struct block_pos;
     struct chunk_pos {
         int32_t x{0};
         int32_t z{0};
         int32_t dim{-1};
 
+        chunk_pos(int32_t xx, int32_t zz, int32_t dimension) : x(xx), z(zz), dim(dimension) {}
+
+        chunk_pos() = default;
+
         [[nodiscard]] bool valid() const { return this->dim >= 0 && this->dim <= 2; }
 
         [[nodiscard]] std::string to_string() const;
-
-        chunk_pos() = default;
 
         bool operator==(const chunk_pos &p) const;
 
         bool operator<(const chunk_pos &rhs) const;
 
-        [[nodiscard]] std::tuple<int32_t, int32_t> get_y_range() const;
+        [[nodiscard]] std::tuple<int32_t, int32_t> get_y_range(ChunkVersion v) const;
 
-        [[nodiscard]] std::tuple<int8_t, int8_t> get_subchunk_index_range() const;
-
-        [[nodiscard]] block_pos get_min_pos() const;
-        [[nodiscard]] block_pos get_max_pos() const;
+        [[nodiscard]] std::tuple<int8_t, int8_t> get_subchunk_index_range(ChunkVersion v) const;
+        [[nodiscard]] block_pos get_min_pos(ChunkVersion v) const;
+        [[nodiscard]] block_pos get_max_pos(ChunkVersion v) const;
 
         [[nodiscard]] bool is_slime() const;
     };
@@ -144,6 +150,18 @@ namespace bl {
         key_type type{Unknown};
     };
 
+    enum HSAType : int8_t {
+        NetherFortress = 1,
+        SwampHut = 2,
+        OceanMonument = 3,
+        PillagerOutpost = 5,
+        Unknown = 6
+    };
+    struct hardcoded_spawn_area {
+        HSAType type{Unknown};
+        block_pos min_pos{0, 0, 0};
+        block_pos max_pos{0, 0, 0};
+    };
 }  // namespace bl
 
 namespace std {

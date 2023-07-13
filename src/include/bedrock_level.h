@@ -75,6 +75,10 @@ namespace bl {
         // write
         bool remove_chunk(const chunk_pos &cp);
 
+        [[nodiscard]] std::string root_path() const { return this->root_name_; }
+        static const std::string LEVEL_DATA;
+        static const std::string LEVEL_DB;
+
        private:
         /**
          * 从数据库中读取一个区块的所有数据
@@ -103,8 +107,6 @@ namespace bl {
 
         bl::player_data player_list_;
         bl::village_data village_list_;
-        static const std::string LEVEL_DATA;
-        static const std::string LEVEL_DB;
     };
 
 }  // namespace bl

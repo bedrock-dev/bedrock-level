@@ -11,11 +11,12 @@
 #include <memory>
 #include <vector>
 
+#include "color.h"
 #include "palette.h"
-
 namespace bl {
     struct block_info {
         std::string name{"minecraft:unknown"};
+        bl::color color{};
     };
 
     class sub_chunk {
@@ -39,7 +40,7 @@ namespace bl {
 
         void set_version(uint8_t version) { this->version_ = version; }
 
-        void set_y_index(int y_index) { this->y_index_ = y_index; }
+        void set_y_index(int8_t y_index) { this->y_index_ = y_index; }
 
         void set_layers_num(uint8_t layers_num) { this->layers_num_ = layers_num; }
 
@@ -48,16 +49,19 @@ namespace bl {
         // for develop
         void dump_to_file(FILE *fp) const;
 
+        [[nodiscard]] inline int8_t y_index() const { return this->y_index_; }
+        [[nodiscard]] inline uint8_t version() const { return this->version_; };
         ~sub_chunk();
 
        private:
         void push_back_layer(layer *layer) { this->layers_.push_back(layer); }
 
         uint8_t version_{0xff};
-        int y_index_{0};
+        int8_t y_index_{0};
         uint8_t layers_num_{0xff};
         std::vector<layer *> layers_;
     };
+
 }  // namespace bl
 
 #endif  // BEDROCK_LEVEL_SUB_CHUNK_H

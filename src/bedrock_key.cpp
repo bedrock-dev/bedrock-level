@@ -9,7 +9,8 @@
 #include "utils.h"
 namespace bl {
 
-    const chunk_key chunk_key::INVALID_CHUNK_KEY = chunk_key{chunk_key::Unknown, 0, 0, 0, 0};
+    const chunk_key chunk_key::INVALID_CHUNK_KEY =
+        chunk_key{chunk_key::Unknown, bl::chunk_pos(), 0};
 
     chunk_key chunk_key::parse(const std::string &key) {
         auto sz = key.size();
@@ -89,7 +90,6 @@ namespace bl {
         if (key.rfind("VILLAGE_", 0) != 0) return res;
         res.uuid = std::string(key.begin() + 8, key.begin() + 44);  // uuid
         std::string type_str = std::string(key.data() + 45);
-        BL_LOGGER("type: [%s]", type_str.c_str());
         if (type_str == "DWELLERS") {
             res.type = DWELLERS;
         } else if (type_str == "INFO") {
@@ -193,27 +193,40 @@ namespace bl {
         return this->x == p.x && this->dim == p.dim && this->z == p.z;
     }
 
-    block_pos chunk_pos::get_min_pos() const {
-        auto [y, _] = this->get_y_range();
+    block_pos chunk_pos::get_min_pos(ChunkVersion v) const {
+        auto [y, _] = this->get_y_range(v);
         return {this->x * 16, y, this->z * 16};
     }
-    block_pos chunk_pos::get_max_pos() const {
-        auto [_, y] = this->get_y_range();
+    block_pos chunk_pos::get_max_pos(ChunkVersion v) const {
+        auto [_, y] = this->get_y_range(v);
         return {this->x * 16 + 15, y, this->z * 16 + 15};
     }
 
-    std::tuple<int32_t, int32_t> chunk_pos::get_y_range() const {
-        if (this->dim == 0) return {-64, 319};
+    std::tuple<int32_t, int32_t> chunk_pos::get_y_range(ChunkVersion v) const {
         if (this->dim == 1) return {0, 127};
         if (this->dim == 2) return {0, 255};
+        if (this->dim == 0) {
+            if (v == New) {
+                return {-64, 319};
+            } else {
+                return {0, 255};
+            }
+        }
         return {0, -1};
     }
-    std::tuple<int8_t, int8_t> chunk_pos::get_subchunk_index_range() const {
-        if (this->dim == 0) return {-4, 19};
+    std::tuple<int8_t, int8_t> chunk_pos::get_subchunk_index_range(ChunkVersion v) const {
         if (this->dim == 1) return {0, 7};
         if (this->dim == 2) return {0, 15};
+        if (this->dim == 0) {
+            if (v == New) {
+                return {-4, 19};
+            } else {
+                return {0, 15};
+            }
+        }
         return {0, -1};
     }
+
     bool chunk_pos::is_slime() const {
         auto seed = (x * 0x1f1f1f1fu) ^ (uint32_t)z;
         std::mt19937 mt(seed);

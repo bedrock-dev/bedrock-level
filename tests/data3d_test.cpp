@@ -11,15 +11,15 @@
 TEST(Data3d, BasicRead) {
     auto data = bl::utils::read_file("../data/dumps/data3d/0_-1.data3d");
     EXPECT_TRUE(data.size() > 512);
-    bl::data_3d d3d{};
-    d3d.load(data.data(), data.size());
+    bl::biome3d d3d{};
+    d3d.load_from_d3d(data.data(), data.size());
 }
 
 TEST(Data3d, MemoryFree) {
     auto data = bl::utils::read_file("../data/dumps/data3d/0_-1.data3d");
     EXPECT_TRUE(data.size() > 512);
-    auto *d = new bl::data_3d;
-    d->load(data.data(), data.size());
+    auto *d = new bl::biome3d;
+    d->load_from_d3d(data.data(), data.size());
     delete d;
 }
 
@@ -29,8 +29,8 @@ TEST(Data3d, BiomeRead) {
 
     auto data = bl::utils::read_file("../data/dumps/data3d/0_0.data3d");
     EXPECT_TRUE(data.size() > 512);
-    bl::data_3d d3d{};
-    d3d.load(data.data(), data.size());
+    bl::biome3d d3d{};
+    d3d.load_from_d3d(data.data(), data.size());
 
     for (int y = -64; y < 320; y++) {
         std::vector<std::vector<bl::color>> c(16, std::vector<bl::color>(16, bl::color()));
@@ -50,8 +50,8 @@ TEST(Data3d, TopBiomeRead) {
 
     auto data = bl::utils::read_file("../data/dumps/data3d/1_-1.data3d");
     EXPECT_TRUE(data.size() > 512);
-    bl::data_3d d3d{};
-    d3d.load(data.data(), data.size());
+    bl::biome3d d3d{};
+    d3d.load_from_d3d(data.data(), data.size());
 
     std::vector<std::vector<bl::color>> c(16, std::vector<bl::color>(16, bl::color()));
     for (int x = 0; x < 16; x++) {

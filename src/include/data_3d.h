@@ -9,12 +9,13 @@
 #include <cstdint>
 #include <cstdio>
 
+#include "bedrock_key.h"
 #include "utils.h"
-
 namespace bl {
 
     // clang-format off
-    enum biome  {
+
+    enum biome  : uint8_t {
         ocean                            = 0,
         plains                           = 1,
         desert                           = 2,
@@ -102,16 +103,19 @@ namespace bl {
         mangrove_swamp                   = 191,
         cherry_groves                    = 192,
         none                             = 255,
-        LEN,
     };
     // clang-format on
 
-    class data_3d {
+    class biome3d {
        public:
-        bool load(const byte_t *data, size_t len);
-        void dump_to_file(FILE *fp) const;
+        bool load_from_d3d(const byte_t *data, size_t len);
 
-        inline int height(int x, int z) { return this->height_map_[x + z * 16]; }
+        bool load_from_d2d(const byte_t *data, size_t len);
+
+        inline int height(int x, int z) {
+            auto [my, _] = this->pos_.get_y_range(this->version_);
+            return this->height_map_[x + z * 16] + my;
+        }
 
         [[nodiscard]] inline std::array<int16_t, 256> height_map() const {
             return this->height_map_;
@@ -123,10 +127,14 @@ namespace bl {
 
         biome get_top_biome(int cx, int cz);
 
+        void set_chunk_pos(const bl::chunk_pos &cp) { this->pos_ = cp; }
+        void set_version(ChunkVersion version) { this->version_ = version; }
+
        private:
         std::array<int16_t, 256> height_map_;
         std::vector<std::array<std::array<biome, 16>, 16>> biomes_;
-        int dim{0};
+        bl::chunk_pos pos_;
+        ChunkVersion version_;
     };
 }  // namespace bl
 

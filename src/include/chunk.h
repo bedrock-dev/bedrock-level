@@ -44,9 +44,10 @@ namespace bl {
 
         biome get_top_biome(int cx, int cz);
 
-        std::vector<std::string> &get_actor_list() {
-            return this->actor_digest_list_.actor_digests_;
-        }
+        //        std::vector<std::string> &get_actor_list() {
+
+        //            return this->actor_digest_list_.actor_digests_;
+        //        }
 
         [[nodiscard]] bl::chunk_pos get_pos() const;
 
@@ -57,39 +58,48 @@ namespace bl {
         chunk() = delete;
 
         [[nodiscard]] inline bool loaded() const { return this->loaded_; }
+        std::vector<bl::palette::compound_tag *> &block_entities() { return this->block_entities_; }
+        std::vector<bl::palette::compound_tag *> &pending_ticks() { return this->pending_ticks_; }
 
-        std::vector<bl::palette::compound_tag *> block_entities() { return this->block_entities_; }
-        std::vector<bl::palette::compound_tag *> pending_ticks() { return this->pending_ticks_; }
+        std::vector<bl::actor *> entities() & { return this->entities_; }
 
+        std::vector<hardcoded_spawn_area> HSAs() { return this->HSAs_; }
+
+        [[nodiscard]] ChunkVersion get_version() const { return this->version; }
         ~chunk();
 
        private:
         bool load_data(bedrock_level &level);
 
        private:
-        bool load_subchunks_(bedrock_level &level);
+        bool load_subchunks(bedrock_level &level);
 
-        bool load_d3d(bedrock_level &level);
+        bool load_biomes(bedrock_level &level);
 
-        bool load_actor_digest(bedrock_level &level);
+        void load_entities(bedrock_level &level);
 
         bool load_pending_ticks(bedrock_level &level);
 
         bool load_block_entities(bedrock_level &level);
+
+        void load_hsa(bedrock_level &level);
 
         bool loaded_{false};
         const chunk_pos pos_;
         // sub_chunks
         std::map<int, sub_chunk *> sub_chunks_;
         // biome and height map
-        data_3d d3d_{};
+        biome3d d3d_{};
         // actor digest
-        bl::actor_digest_list actor_digest_list_;
+        //        bl::actor_digest_list actor_digest_list_;
         // block entities
+        std::vector<bl::actor *> entities_;
         std::vector<bl::palette::compound_tag *> block_entities_;
         std::vector<bl::palette::compound_tag *> pending_ticks_;
-    };
 
+        std::vector<bl::hardcoded_spawn_area> HSAs_;
+        ChunkVersion version{New};
+    };
 }  // namespace bl
 
 #endif  // BEDROCK_LEVEL_CHUNK_H
