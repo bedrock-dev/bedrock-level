@@ -20,6 +20,8 @@ namespace bl {
 
     class bedrock_level {
        public:
+        bedrock_level();
+
         /*
          * 返回存档是否已经正常打开
          */
@@ -107,6 +109,7 @@ namespace bl {
 
         bl::player_data player_list_;
         bl::village_data village_list_;
+        leveldb::Options options_{};
     };
 
 }  // namespace bl

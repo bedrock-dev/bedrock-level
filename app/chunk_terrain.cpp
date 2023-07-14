@@ -6,25 +6,24 @@
 
 #include "bedrock_level.h"
 #include "utils.h"
-int main() {
-    const std::string path = R"(C:\Users\xhy\Desktop\worlds\231)";
-    auto level = bl::bedrock_level();
-    level.open(path);
-    if (!level.is_open()) {
+void check_leak() {
+    const std::string path = R"(C:\Users\xhy\Desktop\SAC_survival)";
+    auto *level = new bl::bedrock_level();
+    level->open(path);
+    if (!level->is_open()) {
         BL_LOGGER("Can not open %s", path.c_str());
+        return;
     }
-    auto key = std::string("player_server_1cac9061-77c2-4922-8a56-c6ec4c0b7cce");
 
-    std::string value;
+    int x = 0;
+    PROF_TIMER(TR, {
+        level->foreach_global_keys([&x](const std::string &key, const std::string &value) { x++; });
+    });
 
-    level.db()->Get(leveldb::ReadOptions(), key, &value);
+    printf("Total %d keys, %zu ms needed", x, time_TR / 1000);
+}
 
-    bl::utils::write_file("a.mcstructure", value.data(), value.size());
-    int read = 0;
-    BL_LOGGER("%d", value.size());
-    auto* b = bl::palette::read_one_palette(value.data(), read);
-    b->write(std::cout, 0);
-
-    //    level.load_global_data();
+int main() {
+    check_leak();
     return 0;
 }

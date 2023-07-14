@@ -55,7 +55,7 @@ namespace bl {
                 //                printf("%s  [%d] -> %u %u %u\n", key.c_str(), id, c.r, c.g, c.b);
             }
 
-        } catch (std::exception& e) {
+        } catch (std::exception&) {
             return false;
         }
 

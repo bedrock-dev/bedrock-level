@@ -41,3 +41,7 @@
 .cache/*
 data/worlds/*
 data/dumps/*
+.vs-build
+.release
+.debug
+.build

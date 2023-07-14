@@ -19,6 +19,7 @@
 #define KCYN "\x1B[36m"
 #define KWHT "\x1B[37m"
 
+
 void log(const char *file_name, const char *function_name, size_t line, const char *fmt, ...) {
 #ifdef DEBUG
     va_list args;
@@ -63,7 +64,6 @@ namespace bl::utils {
         std::vector<byte_t> bytes((std::istreambuf_iterator<char>(input)),
                                   (std::istreambuf_iterator<char>()));
         input.close();
-
         return bytes;
     }
 

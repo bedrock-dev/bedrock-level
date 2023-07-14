@@ -24,6 +24,7 @@ namespace bl {
             return this->data_;
         }
 
+        void clear_data();
         ~village_data();
 
        private:
@@ -39,6 +40,8 @@ namespace bl {
             return this->data_;
         };
         ~player_data();
+
+        void clear_data();
 
        private:
         std::unordered_map<std::string, bl::palette::compound_tag*> data_;

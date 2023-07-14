@@ -1,24 +1,32 @@
 
 CMAKE_MINIMUM_REQUIRED(VERSION 3.14)
 
+
 project(bedrock_level)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    # using Clang
+    MESSAGE(STATUS "Current compiler is MSVC")
+    set(EXTRA_LIBS ${PROJECT_SOURCE_DIR}/libs/leveldb.lib)
+    add_compile_options(/utf-8 /EHsc /std:c++17 /EHsc /MT /O2)
+
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    MESSAGE(STATUS "Current compiler is Mingw")
+    set(EXTRA_LIBS ${PROJECT_SOURCE_DIR}/libs/libleveldb.a ${PROJECT_SOURCE_DIR}/libs/libz.a)
+    add_compile_options(-std=c++17 -O2 -Wall -g)
+endif ()
 
 
 include_directories(src/include)
 include_directories(third/)
 
-# find_package(Catch2 REQUIRED)
-
-#Catch2 Test lib
 enable_testing()
-
-
 add_library(bedrock-level
+        STATIC
         src/sub_chunk.cpp
         src/utils.cpp
-        #        src/bit_tools.cpp
         src/palette.cpp
         src/bedrock_level.cpp
         src/bedrock_key.cpp
@@ -34,8 +42,7 @@ add_library(bedrock-level
 
 
 target_link_libraries(bedrock-level
-        ${PROJECT_SOURCE_DIR}/libs/libleveldb.a
-        ${PROJECT_SOURCE_DIR}/libs/libz.a
+        ${EXTRA_LIBS}
         )
 
 

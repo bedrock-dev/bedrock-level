@@ -127,35 +127,7 @@ namespace bl {
         return true;
     }
 
-    void sub_chunk::dump_to_file(FILE *fp) const {
-        //        fprintf(fp, "Version : %u\n", this->version_);
-        //        fprintf(fp, "Y index : %d\n", this->y_index_);
-        //        fprintf(fp, "Layers  : %u\n", this->layers_num_);
-        //        fprintf(fp, "===========================================\n");
-        //        size_t index = 0;
-        //        for (auto &layer : this->layers_) {
-        //            fprintf(fp, "Layer %zu:\n", index);
-        //            fprintf(fp, "Bits per block: %d\n", layer.bits);
-        //            fprintf(fp, "Palette type: %d\n", layer.type);
-        //            fprintf(fp, "Palette len: %d\n", layer.palette_len);
-        //            for (auto y = 0; y < 16; y++) {
-        //                printf("Y = %d\n", y);
-        //                for (auto z = 0; z < 16; z++) {
-        //                    for (auto x = 0; x < 16; x++) {
-        //                        auto idx = x * 256 + z * 16 + y;
-        //                        printf("%02d ", layer.blocks[idx]);
-        //                    }
-        //                    printf("\n");
-        //                }
-        //                printf("==============================\n");
-        //            }
-        //            for (auto palette : layer.palettes) {
-        //                palette->write(std::cout, 0);
-        //            }
-        //
-        //            ++index;
-        //        }
-    }
+    void sub_chunk::dump_to_file(FILE *fp) const {}
 
     block_info sub_chunk::get_block(int rx, int ry, int rz) {
         if (rx < 0 || rx > 15 || ry < 0 || ry > 15 || rz < 0 || rz > 15) {

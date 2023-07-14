@@ -36,14 +36,8 @@ namespace bl {
     }
 
     bool bedrock_level::read_db() {  // NOLINT
-        leveldb::Options options;
-        options.filter_policy = leveldb::NewBloomFilterPolicy(10);
-        options.block_cache = leveldb::NewLRUCache(40 * 1024 * 1024);
-        options.write_buffer_size = 4 * 1024 * 1024;
-        options.compressors[0] = new leveldb::ZlibCompressorRaw(-1);
-        options.compressors[1] = new leveldb::ZlibCompressor();
         leveldb::Status status = leveldb::DB::Open(
-            options, this->root_name_ + "/" + bl::bedrock_level::LEVEL_DB, &this->db_);
+            this->options_, this->root_name_ + "/" + bl::bedrock_level::LEVEL_DB, &this->db_);
         if (!status.ok()) {
             BL_ERROR("Can not open level database: %s.", status.ToString().c_str());
         }
@@ -52,9 +46,10 @@ namespace bl {
 
     bedrock_level::~bedrock_level() {
         this->close();
-        for (auto &chunk : this->chunk_data_cache_) {
-            delete chunk.second;
-        }
+        delete this->options_.compressors[0];
+        delete this->options_.compressors[1];
+        delete this->options_.block_cache;
+        delete this->options_.filter_policy;
     };
 
     chunk *bedrock_level::get_chunk(const chunk_pos &cp) {
@@ -87,6 +82,9 @@ namespace bl {
         for (auto &kv : this->chunk_data_cache_) {
             delete kv.second;
         }
+        this->clear_cache();
+        this->village_list_.clear_data();
+        this->player_list_.clear_data();
         delete this->db_;
         this->db_ = nullptr;
         this->is_open_ = false;
@@ -184,5 +182,13 @@ namespace bl {
                 }
             }
         });
+    }
+
+    bedrock_level::bedrock_level() {
+        options_.filter_policy = leveldb::NewBloomFilterPolicy(10);
+        options_.block_cache = leveldb::NewLRUCache(20 * 1024 * 1024);
+        options_.write_buffer_size = 4 * 1024 * 1024;
+        options_.compressors[0] = new leveldb::ZlibCompressorRaw(-1);
+        options_.compressors[1] = new leveldb::ZlibCompressor();
     }
 }  // namespace bl
