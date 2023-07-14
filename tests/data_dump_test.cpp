@@ -11,7 +11,7 @@
 #include "bedrock_level.h"
 #include "utils.h"
 
-const std::string TEST_WORLD_ROOT = R"(C:\Users\xhy\Desktop\SAC_survival)";
+const std::string TEST_WORLD_ROOT = R"(C:\Users\xhy\Desktop\t)";
 const std::string DUMP_ROOT = R"(C:\Users\xhy\dev\bedrock-level\data\dumps\)";
 
 TEST(BedrockLevel, SimpleOpen) {
@@ -236,13 +236,13 @@ TEST(BedrockLevel, SaveInvalid) {
 
         auto village_key = bl::village_key::parse(it->key().ToString());
         if (village_key.valid()) {
-            std::cout << "Village Key: " << village_key.to_string() << std::endl;
+            //            std::cout << "Village Key: " << village_key.to_string() << std::endl;
             continue;
         }
 
-        utils::write_file("invalid/" + std::to_string(idx) + ".key", it->key().data(),
+        utils::write_file(DUMP_ROOT + "invalid/" + std::to_string(idx) + ".key", it->key().data(),
                           it->key().size());
-        utils::write_file("invalid/" + std::to_string(idx) + ".value", it->value().data(),
+        utils::write_file(DUMP_ROOT + "invalid/" + std::to_string(idx) + ".nbt", it->value().data(),
                           it->value().size());
         ++idx;
     }

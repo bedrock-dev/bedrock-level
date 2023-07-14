@@ -30,7 +30,6 @@ add_library(bedrock-level
         src/global.cpp
         src/color.cpp
         src/level_dat.cpp
-        src/nbt.cpp
         )
 
 

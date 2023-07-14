@@ -228,8 +228,6 @@ namespace bl::palette {
                 return "String";
             case Compound:
                 return "Compound";
-            case LEN:
-                return "ERROR";
             case List:
                 return "List";
             case Long:

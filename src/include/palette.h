@@ -29,11 +29,9 @@ namespace bl::palette {
         String = 8,
         List = 9,
         Compound = 10,
-        LEN = 11,
-        IntArray = 12,
-        LongArray = 13
+        IntArray = 11,
+        LongArray = 12
     };
-
     std::string tag_type_to_str(tag_type type);
 
     class abstract_tag {
