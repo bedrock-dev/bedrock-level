@@ -24,7 +24,7 @@ namespace bl {
     [[maybe_unused]] color get_biome_color(biome b);
 
     color get_block_color_from_SNBT(const std::string& name);
-
+    
     [[maybe_unused]] std::unordered_map<std::string, bl::color>& get_block_color_table();
     bool init_biome_color_palette_from_file(const std::string& filename);
 

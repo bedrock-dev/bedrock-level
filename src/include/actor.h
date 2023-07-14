@@ -35,6 +35,9 @@ namespace bl {
         bl::palette::compound_tag* root_{nullptr};
         std::string identifier_{"minecraft:unknown"};
         vec3 pos_{0, 0, 0};
+
+       public:
+        ~actor();
     };
 
     /* 实体摘要信息

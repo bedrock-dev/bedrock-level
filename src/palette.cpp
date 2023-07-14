@@ -33,7 +33,7 @@ namespace bl::palette {
     std::tuple<byte_array_tag *, size_t> read_byte_array_value(const byte_t *data,
                                                                const std::string &key) {
         auto *tag = new byte_array_tag(key);
-        int32_t len = 4;
+        int32_t len = {0};
         memcpy(&len, data, 4);
         tag->value = std::vector<int8_t>(len, 0);
         memcpy(tag->value.data(), data + 4, len);
@@ -43,7 +43,7 @@ namespace bl::palette {
     std::tuple<int_array_tag *, size_t> read_int_array_value(const byte_t *data,
                                                              const std::string &key) {
         auto *tag = new int_array_tag(key);
-        int32_t len = 4;
+        int32_t len{0};
         memcpy(&len, data, 4);
         tag->value = std::vector<int32_t>(len, 0);
         memcpy(tag->value.data(), data + 4, len * 4);
@@ -53,8 +53,9 @@ namespace bl::palette {
     std::tuple<long_array_tag *, size_t> read_long_array_value(const byte_t *data,
                                                                const std::string &key) {
         auto *tag = new long_array_tag(key);
-        int32_t len = 4;
+        int32_t len{0};
         memcpy(&len, data, 4);
+        BL_LOGGER("Len is %d", len);
         tag->value = std::vector<int64_t>(len, 0);
         memcpy(tag->value.data(), data + 4, len * 8);
         return {tag, len * 8 + 4};
@@ -193,6 +194,7 @@ namespace bl::palette {
             auto [res, len] = read_int_array_value(data + read, key);
             return {res, len + read};
         } else if (type == LongArray) {
+            BL_LOGGER("key size(%d)", key.size());
             auto [res, len] = read_long_array_value(data + read, key);
             return {res, len + read};
         } else if (type == List) {

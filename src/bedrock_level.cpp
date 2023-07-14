@@ -50,7 +50,12 @@ namespace bl {
         return status.ok();
     }
 
-    bedrock_level::~bedrock_level() { this->close(); };
+    bedrock_level::~bedrock_level() {
+        this->close();
+        for (auto &chunk : this->chunk_data_cache_) {
+            delete chunk.second;
+        }
+    };
 
     chunk *bedrock_level::get_chunk(const chunk_pos &cp) {
         if (!this->is_open()) {

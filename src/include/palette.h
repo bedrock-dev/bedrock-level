@@ -151,7 +151,7 @@ namespace bl::palette {
             return it == this->value.end() ? nullptr : it->second;
         }
 
-        abstract_tag *copy() const override {
+        [[nodiscard]] abstract_tag *copy() const override {
             auto *res = new compound_tag(this->key_);
             for (auto &kv : this->value) {
                 res->put(kv.second->copy());
@@ -190,7 +190,7 @@ namespace bl::palette {
         }
         [[nodiscard]] std::string value_string() const override { return this->value; };
 
-        abstract_tag *copy() const override {
+        [[nodiscard]] abstract_tag *copy() const override {
             auto *res = new string_tag(this->key_);
             res->value = this->value;
             return res;
@@ -220,7 +220,7 @@ namespace bl::palette {
         [[nodiscard]] std::string value_string() const override {
             return std::to_string(this->value);
         };
-        abstract_tag *copy() const override {
+        [[nodiscard]] abstract_tag *copy() const override {
             auto *res = new int_tag(this->key_);
             res->value = this->value;
             return res;
@@ -253,7 +253,7 @@ namespace bl::palette {
         }
         ~short_tag() override = default;
 
-        abstract_tag *copy() const override {
+        [[nodiscard]] abstract_tag *copy() const override {
             auto *res = new short_tag(this->key_);
             res->value = this->value;
             return res;
@@ -283,7 +283,7 @@ namespace bl::palette {
         [[nodiscard]] std::string value_string() const override {
             return std::to_string(this->value);
         };
-        abstract_tag *copy() const override {
+        [[nodiscard]] abstract_tag *copy() const override {
             auto *res = new long_tag(this->key_);
             res->value = this->value;
             return res;
@@ -315,7 +315,7 @@ namespace bl::palette {
         [[nodiscard]] std::string value_string() const override {
             return std::to_string(this->value);
         }
-        abstract_tag *copy() const override {
+        [[nodiscard]] abstract_tag *copy() const override {
             auto *res = new float_tag(this->key_);
             res->value = this->value;
             return res;
@@ -347,7 +347,7 @@ namespace bl::palette {
             return std::to_string(this->value);
         }
 
-        abstract_tag *copy() const override {
+        [[nodiscard]] abstract_tag *copy() const override {
             auto *res = new double_tag(this->key_);
             res->value = this->value;
             return res;
@@ -378,7 +378,7 @@ namespace bl::palette {
         [[nodiscard]] std::string value_string() const override {
             return std::to_string(this->value);
         }
-        abstract_tag *copy() const override {
+        [[nodiscard]] abstract_tag *copy() const override {
             auto *res = new byte_tag(this->key_);
             res->value = this->value;
             return res;
@@ -419,6 +419,8 @@ namespace bl::palette {
        protected:
         [[nodiscard]] std::string payload_to_raw() const override {
             std::string raw(4 + this->value.size() * 1, 0);
+            auto size = static_cast<int32_t>(this->value.size());
+            memcpy(raw.data(), &size, 4);
             memcpy(raw.data() + 4, this->value.data(), this->value.size());
             return raw;
         }
@@ -447,6 +449,8 @@ namespace bl::palette {
        protected:
         [[nodiscard]] std::string payload_to_raw() const override {
             std::string raw(4 + this->value.size() * 4, 0);
+            auto size = static_cast<int32_t>(this->value.size());
+            memcpy(raw.data(), &size, 4);
             memcpy(raw.data() + 4, this->value.data(), this->value.size() * 4);
             return raw;
         }
@@ -475,6 +479,9 @@ namespace bl::palette {
        protected:
         [[nodiscard]] std::string payload_to_raw() const override {
             std::string raw(4 + this->value.size() * 8, 0);
+            auto size = static_cast<int32_t>(this->value.size());
+            memcpy(raw.data(), &size, 4);
+
             memcpy(raw.data() + 4, this->value.data(), this->value.size() * 8);
             return raw;
         }
@@ -511,7 +518,7 @@ namespace bl::palette {
             }
             o << "}\n";
         }
-        abstract_tag *copy() const override {
+        [[nodiscard]] abstract_tag *copy() const override {
             auto *res = new list_tag(this->key_);
             for (auto &item : this->value) {
                 res->value.push_back(item->copy());
