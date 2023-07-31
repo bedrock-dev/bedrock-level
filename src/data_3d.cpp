@@ -67,19 +67,20 @@ namespace bl {
             BL_ERROR("Invalid Data3d format");
             return false;
         }
-
         memcpy(this->height_map_.data(), data, 512);
         index += 512;
         while (index < len) {
             int read = 0;
             auto sub_chunk_biome = load_subchunk_biome(data + index, read, len);
             for (int y = 0; y < 16; y++) {
-                auto layer = std::array<std::array<biome, 16>, 16>{};
+                auto layer =
+                    std::vector<std::vector<bl::biome>>(16, std::vector<bl::biome>(16, bl::none));
                 for (int x = 0; x < 16; x++) {
                     for (int z = 0; z < 16; z++) {
                         layer[x][z] = sub_chunk_biome[x * 256 + z * 16 + y];
                     }
                 }
+
                 this->biomes_.push_back(layer);
             }
             index += read;
@@ -99,9 +100,10 @@ namespace bl {
         return this->biomes_[y][cx][cz];
     }
 
-    std::array<std::array<biome, 16>, 16> biome3d::get_biome_y(int y) {
+    std::vector<std::vector<biome>> biome3d::get_biome_y(int y) {
         if (this->version_ == Old) {
-            return this->biomes_.empty() ? std::array<std::array<biome, 16>, 16>()
+            return this->biomes_.empty() ? std::vector<std::vector<bl::biome>>(
+                                               16, std::vector<bl::biome>(16, bl::none))
                                          : this->biomes_[0];
         }
         auto [my, _] = pos_.get_y_range(this->version_);
@@ -126,7 +128,7 @@ namespace bl {
             return false;
         }
         memcpy(this->height_map_.data(), data, 512);
-        auto layer = std::array<std::array<biome, 16>, 16>{};
+        auto layer = std::vector<std::vector<biome>>(16, std::vector<biome>(16, bl::biome::none));
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
                 layer[x][z] = static_cast<biome>(data[512 + x + 16 * z]);

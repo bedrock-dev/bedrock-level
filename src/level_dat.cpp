@@ -51,7 +51,7 @@ namespace bl {
         int read = 0;
         this->header_ = std::string(data.data(), 8);
         this->root_ = read_one_palette(data.data() + 8, read);
-        if (!root_ || read != data.size() - 8) {
+        if (!root_ || read != static_cast<int>(data.size()) - 8) {
             BL_ERROR("can not read level.dat");
             return false;
         }

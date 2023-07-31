@@ -112,7 +112,9 @@ namespace bl {
     struct actor_key {
         int64_t actor_uid{static_cast<int64_t>(0xffffffffffffffff)};
 
-        [[nodiscard]] inline bool valid() const { return this->actor_uid != 0xffffffffffffffff; }
+        [[nodiscard]] inline bool valid() const {
+            return this->actor_uid != static_cast<int64_t>(0xffffffffffffffff);
+        }
 
         [[nodiscard]] std::string to_string() const;
 

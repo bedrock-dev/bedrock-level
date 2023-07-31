@@ -123,7 +123,7 @@ namespace bl {
 
         biome get_biome(int cx, int y, int cz);
 
-        std::array<std::array<biome, 16>, 16> get_biome_y(int y);
+        std::vector<std::vector<bl::biome>> get_biome_y(int y);
 
         biome get_top_biome(int cx, int cz);
 
@@ -132,7 +132,7 @@ namespace bl {
 
        private:
         std::array<int16_t, 256> height_map_;
-        std::vector<std::array<std::array<biome, 16>, 16>> biomes_;
+        std::vector<std::vector<std::vector<biome>>> biomes_;
         bl::chunk_pos pos_;
         ChunkVersion version_;
     };

@@ -200,7 +200,7 @@ namespace bl {
         if (!load_raw(level.db(), hsa_key.to_raw(), raw)) return;
         if (raw.size() < 4) return;
         int count = *reinterpret_cast<const int *>(raw.data());
-        if (raw.size() != count * 25 + 4) return;
+        if (raw.size() != count * 25ul + 4ul) return;
 
         auto *d = raw.data();
         for (int i = 0; i < count; i++) {
@@ -232,7 +232,7 @@ namespace bl {
         return true;
     }
 
-    bool chunk::load_data(bedrock_level &level) {
+    bool chunk::load_data(bedrock_level &level, bool fast_load) {
         if (this->loaded()) return true;
         if ((!contains_key(level.db(),
                            bl::chunk_key{chunk_key::VersionOld, this->pos_}.to_raw())) &&
@@ -245,9 +245,13 @@ namespace bl {
         if (this->sub_chunks_.empty()) return false;
         this->load_biomes(level);
         this->load_entities(level);
-        this->load_block_entities(level);
-        this->load_pending_ticks(level);
+
+        if (!fast_load) {
+            this->load_block_entities(level);
+            this->load_pending_ticks(level);
+        }
         this->load_hsa(level);
+        this->fast_load_mode_ = fast_load;
         this->loaded_ = true;
         return this->loaded_;
     }
@@ -256,9 +260,7 @@ namespace bl {
     int chunk::get_height(int cx, int cz) { return this->d3d_.height(cx, cz); }
     biome chunk::get_top_biome(int cx, int cz) { return this->d3d_.get_top_biome(cx, cz); }
 
-    std::array<std::array<biome, 16>, 16> chunk::get_biome_y(int y) {
-        return this->d3d_.get_biome_y(y);
-    }
+    std::vector<std::vector<biome>> chunk::get_biome_y(int y) { return this->d3d_.get_biome_y(y); }
     bl::chunk_pos chunk::get_pos() const { return this->pos_; }
     chunk::~chunk() {
         for (auto &sub : this->sub_chunks_) {

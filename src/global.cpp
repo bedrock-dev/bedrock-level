@@ -14,7 +14,7 @@ namespace bl {
     void village_data::append_village(const village_key& key, const std::string& value) {
         int read = 0;
         auto* nbt = bl::palette::read_one_palette(value.data(), read);
-        if (read == value.size() && nbt) {
+        if (static_cast<size_t>(read) == value.size() && nbt) {
             this->data_[key.uuid][static_cast<size_t>(key.type)] = nbt;
         }
     }
@@ -36,7 +36,7 @@ namespace bl {
     void player_data::append_player(const std::string& key, const std::string& value) {
         int read = 0;
         auto* nbt = bl::palette::read_one_palette(value.data(), read);
-        if (read == value.size() && nbt) {
+        if (static_cast<size_t>(read) == value.size() && nbt) {
             this->data_[key] = nbt;
         }
     }

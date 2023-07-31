@@ -52,7 +52,7 @@ namespace bl {
         bool read_palettes(bl::sub_chunk::layer *layer, const byte_t *stream, size_t number,
                            size_t len, int &read) {
             read = 0;
-            for (int i = 0; i < number; i++) {
+            for (auto i = 0u; i < number; i++) {
                 int r = 0;
                 auto *tag = bl::palette::read_one_palette(stream + read, r);
                 if (tag) {
@@ -88,7 +88,7 @@ namespace bl {
                     for (int block = 0; block < block_per_word; block++) {
                         int state = (word >> ((position % block_per_word) * layer->bits)) &
                                     ((1 << layer->bits) - 1);
-                        if (position < layer->blocks.size()) {
+                        if (position < static_cast<int>(layer->blocks.size())) {
                             layer->blocks[position] = state;
                         }
                         position++;

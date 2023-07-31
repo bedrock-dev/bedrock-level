@@ -39,8 +39,7 @@ namespace bl {
 
         void close();
 
-        chunk *get_chunk(const chunk_pos &cp);
-
+        chunk *get_chunk(const chunk_pos &cp, bool fast_load = false);
         player_data &player_list() { return this->player_list_; }
 
         bl::village_data &village_list() { return this->village_list_; }
@@ -87,7 +86,7 @@ namespace bl {
          * @param cp 区块坐标
          * @return
          */
-        chunk *read_chunk_from_db(const bl::chunk_pos &cp);
+        chunk *read_chunk_from_db(const bl::chunk_pos &cp, bool fast_load);
 
         void clear_cache();
 

@@ -26,6 +26,8 @@ namespace bl {
         static void map_y_to_subchunk(int y, int &index, int &offset);
 
        public:
+        [[nodiscard]] inline bool fast_load() const { return this->fast_load_mode_; }
+
         block_info get_block(int cx, int y, int cz);
 
         block_info get_top_block(int cx, int cz);
@@ -40,20 +42,15 @@ namespace bl {
 
         biome get_biome(int cx, int y, int cz);
 
-        std::array<std::array<biome, 16>, 16> get_biome_y(int y);
+        std::vector<std::vector<biome>> get_biome_y(int y);
 
         biome get_top_biome(int cx, int cz);
-
-        //        std::vector<std::string> &get_actor_list() {
-
-        //            return this->actor_digest_list_.actor_digests_;
-        //        }
 
         [[nodiscard]] bl::chunk_pos get_pos() const;
 
         int get_height(int cx, int cz);
 
-        explicit chunk(const chunk_pos &pos) : pos_(pos), loaded_(false){};
+        explicit chunk(const chunk_pos &pos) : loaded_(false), pos_(pos){};
 
         chunk() = delete;
 
@@ -69,7 +66,7 @@ namespace bl {
         ~chunk();
 
        private:
-        bool load_data(bedrock_level &level);
+        bool load_data(bedrock_level &level, bool fast_load);
 
        private:
         bool load_subchunks(bedrock_level &level);
@@ -99,6 +96,7 @@ namespace bl {
 
         std::vector<bl::hardcoded_spawn_area> HSAs_;
         ChunkVersion version{New};
+        bool fast_load_mode_{false};
     };
 }  // namespace bl
 

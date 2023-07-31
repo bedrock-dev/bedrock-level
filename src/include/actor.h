@@ -50,7 +50,7 @@ namespace bl {
         bool load(const std::string& raw) {
             if (raw.size() % 8 != 0) return false;
             const size_t actor_num = raw.size() / 8;
-            for (int i = 0; i < actor_num; i++) {
+            for (auto i = 0u; i < actor_num; i++) {
                 this->actor_digests_.emplace_back(raw.begin() + i, raw.begin() + i + 8);
             }
             return true;

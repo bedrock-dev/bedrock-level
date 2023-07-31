@@ -7,20 +7,22 @@
 #include "bedrock_level.h"
 #include "utils.h"
 void check_leak() {
-    const std::string path = R"(C:\Users\xhy\Desktop\SAC_survival)";
-    auto *level = new bl::bedrock_level();
+    const std::string path = R"(C:\Users\xhy\Desktop\2g)";
+    auto* level = new bl::bedrock_level();
     level->open(path);
     if (!level->is_open()) {
         BL_LOGGER("Can not open %s", path.c_str());
         return;
     }
-
-    int x = 0;
-    PROF_TIMER(TR, {
-        level->foreach_global_keys([&x](const std::string &key, const std::string &value) { x++; });
+    PROF_TIMER(fast, {
+        for (int i = 0; i < 40; i++) {
+            for (int j = 0; j < 40; j++) {
+                level->get_chunk(bl::chunk_pos{i, j, 0});
+            }
+        }
     });
 
-    printf("Total %d keys, %zu ms needed", x, time_TR / 1000);
+    BL_LOGGER("time is %d ms", time_fast / 1000);
 }
 
 int main() {

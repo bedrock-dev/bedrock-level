@@ -52,7 +52,7 @@ namespace bl {
         delete this->options_.filter_policy;
     };
 
-    chunk *bedrock_level::get_chunk(const chunk_pos &cp) {
+    chunk *bedrock_level::get_chunk(const chunk_pos &cp, bool fast_load) {
         if (!this->is_open()) {
             BL_ERROR("Level is not opened.");
             return nullptr;
@@ -67,14 +67,14 @@ namespace bl {
             if (it != this->chunk_data_cache_.end()) {
                 return it->second;
             } else {
-                auto *ch = this->read_chunk_from_db(cp);
+                auto *ch = this->read_chunk_from_db(cp, fast_load);
                 if (ch) {
                     this->chunk_data_cache_[cp] = ch;
                 }
                 return ch;
             }
         } else {
-            return this->read_chunk_from_db(cp);
+            return this->read_chunk_from_db(cp, fast_load);
         }
     }
 
@@ -97,9 +97,9 @@ namespace bl {
         }
     }
 
-    chunk *bedrock_level::read_chunk_from_db(const chunk_pos &cp) {
+    chunk *bedrock_level::read_chunk_from_db(const chunk_pos &cp, bool fast_load) {
         auto *chunk = new bl::chunk(cp);
-        if (!chunk->load_data(*this)) {
+        if (!chunk->load_data(*this, fast_load)) {
             delete chunk;
             return nullptr;
         } else {
