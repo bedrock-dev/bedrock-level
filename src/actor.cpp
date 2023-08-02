@@ -73,7 +73,6 @@ namespace bl {
                 read_uid = true;
             }
         }
-
         return read_pos && read_identifier && read_uid;
     }
     actor::~actor() { delete this->root_; }

@@ -4,6 +4,7 @@
 
 #include "bedrock_level.h"
 
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 
@@ -13,9 +14,11 @@
 #include "leveldb/cache.h"
 #include "leveldb/comparator.h"
 #include "leveldb/db.h"
+#include "leveldb/env.h"
 #include "leveldb/filter_policy.h"
 #include "leveldb/write_batch.h"
 #include "leveldb/zlib_compressor.h"
+class SlowEnv : public leveldb::Env {};
 
 namespace bl {
     namespace {
@@ -29,17 +32,22 @@ namespace bl {
     const std::string bedrock_level::LEVEL_DB = "db";
 
     bool bedrock_level::open(const std::string &root) {
+        namespace fs = std::filesystem;
         this->root_name_ = root;
-        this->is_open_ =
-            this->dat_.load_from_file(this->root_name_ + "/" + LEVEL_DATA) && this->read_db();
+        fs::path path(this->root_name_);
+        path /= LEVEL_DATA;
+        this->is_open_ = this->dat_.load_from_file(path.string()) && this->read_db();
         return this->is_open_;
     }
 
     bool bedrock_level::read_db() {  // NOLINT
+        namespace fs = std::filesystem;
+        fs::path path(this->root_name_);
+        path /= bl::bedrock_level::LEVEL_DB;
         leveldb::Status status = leveldb::DB::Open(
-            this->options_, this->root_name_ + "/" + bl::bedrock_level::LEVEL_DB, &this->db_);
+            this->options_, bl::utils::UTF8ToGBEx(path.string().c_str()), &this->db_);
         if (!status.ok()) {
-            BL_ERROR("Can not open level database: %s.", status.ToString().c_str());
+            BL_ERROR("Can not open level database: [%s].", status.ToString().c_str());
         }
         return status.ok();
     }
@@ -59,7 +67,7 @@ namespace bl {
         }
 
         if (!cp.valid()) {
-            BL_ERROR("Invalid Chunk position %s", cp.to_string().c_str());
+            BL_ERROR("Invalid Chunk position %s.", cp.to_string().c_str());
             return nullptr;
         }
         if (this->enable_cache_) {

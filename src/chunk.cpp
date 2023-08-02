@@ -248,7 +248,7 @@ namespace bl {
 
         if (!fast_load) {
             this->load_block_entities(level);
-            this->load_pending_ticks(level);
+            //            this->load_pending_ticks(level);  // 有bug
         }
         this->load_hsa(level);
         this->fast_load_mode_ = fast_load;

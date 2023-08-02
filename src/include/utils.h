@@ -64,6 +64,7 @@ namespace bl::utils {
 
     void write_file(const std::string &file_name, const byte_t *data, size_t len);
 
+    std::string UTF8ToGBEx(const char *utf8);
 }  // namespace bl::utils
 
 #endif  // BEDROCK_LEVEL_UTILS_H

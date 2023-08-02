@@ -19,7 +19,6 @@
 #define KCYN "\x1B[36m"
 #define KWHT "\x1B[37m"
 
-
 void log(const char *file_name, const char *function_name, size_t line, const char *fmt, ...) {
 #ifdef DEBUG
     va_list args;
@@ -52,11 +51,11 @@ void M_Assert(const char *expr_str, bool expr, const char *file, int line, const
         abort();
     }
 }
-
+#include <filesystem>
 namespace bl::utils {
 
     std::vector<byte_t> read_file(const std::string &file_name) {
-        std::ifstream input(file_name, std::ios::binary);
+        std::ifstream input(std::filesystem::u8path(file_name), std::ios::binary);
         if (!input.is_open()) {
             BL_ERROR("Can not open file %s", file_name.c_str());
             return {};
@@ -76,4 +75,28 @@ namespace bl::utils {
         output.write(reinterpret_cast<const char *>(data), static_cast<std::streamsize>(len));
         output.close();
     }
+    //    https :  // www.jianshu.com/p/baf75216f883
+
+#ifdef _WIN32
+#include <windows.h>
+    std::string UTF8ToGBEx(const char *utf8) {
+        if (!utf8 || strlen(utf8) < 1) return "";
+        std::stringstream ss;
+        int len = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, nullptr, 0);
+        wchar_t *wstr = new wchar_t[len + 1];
+        memset(wstr, 0, len + 1);
+        MultiByteToWideChar(CP_UTF8, 0, utf8, -1, wstr, len);
+        len = WideCharToMultiByte(CP_ACP, 0, wstr, -1, nullptr, 0, nullptr, nullptr);
+        char *str = new char[len + 1];
+        memset(str, 0, len + 1);
+        WideCharToMultiByte(CP_ACP, 0, wstr, -1, str, len, nullptr, nullptr);
+        ss << str;
+        delete[] wstr;
+        delete[] str;
+        return ss.str();
+    }
+#else
+    std::string UTF8ToGBEx(const char *utf8) { return std::string(utf8); }
+#endif
+
 }  // namespace bl::utils

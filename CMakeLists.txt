@@ -14,7 +14,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     MESSAGE(STATUS "Current compiler is Mingw")
-    set(EXTRA_LIBS ${PROJECT_SOURCE_DIR}/libs/libleveldb.a ${PROJECT_SOURCE_DIR}/libs/libz.a)
+    set(EXTRA_LIBS ${PROJECT_SOURCE_DIR}/libs/libleveldb-release.a ${PROJECT_SOURCE_DIR}/libs/libz.a)
     add_compile_options(-std=c++17 -O2 -Wall -g)
 endif ()
 
