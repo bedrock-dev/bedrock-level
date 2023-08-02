@@ -14,10 +14,24 @@
 
 namespace bl {
     namespace {
+        // biome id -> water
+        std::unordered_map<biome, bl::color> biome_water_map;
+        std::unordered_map<biome, bl::color> biome_leave_map;
+        std::unordered_map<biome, bl::color> biome_grass_map;
 
+        bl::color default_water_color{63, 118, 228};
+        bl::color default_leave_color{113, 167, 77};
+        bl::color default_grass_color{142, 185, 113};
+
+        //
+        // biome id -> name
+        std::unordered_map<biome, std::string> biome_id_map;
+        // biome id -> biome color
         std::unordered_map<biome, bl::color> biome_color_map;
+
         // key 是palette的raw形态
         std::unordered_map<std::string, bl::color> block_color_map;
+
     }  // namespace
 
     color get_biome_color(bl::biome b) {
@@ -27,38 +41,81 @@ namespace bl {
     color get_block_color_from_SNBT(const std::string& name) {
         auto it = block_color_map.find(name);
         if (it == block_color_map.end()) {
-            //            BL_ERROR("unknown key: %s", name.c_str());
-
             return {};
         }
         return it->second;
+    }
+
+    std::string get_biome_name(biome b) {
+        auto it = biome_id_map.find(b);
+        return it == biome_id_map.end() ? "unknown" : it->second;
     }
 
     bool init_biome_color_palette_from_file(const std::string& filename) {
         try {
             std::ifstream f(filename);
             if (!f.is_open()) {
-                BL_ERROR("Can not open file %s", filename.c_str());
+                BL_ERROR("Can not open biome color file %s", filename.c_str());
                 return false;
             }
             nlohmann::json j;
             f >> j;
             for (auto& [key, value] : j.items()) {
-                auto rgb = value["rgb"];
-                assert(rgb.size() == 3);
-                color c;
-                c.r = static_cast<uint8_t>(rgb[0].get<int>());
-                c.g = static_cast<uint8_t>(rgb[1].get<int>());
-                c.b = static_cast<uint8_t>(rgb[2].get<int>());
                 int id = value["id"].get<int>();
-                biome_color_map[static_cast<biome>(id)] = c;
-                //                printf("%s  [%d] -> %u %u %u\n", key.c_str(), id, c.r, c.g, c.b);
+                biome_id_map[static_cast<biome>(id)] = key;
+
+                if (value.contains("rgb")) {
+                    auto rgb = value["rgb"];
+                    assert(rgb.size() == 3);
+                    color c;
+                    c.r = static_cast<uint8_t>(rgb[0].get<int>());
+                    c.g = static_cast<uint8_t>(rgb[1].get<int>());
+                    c.b = static_cast<uint8_t>(rgb[2].get<int>());
+                    biome_color_map[static_cast<biome>(id)] = c;
+                }
+
+                // water
+                if (value.contains("water")) {
+                    auto water = value["water"];
+                    assert(water.size() == 3);
+                    color c;
+                    c.r = static_cast<uint8_t>(water[0].get<int>());
+                    c.g = static_cast<uint8_t>(water[1].get<int>());
+                    c.b = static_cast<uint8_t>(water[2].get<int>());
+                    biome_water_map[static_cast<biome>(id)] = c;
+                    if (key == "default") default_water_color = c;
+                }
+
+                if (value.contains("grass")) {
+                    auto grass = value["grass"];
+                    assert(grass.size() == 3);
+                    color c;
+                    c.r = static_cast<uint8_t>(grass[0].get<int>());
+                    c.g = static_cast<uint8_t>(grass[1].get<int>());
+                    c.b = static_cast<uint8_t>(grass[2].get<int>());
+                    biome_grass_map[static_cast<biome>(id)] = c;
+                    if (key == "default") default_grass_color = c;
+                }
+
+                if (value.contains("leaves")) {
+                    auto leaves = value["leaves"];
+                    assert(leaves.size() == 3);
+                    color c;
+                    c.r = static_cast<uint8_t>(leaves[0].get<int>());
+                    c.g = static_cast<uint8_t>(leaves[1].get<int>());
+                    c.b = static_cast<uint8_t>(leaves[2].get<int>());
+                    biome_leave_map[static_cast<biome>(id)] = c;
+                    if (key == "default") default_leave_color = c;
+                }
             }
 
         } catch (std::exception&) {
             return false;
         }
 
+        BL_LOGGER("Water color Map: %zu", biome_water_map.size());
+        BL_LOGGER("Leaves color Map: %zu", biome_leave_map.size());
+        BL_LOGGER("Grass color Map: %zu", biome_grass_map.size());
         return true;
     }
 
@@ -147,4 +204,12 @@ namespace bl {
     }
     std::unordered_map<std::string, bl::color>& get_block_color_table() { return block_color_map; }
 
+    [[maybe_unused]] bl::color get_water_color(bl::color gray, bl::biome b) {
+        auto it = biome_water_map.find(b);
+        auto x = it == biome_water_map.end() ? default_water_color : it->second;
+        gray.r = static_cast<int>(gray.r / 255.0 * x.r);
+        gray.g = static_cast<int>(gray.g / 255.0 * x.g);
+        gray.b = static_cast<int>(gray.b / 255.0 * x.b);
+        return gray;
+    }
 }  // namespace bl

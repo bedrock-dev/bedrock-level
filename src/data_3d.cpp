@@ -53,7 +53,7 @@ namespace bl {
             }
 
             for (int i = 0; i < 4096; i++) {
-                if (index[i] >= 0 && index[i] < biomes_palettes.size()) {
+                if (index[i] >= 0 && index[i] < static_cast<int>(biomes_palettes.size())) {
                     res[i] = biomes_palettes[index[i]];
                 }
             }
@@ -69,7 +69,7 @@ namespace bl {
         }
         memcpy(this->height_map_.data(), data, 512);
         index += 512;
-        while (index < len) {
+        while (index < static_cast<int>(len)) {
             int read = 0;
             auto sub_chunk_biome = load_subchunk_biome(data + index, read, len);
             for (int y = 0; y < 16; y++) {
@@ -108,7 +108,7 @@ namespace bl {
         }
         auto [my, _] = pos_.get_y_range(this->version_);
         y += my;
-        if (y >= this->biomes_.size()) {
+        if (y >= static_cast<int>(this->biomes_.size())) {
             return {};
         }
         return this->biomes_[y];
