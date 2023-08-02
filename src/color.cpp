@@ -7,6 +7,7 @@
 #include <fstream>
 #include <iostream>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "json/json.hpp"
 #include "palette.h"
@@ -15,6 +16,11 @@
 namespace bl {
     namespace {
         // biome id -> water
+        // 和群系有关的颜色白名单
+        std::unordered_set<std::string> water_block_names;
+        std::unordered_set<std::string> leaves_block_names;
+        std::unordered_set<std::string> grass_block_names;
+
         std::unordered_map<biome, bl::color> biome_water_map;
         std::unordered_map<biome, bl::color> biome_leave_map;
         std::unordered_map<biome, bl::color> biome_grass_map;
@@ -31,6 +37,16 @@ namespace bl {
 
         // key 是palette的raw形态
         std::unordered_map<std::string, bl::color> block_color_map;
+
+        bl::color blend_with_biome(const std::unordered_map<bl::biome, bl::color>& map,
+                                   bl::color gray, bl::color default_color, bl::biome b) {
+            auto it = map.find(b);
+            auto x = it == map.end() ? default_color : it->second;
+            gray.r = static_cast<int>(gray.r / 255.0 * x.r);
+            gray.g = static_cast<int>(gray.g / 255.0 * x.g);
+            gray.b = static_cast<int>(gray.b / 255.0 * x.b);
+            return gray;
+        }
 
     }  // namespace
 
@@ -128,10 +144,25 @@ namespace bl {
             }
             nlohmann::json j;
             f >> j;
+            BL_LOGGER("Load json success: %s", filename.c_str());
             for (auto& item : j) {
                 using namespace bl::palette;
-                //                std::cout << name << std::endl;
                 auto extra_data = item["extra_data"];
+                auto block_name = item["name"].get<std::string>();
+
+                if (extra_data.contains("use_grass_color") &&
+                    extra_data["use_grass_color"].get<bool>()) {
+                    grass_block_names.insert(block_name);
+                }
+                if (extra_data.contains("use_leaves_color") &&
+                    extra_data["use_leaves_color"].get<bool>()) {
+                    leaves_block_names.insert(block_name);
+                }
+                if (extra_data.contains("use_water_color") &&
+                    extra_data["use_water_color"].get<bool>()) {
+                    water_block_names.insert(block_name);
+                }
+
                 if (extra_data.contains("color")) {
                     auto rgb = extra_data["color"];
                     color c;
@@ -142,7 +173,7 @@ namespace bl {
 
                     auto* root = new compound_tag("");
                     auto* name_key = new string_tag("name");
-                    name_key->value = item["name"].get<std::string>();
+                    name_key->value = block_name;
                     auto* stat_tag = new compound_tag("states");
                     if (item.contains("states")) {
                         for (auto& [k, v] : item["states"].items()) {
@@ -181,6 +212,19 @@ namespace bl {
             std::cout << "Err: " << e.what() << std::endl;
             return false;
         }
+        BL_LOGGER("Water blocks:");
+        for (auto& b : water_block_names) {
+            BL_LOGGER(" - %s", b.c_str());
+        }
+        BL_LOGGER("Leaves blocks:");
+        for (auto& b : leaves_block_names) {
+            BL_LOGGER(" - %s", b.c_str());
+        }
+        BL_LOGGER("Grass blocks:");
+        for (auto& b : grass_block_names) {
+            BL_LOGGER(" - %s", b.c_str());
+        }
+
         return true;
     }
 
@@ -204,12 +248,14 @@ namespace bl {
     }
     std::unordered_map<std::string, bl::color>& get_block_color_table() { return block_color_map; }
 
-    [[maybe_unused]] bl::color get_water_color(bl::color gray, bl::biome b) {
-        auto it = biome_water_map.find(b);
-        auto x = it == biome_water_map.end() ? default_water_color : it->second;
-        gray.r = static_cast<int>(gray.r / 255.0 * x.r);
-        gray.g = static_cast<int>(gray.g / 255.0 * x.g);
-        gray.b = static_cast<int>(gray.b / 255.0 * x.b);
-        return gray;
+    bl::color blend_color_with_biome(const std::string& name, bl::color color, bl::biome b) {
+        if (water_block_names.count(name))
+            return blend_with_biome(biome_water_map, color, default_water_color, b);
+        if (grass_block_names.count(name))
+            return blend_with_biome(biome_grass_map, color, default_grass_color, b);
+        if (leaves_block_names.count(name))
+            return blend_with_biome(biome_leave_map, color, default_leave_color, b);
+        return color;
     }
+
 }  // namespace bl
