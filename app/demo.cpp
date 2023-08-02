@@ -10,13 +10,11 @@
 #include "bedrock_level.h"
 #include "palette.h"
 int main() {
-    using namespace bl::palette;
-    // auto data =
-    // bl::utils::read_file(R"(C:\Users\xhy\dev\bedrock-level\data\dumps\actors\144115188092633088.palette)");
-    //  int r = 0;
-    //  auto* nbt = bl::palette::read_one_palette(data.data(), r);
-    // nbt->write(std::cout, 0);
-    //  delete nbt;
-    printf("Hello world\n");
+    std::locale::global(std::locale(""));
+    auto name = R"(D:\MC\saves\中文测试)";
+    bl::bedrock_level level;
+    level.open(name);
+    //    level.foreach_global_keys([](const std::string& key, const std::string& value) {});
+    //    level.load_global_data();
     return 0;
 }
