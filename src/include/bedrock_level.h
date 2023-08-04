@@ -40,9 +40,13 @@ namespace bl {
         void close();
 
         chunk *get_chunk(const chunk_pos &cp, bool fast_load = false);
-        player_data &player_list() { return this->player_list_; }
+        general_kv_nbts &player_data() { return this->player_data_; }
 
-        bl::village_data &village_list() { return this->village_list_; }
+        bl::village_data &village_data() { return this->village_data_; }
+
+        bl::general_kv_nbts &map_item_data() { return this->map_item_data_; }
+
+        bl::general_kv_nbts &other_item_data() { return this->other_data_; }
 
         /**
          * 获取缓存的区块的的数量
@@ -105,10 +109,12 @@ namespace bl {
         bool read_db();
 
         bool enable_cache_{false};
-
-        bl::player_data player_list_;
-        bl::village_data village_list_;
         leveldb::Options options_{};
+        // global data
+        bl::village_data village_data_;
+        bl::general_kv_nbts player_data_;
+        bl::general_kv_nbts map_item_data_;
+        bl::general_kv_nbts other_data_;
     };
 
 }  // namespace bl

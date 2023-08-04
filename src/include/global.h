@@ -8,11 +8,6 @@
 #include "memory"
 #include "palette.h"
 namespace bl {
-    class autonomous_entities {};
-
-    class biome_data {};
-
-    class level_chunk_metadata_dictionary {};
 
     class village_data {
        public:
@@ -31,15 +26,16 @@ namespace bl {
         std::unordered_map<std::string, std::array<bl::palette::compound_tag*, 4>> data_;
     };
 
-    class player_data {
+    class general_kv_nbts {
        public:
         void reset(const std::unordered_map<std::string, bl::palette::compound_tag*>& data);
 
-        void append_player(const std::string& key, const std::string& value);
+        void append_nbt(const std::string& key, const std::string& value);
         inline std::unordered_map<std::string, bl::palette::compound_tag*>& data() {
             return this->data_;
         };
-        ~player_data();
+
+        ~general_kv_nbts();
 
         void clear_data();
 

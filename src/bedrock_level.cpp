@@ -91,8 +91,8 @@ namespace bl {
             delete kv.second;
         }
         this->clear_cache();
-        this->village_list_.clear_data();
-        this->player_list_.clear_data();
+        this->village_data_.clear_data();
+        this->player_data_.clear_data();
         delete this->db_;
         this->db_ = nullptr;
         this->is_open_ = false;
@@ -182,11 +182,15 @@ namespace bl {
     void bedrock_level::load_global_data() {
         this->foreach_global_keys([this](const std::string &key, const std::string &value) {
             if (key.find("player") != std::string::npos) {
-                this->player_list_.append_player(key, value);
+                this->player_data_.append_nbt(key, value);
+            } else if (key.find("map") == 0) {
+                this->map_item_data_.append_nbt(key, value);
             } else {
                 bl::village_key vk = village_key::parse(key);
                 if (vk.valid()) {
-                    this->village_list_.append_village(vk, value);
+                    this->village_data_.append_village(vk, value);
+                } else {
+                    this->other_data_.append_nbt(key, value);
                 }
             }
         });

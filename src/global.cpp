@@ -28,27 +28,28 @@ namespace bl {
         this->data_.clear();
     }
 
-    void player_data::reset(
+    void general_kv_nbts::reset(
         const std::unordered_map<std::string, bl::palette::compound_tag*>& data) {
         this->clear_data();
         this->data_ = data;
     }
-    void player_data::append_player(const std::string& key, const std::string& value) {
+    void general_kv_nbts::append_nbt(const std::string& key, const std::string& value) {
         int read = 0;
         auto* nbt = bl::palette::read_one_palette(value.data(), read);
         if (static_cast<size_t>(read) == value.size() && nbt) {
             this->data_[key] = nbt;
         }
     }
-    player_data::~player_data() {
+    general_kv_nbts::~general_kv_nbts() {
         for (auto& kv : this->data_) {
             delete kv.second;
         }
     }
-    void player_data::clear_data() {
+    void general_kv_nbts::clear_data() {
         for (auto& kv : this->data_) {
             delete kv.second;
         }
         this->data_.clear();
     }
+
 }  // namespace bl
