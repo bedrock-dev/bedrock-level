@@ -189,8 +189,6 @@ namespace bl {
                 bl::village_key vk = village_key::parse(key);
                 if (vk.valid()) {
                     this->village_data_.append_village(vk, value);
-                } else {
-                    this->other_data_.append_nbt(key, value);
                 }
             }
         });
