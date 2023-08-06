@@ -16,7 +16,7 @@
 namespace bl {
     struct block_info {
         std::string name{"minecraft:unknown"};
-        bl::color color{};
+        bl::color color{173, 8, 172, 255};
     };
 
     class sub_chunk {

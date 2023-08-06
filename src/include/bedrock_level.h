@@ -116,7 +116,6 @@ namespace bl {
         bl::general_kv_nbts map_item_data_;
         bl::general_kv_nbts other_data_;
     };
-
 }  // namespace bl
 
 #endif  // BEDROCK_LEVEL_BEDROCK_LEVEL_H

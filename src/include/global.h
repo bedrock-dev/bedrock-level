@@ -34,7 +34,9 @@ namespace bl {
         inline std::unordered_map<std::string, bl::palette::compound_tag*>& data() {
             return this->data_;
         };
-
+        inline const std::unordered_map<std::string, bl::palette::compound_tag*>& data() const {
+            return this->data_;
+        };
         ~general_kv_nbts();
 
         void clear_data();

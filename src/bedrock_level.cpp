@@ -178,7 +178,7 @@ namespace bl {
         }
         delete it;
     }
-
+    
     void bedrock_level::load_global_data() {
         this->foreach_global_keys([this](const std::string &key, const std::string &value) {
             if (key.find("player") != std::string::npos) {
