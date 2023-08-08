@@ -84,7 +84,6 @@ namespace bl {
                 int position = 0;
                 for (int wordi = 0; wordi < wordCount; wordi++) {
                     auto word = *reinterpret_cast<const int *>(stream + read + wordi * 4);
-                    //                    endian_swap(word);
                     for (int block = 0; block < block_per_word; block++) {
                         int state = (word >> ((position % block_per_word) * layer->bits)) &
                                     ((1 << layer->bits) - 1);

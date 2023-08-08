@@ -150,46 +150,44 @@ namespace bl {
         return true;
     }
     void chunk::load_entities(bedrock_level &level) {
-        if (this->version == Old) {
-            auto entity_key = bl::chunk_key{chunk_key::Entity, this->pos_};
-            std::string block_entity_raw;
-            if (load_raw(level.db(), entity_key.to_raw(), block_entity_raw) &&
-                !block_entity_raw.empty()) {
-                auto actors =
-                    palette::read_palette_to_end(block_entity_raw.data(), block_entity_raw.size());
-                for (auto &a : actors) {
-                    auto *ac = new actor;
-                    if (ac->load_from_nbt(a)) {
-                        this->entities_.push_back(ac);
-                    } else {
-                        delete ac;
-                    }
-                    delete a;
+        // try read old version actors
+        auto entity_key = bl::chunk_key{chunk_key::Entity, this->pos_};
+        std::string block_entity_raw;
+        if (load_raw(level.db(), entity_key.to_raw(), block_entity_raw) &&
+            !block_entity_raw.empty()) {
+            auto actors =
+                palette::read_palette_to_end(block_entity_raw.data(), block_entity_raw.size());
+            for (auto &a : actors) {
+                auto *ac = new actor;
+                if (ac->load_from_nbt(a)) {
+                    this->entities_.push_back(ac);
+                } else {
+                    delete ac;
                 }
+                delete a;
             }
-        } else {
-            // new version:
-            // 1. read key file  form digest
-            // 2. read actor from actor keys [actorprefix+uid]
-            bl::actor_digest_key key{this->pos_};
-            std::string raw;
-            // 没啥要解析的，不用管错误
-            if (!load_raw(level.db(), key.to_raw(), raw)) {
-                return;
-            }
+        }
+        // new version actor key:
+        // 1. read key file  form digest
+        // 2. read actor from actor keys [actorprefix+uid]
+        bl::actor_digest_key key{this->pos_};
+        std::string raw;
+        // 没啥要解析的，不用管错误
+        if (!load_raw(level.db(), key.to_raw(), raw)) {
+            return;
+        }
 
-            bl::actor_digest_list list;
-            list.load(raw);
-            for (auto &uid : list.actor_digests_) {
-                auto actor_key = "actorprefix" + uid;
-                std::string raw_actor;
-                if (load_raw(level.db(), actor_key, raw_actor)) {
-                    auto ac = new actor;
-                    if (!ac->load(raw_actor.data(), raw_actor.size())) {
-                        delete ac;
-                    } else {
-                        this->entities_.push_back(ac);
-                    }
+        bl::actor_digest_list list;
+        list.load(raw);
+        for (auto &uid : list.actor_digests_) {
+            auto actor_key = "actorprefix" + uid;
+            std::string raw_actor;
+            if (load_raw(level.db(), actor_key, raw_actor)) {
+                auto ac = new actor;
+                if (!ac->load(raw_actor.data(), raw_actor.size())) {
+                    delete ac;
+                } else {
+                    this->entities_.push_back(ac);
                 }
             }
         }

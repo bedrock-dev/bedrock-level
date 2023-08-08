@@ -22,7 +22,7 @@ typedef int64_t microsecond_t;
     auto e_##label = std::chrono::high_resolution_clock ::now() - start_##label; \
     auto time_##label = std::chrono::duration_cast<std::chrono::microseconds>(e_##label).count();
 
-#define DEBUG
+// #define DEBUG
 
 // #ifdef WIN32
 // #define FN (__builtin_strrchr(__FILE__, '\\') ? __builtin_strrchr(__FILE__, '\\') + 1 : __FILE__)

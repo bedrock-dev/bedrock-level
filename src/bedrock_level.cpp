@@ -62,7 +62,6 @@ namespace bl {
 
     chunk *bedrock_level::get_chunk(const chunk_pos &cp, bool fast_load) {
         if (!this->is_open()) {
-            BL_ERROR("Level is not opened.");
             return nullptr;
         }
 
@@ -178,7 +177,7 @@ namespace bl {
         }
         delete it;
     }
-    
+
     void bedrock_level::load_global_data() {
         this->foreach_global_keys([this](const std::string &key, const std::string &value) {
             if (key.find("player") != std::string::npos) {
