@@ -4,6 +4,7 @@
 
 #include "bedrock_key.h"
 
+#include <cstring>
 #include <random>
 
 #include "utils.h"

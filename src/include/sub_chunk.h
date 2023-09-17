@@ -34,6 +34,8 @@ namespace bl {
 
         block_info get_block(int rx, int ry, int rz);
 
+        block_info get_block_fast(int rx, int ry, int rz);
+
         palette::compound_tag *get_block_raw(int rx, int ry, int rz);
 
         sub_chunk() = default;

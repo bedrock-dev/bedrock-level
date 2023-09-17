@@ -5,17 +5,8 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.14)
 project(bedrock_level)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
 if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    # using Clang
-    MESSAGE(STATUS "Current compiler is MSVC")
-    set(EXTRA_LIBS ${PROJECT_SOURCE_DIR}/libs/leveldb.lib)
-    add_compile_options(/utf-8 /EHsc /std:c++17 /EHsc /MT /O2)
-
-elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    MESSAGE(STATUS "Current compiler is Mingw")
-    set(EXTRA_LIBS ${PROJECT_SOURCE_DIR}/libs/libleveldb-release.a ${PROJECT_SOURCE_DIR}/libs/libz.a)
-    add_compile_options(-std=c++17 -O2 -Wall -g)
+    MESSAGE(FATAL_ERROR "Unsupported tool-chain, please use mingw54 instead")
 endif ()
 
 
@@ -38,12 +29,26 @@ add_library(bedrock-level
         src/global.cpp
         src/color.cpp
         src/level_dat.cpp
-        )
+)
 
 
-target_link_libraries(bedrock-level
-        ${EXTRA_LIBS}
-        )
+if (WIN32)
+    MESSAGE(STATUS "Current compiler is Mingw")
+    set(EXTRA_LIBS ${PROJECT_SOURCE_DIR}/libs/libleveldb-mingw64.a ${PROJECT_SOURCE_DIR}/libs/libz-mingw64.a)
+    add_compile_options(-std=c++17 -O2 -Wall -g)
+    target_link_libraries(bedrock-level ${EXTRA_LIBS})
+endif (WIN32)
+
+
+if (UNIX)
+    add_compile_options(-std=c++17 -Wall -g)
+    MESSAGE(STATUS "Current compiler is GUN gcc")
+    set(EXTRA_LIBS ${PROJECT_SOURCE_DIR}/libs/libleveldb-gnu.a)
+    add_compile_options(-fsanitize=address)
+    add_link_options(-fsanitize=address)
+    find_package(ZLIB)
+    target_link_libraries(bedrock-level ${EXTRA_LIBS} ZLIB::ZLIB)
+endif (UNIX)
 
 
 function(create_app name files)
@@ -55,13 +60,10 @@ function(create_app name files)
 endfunction(create_app)
 
 create_app(biome_png app/biome_png.cpp)
-create_app(chunk_terrain app/chunk_terrain.cpp)
-create_app(demo app/demo.cpp)
+create_app(mem_leak_check app/mem_leak_check.cpp)
 
-create_app(block_color_analysis app/block_color_analysis.cpp)
+
 #testing
-
-
 include(FetchContent)
 FetchContent_Declare(
         googletest

@@ -4,6 +4,9 @@
 
 #include "palette.h"
 
+#include <cstdlib>
+#include <cstring>
+
 #include "utils.h"
 
 namespace bl::palette {

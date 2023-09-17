@@ -30,15 +30,17 @@ namespace bl {
 
         block_info get_block(int cx, int y, int cz);
 
-        block_info get_top_block(int cx, int cz);
+        block_info get_block_fast(int cx, int y, int cz);
+
+        //        block_info get_top_block(int cx, int cz);
 
         palette::compound_tag *get_block_raw(int cx, int y, int cz);
 
-        palette::compound_tag *get_top_block_raw(int cx, int cz);
+        //        palette::compound_tag *get_top_block_raw(int cx, int cz);
 
         bl::color get_block_color(int cx, int y, int cz);
 
-        bl::color get_top_block_color(int cx, int cz);
+        //        bl::color get_top_block_color(int cx, int cz);
 
         biome get_biome(int cx, int y, int cz);
 

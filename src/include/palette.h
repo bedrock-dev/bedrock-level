@@ -5,6 +5,8 @@
 #ifndef BEDROCK_LEVEL_PALETTE_H
 #define BEDROCK_LEVEL_PALETTE_H
 
+#include <cstdlib>
+#include <cstring>
 #include <map>
 #include <ostream>
 #include <string>

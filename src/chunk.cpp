@@ -64,15 +64,28 @@ namespace bl {
         return it->second->get_block(cx, offset, cz);
     }
 
-    block_info chunk::get_top_block(int cx, int cz) {
-        auto height = this->get_height(cx, cz);
-        return this->get_block(cx, height - 1, cz);
+    block_info chunk::get_block_fast(int cx, int y, int cz) {
+        int index;
+        int offset;
+        map_y_to_subchunk(y, index, offset);
+        auto it = this->sub_chunks_.find(index);
+        if (it == this->sub_chunks_.end()) {
+            return {};
+        }
+        return it->second->get_block_fast(cx, offset, cz);
     }
 
-    palette::compound_tag *chunk::get_top_block_raw(int cx, int cz) {
-        auto height = this->get_height(cx, cz);
-        return this->get_block_raw(cx, height - 1, cz);
-    }
+    //    block_info chunk::get_top_block(int cx, int cz) {
+    //        auto height = this->get_height(cx, cz);
+    //        return this->get_block(cx, height - 1, cz);
+    //    }
+    //
+    //    palette::compound_tag *chunk::get_top_block_raw(int cx, int cz) {
+    //        auto height = this->get_height(cx, cz);
+    //        return this->get_block_raw(cx, height - 1, cz);
+    //    }
+    //
+
     palette::compound_tag *chunk::get_block_raw(int cx, int y, int cz) {
         int index;
         int offset;
@@ -224,7 +237,7 @@ namespace bl {
         if (load_raw(level.db(), be_key.to_raw(), block_entity_raw) && !block_entity_raw.empty()) {
             this->block_entities_ =
                 palette::read_palette_to_end(block_entity_raw.data(), block_entity_raw.size());
-            //
+        } else {
         }
 
         return true;
@@ -274,9 +287,10 @@ namespace bl {
         if (!raw) return {};
         return get_block_color_from_SNBT(raw->to_raw());
     }
-    bl::color chunk::get_top_block_color(int cx, int cz) {
-        auto height = this->get_height(cx, cz);
-        return this->get_block_color(cx, height - 1, cz);
-    }
+
+    //    bl::color chunk::get_top_block_color(int cx, int cz) {
+    //        auto height = this->get_height(cx, cz);
+    //        return this->get_block_color(cx, height - 1, cz);
+    //    }
 
 }  // namespace bl

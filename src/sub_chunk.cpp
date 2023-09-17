@@ -10,6 +10,7 @@
 #include "utils.h"
 
 // #include "nbt.hpp"
+#include <cstdio>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -153,6 +154,29 @@ namespace bl {
                 bl::get_block_color_from_SNBT(palette->to_raw())};
     }
 
+    block_info sub_chunk::get_block_fast(int rx, int ry, int rz) {
+        if (rx < 0 || rx > 15 || ry < 0 || ry > 15 || rz < 0 || rz > 15) {
+            BL_ERROR("Invalid in chunk position %d %d %d", rx, ry, rz);
+            return {};
+        }
+
+        auto idx = ry + rz * 16 + rx * 256;
+        auto block = this->layers_[0]->blocks[idx];
+
+        if (block >= this->layers_[0]->palettes.size() || block < 0) {
+            BL_ERROR("Invalid block index with value %d", block);
+            return {};
+        }
+
+        auto &palette = this->layers_[0]->palettes[block];
+        auto id = palette->value.find("name");
+        if (id == palette->value.end()) {
+            return {};
+        }
+
+        return {dynamic_cast<bl::palette::string_tag *>(id->second)->value, bl::color{}};
+    }
+
     palette::compound_tag *sub_chunk::get_block_raw(int rx, int ry, int rz) {
         if (rx < 0 || rx > 15 || ry < 0 || ry > 15 || rz < 0 || rz > 15) {
             BL_ERROR("Invalid in chunk position %d %d %d", rx, ry, rz);
@@ -174,6 +198,7 @@ namespace bl {
             delete layer;
         }
     }
+
     sub_chunk::layer::~layer() {
         for (auto &p : this->palettes) delete p;
     }

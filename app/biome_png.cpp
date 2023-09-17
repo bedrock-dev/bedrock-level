@@ -36,8 +36,9 @@ int main() {
                 auto sz = (z - minP.z) * 16;
                 for (int xx = 0; xx < 16; xx++) {
                     for (int zz = 0; zz < 16; zz++) {
-                        auto name = chunk->get_top_block(xx, zz);
-                        cm[sz + zz][sx + xx] = chunk->get_top_block_color(xx, zz);
+                        //                        auto name = chunk->get_top_block(xx, zz);
+                        //                        cm[sz + zz][sx + xx] =
+                        //                        chunk->get_top_block_color(xx, zz);
                         //
                     }
                 }

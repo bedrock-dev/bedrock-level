@@ -93,7 +93,9 @@ namespace bl {
             return this->biomes_.empty() ? bl::biome::none : this->biomes_[0][cx][cz];
         }
         auto [my, _] = pos_.get_y_range(this->version_);
-        y += my;
+        y -= my;
+
+        //        printf("y = %d\n", y);
         if (y >= static_cast<int>(this->biomes_.size()) || y < 0) {
             return biome::none;
         }
@@ -107,7 +109,7 @@ namespace bl {
                                          : this->biomes_[0];
         }
         auto [my, _] = pos_.get_y_range(this->version_);
-        y += my;
+        y -= my;
         if (y >= static_cast<int>(this->biomes_.size())) {
             return {};
         }
