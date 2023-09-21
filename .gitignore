@@ -42,3 +42,4 @@ data/dumps/*
 .release
 .debug
 .build
+build
