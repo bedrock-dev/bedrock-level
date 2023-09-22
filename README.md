@@ -51,6 +51,7 @@ int main() {
 
 ![](pics/biome.png)
 
-## Terrain Map
 
-Todo.
+### Complie guide
+
+You just need to clone this repo and run `build.ps1` in powershell
