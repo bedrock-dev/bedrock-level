@@ -52,7 +52,7 @@ namespace bl {
 
         int get_height(int cx, int cz);
 
-        explicit chunk(const chunk_pos &pos) : loaded_(false), pos_(pos){};
+        explicit chunk(const chunk_pos &pos) : loaded_(false), pos_(pos) {};
 
         chunk() = delete;
 

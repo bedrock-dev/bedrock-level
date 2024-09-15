@@ -9,12 +9,13 @@
 #include <cstring>
 #include <map>
 #include <ostream>
+#include <sstream>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "utils.h"
+
 
 namespace bl::palette {
 

@@ -6,7 +6,7 @@ project(bedrock_level)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    MESSAGE(FATAL_ERROR "Unsupported tool-chain, please use mingw54 instead")
+    MESSAGE(FATAL_ERROR "Unsupported tool-chain, please use mingw64 instead")
 endif ()
 
 

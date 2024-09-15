@@ -5,10 +5,9 @@
 #include "level_dat.h"
 
 #include <filesystem>
-#include <fstream>
-#include <memory>
 
 #include "utils.h"
+
 namespace bl {
 
     bool level_dat::load_from_file(const std::string &path) {

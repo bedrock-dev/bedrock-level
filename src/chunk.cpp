@@ -4,7 +4,6 @@
 
 #include "chunk.h"
 
-#include <sstream>
 #include <utility>
 
 #include "bedrock_key.h"

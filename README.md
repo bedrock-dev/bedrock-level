@@ -3,7 +3,7 @@
 Bedrock level library written in C++
 (The project is still in the early demo stage and may contain some bugs)
 
-Only on Mingw64!!!
+Only on Mingw64(posix version)!!!
 
 ## Samples
 
@@ -50,7 +50,6 @@ int main() {
 ```
 
 ![](pics/biome.png)
-
 
 ### Complie guide
 
