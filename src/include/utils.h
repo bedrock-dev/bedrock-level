@@ -8,6 +8,7 @@
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
+#include <string>
 #include <vector>
 
 typedef std::chrono::high_resolution_clock timer_clock;
