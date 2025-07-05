@@ -193,7 +193,6 @@ namespace bl {
                                 auto* t = new int_tag(k);
                                 t->value = v.get<int>();
                                 stat_tag->put(t);
-
                             } else if (v.type() == nlohmann::json::value_t::number_unsigned) {
                                 auto* t = new int_tag(k);
                                 t->value = v.get<unsigned>();
