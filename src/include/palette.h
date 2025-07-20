@@ -16,7 +16,6 @@
 
 #include "utils.h"
 
-
 namespace bl::palette {
 
     // TODD: 使用模板重写这个库
@@ -185,6 +184,9 @@ namespace bl::palette {
     struct string_tag : public abstract_tag {
         explicit string_tag(const std::string &key) : abstract_tag(key) {}
 
+        string_tag(const std::string &key, std::string value)
+            : abstract_tag(key), value(std::move(value)) {}
+
         [[nodiscard]] tag_type type() const override { return String; }
 
         void write(std::ostream &o, int indent) const override {
@@ -213,6 +215,8 @@ namespace bl::palette {
 
     struct int_tag : public abstract_tag {
         explicit int_tag(const std::string &key) : abstract_tag(key) {}
+
+        int_tag(const std::string &key, int32_t value) : abstract_tag(key), value(value) {}
 
         [[nodiscard]] tag_type type() const override { return Int; }
 
@@ -243,6 +247,8 @@ namespace bl::palette {
 
     struct short_tag : public abstract_tag {
         explicit short_tag(const std::string &key) : abstract_tag(key) {}
+
+        short_tag(const std::string &key, int16_t value) : abstract_tag(key), value(value) {}
 
         [[nodiscard]] tag_type type() const override { return Short; }
 
@@ -276,6 +282,8 @@ namespace bl::palette {
     struct long_tag : public abstract_tag {
         explicit long_tag(const std::string &key) : abstract_tag(key) {}
 
+        long_tag(const std::string &key, int64_t value) : abstract_tag(key), value(value) {}
+
         [[nodiscard]] tag_type type() const override { return Long; }
 
         void write(std::ostream &o, int indent) const override {
@@ -308,6 +316,8 @@ namespace bl::palette {
     struct float_tag : public abstract_tag {
         explicit float_tag(const std::string &key) : abstract_tag(key) {}
 
+        float_tag(const std::string &key, float value) : abstract_tag(key), value(value) {}
+
         [[nodiscard]] tag_type type() const override { return Float; }
 
         void write(std::ostream &o, int indent) const override {
@@ -338,6 +348,8 @@ namespace bl::palette {
 
     struct double_tag : public abstract_tag {
         explicit double_tag(const std::string &key) : abstract_tag(key) {}
+
+        double_tag(const std::string &key, double value) : abstract_tag(key), value(value) {}
 
         [[nodiscard]] tag_type type() const override { return Double; }
 
@@ -372,6 +384,8 @@ namespace bl::palette {
     struct byte_tag : public abstract_tag {
         explicit byte_tag(const std::string &key) : abstract_tag(key) {}
 
+        byte_tag(const std::string &key, int8_t value) : abstract_tag(key), value(value) {}
+
         [[nodiscard]] tag_type type() const override { return Byte; }
 
         void write(std::ostream &o, int indent) const override {
@@ -401,6 +415,14 @@ namespace bl::palette {
 
     struct byte_array_tag : public abstract_tag {
         explicit byte_array_tag(const std::string &key) : abstract_tag(key) {}
+
+        byte_array_tag(const std::string &key, std::vector<int8_t> value)
+            : abstract_tag(key), value(std::move(value)) {}
+
+        byte_array_tag(const std::string &key, const std::string &value) : abstract_tag(key) {
+            this->value.resize(value.size());
+            memcpy(this->value.data(), value.data(), value.size());
+        }
 
         void write(std::ostream &o, int indent) const override {
             abstract_tag::write(o, indent);
@@ -535,6 +557,31 @@ namespace bl::palette {
             if (tag) {
                 this->value.push_back(tag);
             }
+        }
+
+        bool push_back(abstract_tag *tag) {
+            if (!tag) return false;
+            if (this->value.empty() || this->value[0]->type() == tag->type()) {
+                this->value.push_back(tag);
+                return true;
+            }
+            return false;
+        }
+
+        bool insert(abstract_tag *tag, size_t idx) {
+            if (!tag || idx > this->value.size()) return false;
+            if (this->value.empty() || this->value[0]->type() == tag->type()) {
+                this->value.insert(this->value.begin() + idx, tag);
+                return true;
+            }
+            return false;
+        }
+
+        bool remove(size_t idx) {
+            if (idx >= this->value.size()) return false;
+            delete this->value[idx];
+            this->value.erase(this->value.begin() + idx);
+            return true;
         }
 
         ~list_tag() override;
