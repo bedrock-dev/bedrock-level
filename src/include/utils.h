@@ -6,6 +6,7 @@
 #define BEDROCK_LEVEL_UTILS_H
 
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <string>
@@ -61,6 +62,18 @@ namespace bl::utils {
     void write_file(const std::string &file_name, const byte_t *data, size_t len);
 
     std::string UTF8ToGBEx(const char *utf8);
+
+    template <typename T>
+    std::string numberVecToString(const std::vector<T> &vec, const std::string &sep = " ") {
+        std::string res;
+        if (vec.empty()) return res;
+        res.reserve(vec.size() * 4);
+        for (auto i = 0ul; i < vec.size() - 1; i++) {
+            res += std::to_string(vec[i]) + sep;
+        }
+        res += std::to_string(vec.back());
+        return res;
+    }
 }  // namespace bl::utils
 
 #endif  // BEDROCK_LEVEL_UTILS_H

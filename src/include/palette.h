@@ -52,10 +52,11 @@ namespace bl::palette {
 
        public:
         [[nodiscard]] virtual tag_type type() const = 0;
-
         [[nodiscard]] virtual std::string value_string() const = 0;
         [[nodiscard]] virtual abstract_tag *copy() const = 0;
-
+        [[nodiscard]] virtual std::string resitricted_value_string() const {
+            return this->value_string();
+        }
         /**
          *
          * 这个函数有bug，暂时不要使用
@@ -395,6 +396,7 @@ namespace bl::palette {
         [[nodiscard]] std::string value_string() const override {
             return std::to_string(this->value);
         }
+
         [[nodiscard]] abstract_tag *copy() const override {
             auto *res = new byte_tag(this->key_);
             res->value = this->value;
@@ -431,6 +433,9 @@ namespace bl::palette {
         [[nodiscard]] std::string value_string() const override {
             return "[ ..." + std::to_string(this->value.size()) + "... ]";
         }
+        std::string resitricted_value_string() const override {
+            return bl::utils::numberVecToString(this->value);
+        }
         [[nodiscard]] tag_type type() const override { return ByteArray; }
 
         [[nodiscard]] abstract_tag *copy() const override {
@@ -461,6 +466,10 @@ namespace bl::palette {
         [[nodiscard]] std::string value_string() const override {
             return "[ ..." + std::to_string(this->value.size()) + "... ]";
         }
+
+        std::string resitricted_value_string() const override {
+            return bl::utils::numberVecToString(this->value);
+        }
         [[nodiscard]] tag_type type() const override { return ByteArray; }
 
         [[nodiscard]] abstract_tag *copy() const override {
@@ -490,6 +499,9 @@ namespace bl::palette {
         }
         [[nodiscard]] std::string value_string() const override {
             return "[ ..." + std::to_string(this->value.size()) + "... ]";
+        }
+        std::string resitricted_value_string() const override {
+            return bl::utils::numberVecToString(this->value);
         }
         [[nodiscard]] tag_type type() const override { return ByteArray; }
 
