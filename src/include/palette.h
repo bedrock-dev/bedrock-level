@@ -54,7 +54,7 @@ namespace bl::palette {
         [[nodiscard]] virtual tag_type type() const = 0;
         [[nodiscard]] virtual std::string value_string() const = 0;
         [[nodiscard]] virtual abstract_tag *copy() const = 0;
-        [[nodiscard]] virtual std::string resitricted_value_string() const {
+        [[nodiscard]] virtual std::string restricted_value_string() const {
             return this->value_string();
         }
         /**
@@ -433,7 +433,7 @@ namespace bl::palette {
         [[nodiscard]] std::string value_string() const override {
             return "[ ..." + std::to_string(this->value.size()) + "... ]";
         }
-        std::string resitricted_value_string() const override {
+        std::string restricted_value_string() const override {
             return bl::utils::numberVecToString(this->value);
         }
         [[nodiscard]] tag_type type() const override { return ByteArray; }
@@ -467,7 +467,7 @@ namespace bl::palette {
             return "[ ..." + std::to_string(this->value.size()) + "... ]";
         }
 
-        std::string resitricted_value_string() const override {
+        std::string restricted_value_string() const override {
             return bl::utils::numberVecToString(this->value);
         }
         [[nodiscard]] tag_type type() const override { return ByteArray; }
@@ -500,7 +500,7 @@ namespace bl::palette {
         [[nodiscard]] std::string value_string() const override {
             return "[ ..." + std::to_string(this->value.size()) + "... ]";
         }
-        std::string resitricted_value_string() const override {
+        std::string restricted_value_string() const override {
             return bl::utils::numberVecToString(this->value);
         }
         [[nodiscard]] tag_type type() const override { return ByteArray; }
