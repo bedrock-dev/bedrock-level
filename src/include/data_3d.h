@@ -102,6 +102,8 @@ namespace bl {
         deep_dark                        = 190,
         mangrove_swamp                   = 191,
         cherry_groves                    = 192,
+        //1.21
+        pale_garden                      = 193,
         none                             = 255,
     };
     // clang-format on
