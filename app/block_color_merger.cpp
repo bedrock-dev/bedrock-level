@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <fstream>
 #include <string>
 #include <unordered_set>
 
@@ -7,13 +8,13 @@
 using namespace nlohmann;
 
 int main(int argc, const char** argv) {
-    if (argc < 2) {
-        fprintf(stderr, "Usage: %s <input.json...>\n", argv[0]);
+    if (argc < 3) {
+        fprintf(stderr, "Usage: %s <input.json...> <output.json>\n", argv[0]);
         return 1;
     }
     json result;
     std::pmr::unordered_set<std::string> unique_names;
-    for (int i = 1; i < argc; ++i) {
+    for (int i = 1; i < argc - 1; ++i) {
         const char* filename = argv[i];
         FILE* file = fopen(filename, "r");
         if (!file) {
@@ -43,6 +44,12 @@ int main(int argc, const char** argv) {
         }
     }
 
-    auto r = result.dump(4);
-    printf("%s", r.c_str());
+    std::ofstream out(argv[argc - 1]);
+    if (!out) {
+        fprintf(stderr, "Error opening output file: %s\n", argv[argc - 1]);
+        return 1;
+    }
+    out << result.dump(4);
+    out.close();
+    return 0;
 }
