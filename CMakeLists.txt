@@ -62,7 +62,7 @@ endfunction(create_app)
 create_app(biome_png app/biome_png.cpp)
 create_app(mem_leak_check app/mem_leak_check.cpp)
 create_app(map_to_png app/map_to_png.cpp)
-
+create_app(block_color_merger app/block_color_merger.cpp)
 
 #testing
 include(FetchContent)
