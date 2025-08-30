@@ -32,8 +32,8 @@ int main() {
         for (int z = minP.z; z <= maxP.z; z++) {
             auto *chunk = level.get_chunk({x, z, DIM});
             if (chunk) {
-                auto sx = (x - minP.x) * 16;
-                auto sz = (z - minP.z) * 16;
+                // auto sx = (x - minP.x) * 16;
+                // auto sz = (z - minP.z) * 16;
                 for (int xx = 0; xx < 16; xx++) {
                     for (int zz = 0; zz < 16; zz++) {
                         //                        auto name = chunk->get_top_block(xx, zz);
