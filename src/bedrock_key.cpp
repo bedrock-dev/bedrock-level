@@ -107,7 +107,6 @@ namespace bl {
         } else {
             res.type = Unknown;
         }
-        BL_LOGGER("village key type: %s", type_str.c_str());
         if (sz == 4) {
             auto &dim_str = tks[1];
             if (dim_str == "Overworld") {
