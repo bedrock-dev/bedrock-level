@@ -74,6 +74,9 @@ namespace bl::utils {
         res += std::to_string(vec.back());
         return res;
     }
+
+    // 使用单个字符作为分隔符
+    std::vector<std::string> splitStr(const std::string &str, char delimiter);
 }  // namespace bl::utils
 
 #endif  // BEDROCK_LEVEL_UTILS_H

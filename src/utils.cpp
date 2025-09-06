@@ -5,7 +5,6 @@
 #include "utils.h"
 
 #include <cstdarg>
-#include <cstdint>
 #include <cstdio>
 #include <fstream>
 #include <iostream>
@@ -99,4 +98,13 @@ namespace bl::utils {
     std::string UTF8ToGBEx(const char *utf8) { return std::string(utf8); }
 #endif
 
+    std::vector<std::string> splitStr(const std::string &str, char delimiter) {
+        std::vector<std::string> tokens;
+        std::string token;
+        std::istringstream tokenStream(str);
+        while (std::getline(tokenStream, token, delimiter)) {
+            tokens.push_back(token);
+        }
+        return tokens;
+    }
 }  // namespace bl::utils

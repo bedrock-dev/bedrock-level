@@ -149,6 +149,7 @@ namespace bl {
         [[nodiscard]] std::string to_raw() const;
 
         std::string uuid;
+        int dim{0};
         key_type type{Unknown};
     };
 

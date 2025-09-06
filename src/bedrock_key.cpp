@@ -7,6 +7,8 @@
 #include <cstring>
 #include <random>
 
+#include "utils.h"
+
 namespace bl {
     const chunk_key chunk_key::INVALID_CHUNK_KEY =
         chunk_key{chunk_key::Unknown, bl::chunk_pos(), 0};
@@ -85,10 +87,15 @@ namespace bl {
     }
     village_key village_key::parse(const std::string &key) {
         village_key res;
-        if (key.size() < 46) return res;
-        if (key.rfind("VILLAGE_", 0) != 0) return res;
-        res.uuid = std::string(key.begin() + 8, key.begin() + 44);  // uuid
-        std::string type_str = std::string(key.data() + 45);
+
+        auto tks = utils::splitStr(key, '_');
+        auto sz = tks.size();
+        if (sz != 3 && sz != 4) return res;
+        if (tks[0] != "VILLAGE") return res;
+        auto uuid = tks[sz - 2];
+        if (uuid.size() != 36) return res;
+        res.uuid = uuid;
+        std::string type_str = tks[sz - 1];
         if (type_str == "DWELLERS") {
             res.type = DWELLERS;
         } else if (type_str == "INFO") {
@@ -99,6 +106,17 @@ namespace bl {
             res.type = POI;
         } else {
             res.type = Unknown;
+        }
+        BL_LOGGER("village key type: %s", type_str.c_str());
+        if (sz == 4) {
+            auto &dim_str = tks[1];
+            if (dim_str == "Overworld") {
+                res.dim = 0;
+            } else if (dim_str == "Nether") {
+                res.dim = 1;
+            } else if (dim_str == "TheEnd") {
+                res.dim = 2;
+            }
         }
         return res;
     }
