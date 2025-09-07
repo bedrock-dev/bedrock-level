@@ -4,26 +4,29 @@
 
 #ifndef BEDROCK_LEVEL_GLOBAL_H
 #define BEDROCK_LEVEL_GLOBAL_H
+#include <array>
+
 #include "bedrock_key.h"
 #include "memory"
 #include "palette.h"
+
 namespace bl {
 
     class village_data {
+        using village_data_type = std::array<bl::palette::compound_tag*, 4>;
+        using village_table_type =
+            std::array<std::unordered_map<std::string, village_data_type>, 4>;
+
        public:
-        void reset(
-            const std::unordered_map<std::string, std::array<bl::palette::compound_tag*, 4>>& data);
+        void reset(const village_table_type& data);
         void append_village(const bl::village_key& key, const std::string& value);
 
-        inline std::unordered_map<std::string, std::array<bl::palette::compound_tag*, 4>>& data() {
-            return this->data_;
-        }
-
+        inline village_table_type& data() { return this->data_; }
         void clear_data();
         ~village_data();
 
        private:
-        std::unordered_map<std::string, std::array<bl::palette::compound_tag*, 4>> data_;
+        village_table_type data_;
     };
 
     class general_kv_nbts {
