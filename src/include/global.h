@@ -13,11 +13,11 @@
 namespace bl {
 
     class village_data {
+       public:
         using village_data_type = std::array<bl::palette::compound_tag*, 4>;
         using village_table_type =
             std::array<std::unordered_map<std::string, village_data_type>, 4>;
 
-       public:
         void reset(const village_table_type& data);
         void append_village(const bl::village_key& key, const std::string& value);
 
