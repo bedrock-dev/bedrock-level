@@ -197,6 +197,7 @@ namespace bl {
         options_.filter_policy = leveldb::NewBloomFilterPolicy(10);
         options_.block_cache = leveldb::NewLRUCache(20 * 1024 * 1024);
         options_.write_buffer_size = 4 * 1024 * 1024;
+        options_.block_size = 163840;
         options_.compressors[0] = new leveldb::ZlibCompressorRaw(-1);
         options_.compressors[1] = new leveldb::ZlibCompressor();
     }
