@@ -20,11 +20,6 @@ namespace bl {
      */
 
     namespace {
-        bool load_raw(leveldb::DB *&db, const std::string &raw_key, std::string &raw) {
-            auto r = db->Get(leveldb::ReadOptions(), raw_key, &raw);
-            return r.ok();
-        }
-
         bool contains_key(leveldb::DB *&db, const std::string &raw_key) {
             std::string raw;
             auto r = db->Get(leveldb::ReadOptions(), raw_key, &raw);
@@ -105,15 +100,14 @@ namespace bl {
             // load all sub chunks
             auto terrain_key = bl::chunk_key{chunk_key::SubChunkTerrain, this->pos_, sub_index};
             std::string raw;
-            if (load_raw(level.db(), terrain_key.to_raw(), raw)) {
+            if (level.load_raw(terrain_key.to_raw(), raw)) {
                 auto *sb = new bl::sub_chunk();
                 sb->set_y_index(
                     sub_index);  // set default index (no `sub-chunk index`  in version 8 chunks)
                                  // //see
                                  // https://gist.github.com/Tomcc/a96af509e275b1af483b25c543cfbf37?permalink_comment_id=3901255#gistcomment-3901255
                 if (!sb->load(raw.data(), raw.size())) {
-                    BL_ERROR("Can not load sub chunk %d %d %d %d", pos_.x, pos_.z, pos_.dim,
-                             sub_index);
+                    BL_ERROR("Can not load sub chunk %d %d %d %d", pos_.x, pos_.z, pos_.dim, sub_index);
                     delete sb;  // delete error sub chunks
                     continue;
                 }
@@ -133,8 +127,7 @@ namespace bl {
         if (this->version == New) {
             auto d3d_key = bl::chunk_key{chunk_key::Data3D, this->pos_};
             std::string d3d_raw;
-            if (load_raw(level.db(), d3d_key.to_raw(), d3d_raw) &&
-                this->d3d_.load_from_d3d(d3d_raw.data(), d3d_raw.size())) {
+            if (level.load_raw(d3d_key.to_raw(), d3d_raw) && this->d3d_.load_from_d3d(d3d_raw.data(), d3d_raw.size())) {
                 return true;
             } else {
                 return false;
@@ -143,8 +136,7 @@ namespace bl {
         } else {
             auto d2d_key = bl::chunk_key{chunk_key::Data2D, this->pos_};
             std::string d2d_raw;
-            if (load_raw(level.db(), d2d_key.to_raw(), d2d_raw) &&
-                this->d3d_.load_from_d2d(d2d_raw.data(), d2d_raw.size())) {
+            if (level.load_raw(d2d_key.to_raw(), d2d_raw) && this->d3d_.load_from_d2d(d2d_raw.data(), d2d_raw.size())) {
                 return true;
             } else {
                 return false;
@@ -154,9 +146,8 @@ namespace bl {
     bool chunk::load_pending_ticks(bedrock_level &level) {
         auto pt_key = bl::chunk_key{chunk_key::PendingTicks, this->pos_};
         std::string block_entity_raw;
-        if (load_raw(level.db(), pt_key.to_raw(), block_entity_raw) && !block_entity_raw.empty()) {
-            this->pending_ticks_ =
-                palette::read_palette_to_end(block_entity_raw.data(), block_entity_raw.size());
+        if (level.load_raw(pt_key.to_raw(), block_entity_raw) && !block_entity_raw.empty()) {
+            this->pending_ticks_ = palette::read_palette_to_end(block_entity_raw.data(), block_entity_raw.size());
             //
         }
         return true;
@@ -165,10 +156,8 @@ namespace bl {
         // try read old version actors
         auto entity_key = bl::chunk_key{chunk_key::Entity, this->pos_};
         std::string block_entity_raw;
-        if (load_raw(level.db(), entity_key.to_raw(), block_entity_raw) &&
-            !block_entity_raw.empty()) {
-            auto actors =
-                palette::read_palette_to_end(block_entity_raw.data(), block_entity_raw.size());
+        if (level.load_raw(entity_key.to_raw(), block_entity_raw) && !block_entity_raw.empty()) {
+            auto actors = palette::read_palette_to_end(block_entity_raw.data(), block_entity_raw.size());
             for (auto &a : actors) {
                 auto *ac = new actor;
                 if (ac->load_from_nbt(a)) {
@@ -185,7 +174,7 @@ namespace bl {
         bl::actor_digest_key key{this->pos_};
         std::string raw;
         // 没啥要解析的，不用管错误
-        if (!load_raw(level.db(), key.to_raw(), raw)) {
+        if (!level.load_raw(key.to_raw(), raw)) {
             return;
         }
 
@@ -194,7 +183,7 @@ namespace bl {
         for (auto &uid : list.actor_digests_) {
             auto actor_key = "actorprefix" + uid;
             std::string raw_actor;
-            if (load_raw(level.db(), actor_key, raw_actor)) {
+            if (level.load_raw(actor_key, raw_actor)) {
                 auto ac = new actor;
                 if (!ac->load(raw_actor.data(), raw_actor.size())) {
                     delete ac;
@@ -204,10 +193,11 @@ namespace bl {
             }
         }
     }
+
     void chunk::load_hsa(bedrock_level &level) {
         auto hsa_key = bl::chunk_key{chunk_key::HardCodedSpawnAreas, this->pos_};
         std::string raw;
-        if (!load_raw(level.db(), hsa_key.to_raw(), raw)) return;
+        if (!level.load_raw(hsa_key.to_raw(), raw)) return;
         if (raw.size() < 4) return;
         int count = *reinterpret_cast<const int *>(raw.data());
         if (raw.size() != count * 25ul + 4ul) return;
@@ -223,8 +213,7 @@ namespace bl {
             area.max_pos.y = *reinterpret_cast<const int *>(d + offset + 16);
             area.max_pos.z = *reinterpret_cast<const int *>(d + offset + 20);
             auto type = d[offset + 24];
-            if (type == SwampHut || type == OceanMonument || type == NetherFortress ||
-                type == PillagerOutpost) {
+            if (type == SwampHut || type == OceanMonument || type == NetherFortress || type == PillagerOutpost) {
                 area.type = static_cast<HSAType>(type);
             }
             this->HSAs_.push_back(area);
@@ -233,9 +222,8 @@ namespace bl {
     bool chunk::load_block_entities(bedrock_level &level) {
         auto be_key = bl::chunk_key{chunk_key::BlockEntity, this->pos_};
         std::string block_entity_raw;
-        if (load_raw(level.db(), be_key.to_raw(), block_entity_raw) && !block_entity_raw.empty()) {
-            this->block_entities_ =
-                palette::read_palette_to_end(block_entity_raw.data(), block_entity_raw.size());
+        if (level.load_raw(be_key.to_raw(), block_entity_raw) && !block_entity_raw.empty()) {
+            this->block_entities_ = palette::read_palette_to_end(block_entity_raw.data(), block_entity_raw.size());
         } else {
         }
 
@@ -244,10 +232,8 @@ namespace bl {
 
     bool chunk::load_data(bedrock_level &level, bool fast_load) {
         if (this->loaded()) return true;
-        if ((!contains_key(level.db(),
-                           bl::chunk_key{chunk_key::VersionOld, this->pos_}.to_raw())) &&
-            (!contains_key(level.db(),
-                           bl::chunk_key{chunk_key::VersionNew, this->pos_}.to_raw()))) {
+        if ((!contains_key(level.db(), bl::chunk_key{chunk_key::VersionOld, this->pos_}.to_raw())) &&
+            (!contains_key(level.db(), bl::chunk_key{chunk_key::VersionNew, this->pos_}.to_raw()))) {
             return false;
         }
 

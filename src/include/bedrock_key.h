@@ -8,7 +8,6 @@
 #include <cstdint>
 #include <functional>
 #include <string>
-#include <vector>
 
 namespace bl {
 
@@ -81,11 +80,13 @@ namespace bl {
             BlockExtraData = 52,  //?
             BiomeState = 53,
             FinalizedState = 54,
+            ConversionData = 55,
             BorderBlocks = 56,  // Education Edition Feature
             HardCodedSpawnAreas = 57,
             RandomTicks = 58,
             Checksums = 59,  // 0x3b (;)
             GenerationSeed = 60,
+            GeneratedPreCavesAndCliffsBlending = 61,
             BlendingBiomeHeight = 62,
             MetaDataHash = 63,
             BlendingData = 64,
