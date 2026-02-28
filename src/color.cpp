@@ -11,7 +11,6 @@
 
 #include "json/json.hpp"
 #include "palette.h"
-#include "stb/stb_image_write.h"
 
 namespace bl {
     namespace {
@@ -38,8 +37,8 @@ namespace bl {
         // key 是palette的raw形态
         std::unordered_map<std::string, bl::color> block_color_map;
 
-        bl::color blend_with_biome(const std::unordered_map<bl::biome, bl::color>& map,
-                                   bl::color gray, bl::color default_color, bl::biome b) {
+        bl::color blend_with_biome(const std::unordered_map<bl::biome, bl::color>& map, bl::color gray, bl::color default_color,
+                                   bl::biome b) {
             auto it = map.find(b);
             auto x = it == map.end() ? default_color : it->second;
             gray.r = static_cast<int>(gray.r / 255.0 * x.r);
@@ -150,16 +149,13 @@ namespace bl {
                 auto extra_data = item["extra_data"];
                 auto block_name = item["name"].get<std::string>();
 
-                if (extra_data.contains("use_grass_color") &&
-                    extra_data["use_grass_color"].get<bool>()) {
+                if (extra_data.contains("use_grass_color") && extra_data["use_grass_color"].get<bool>()) {
                     grass_block_names.insert(block_name);
                 }
-                if (extra_data.contains("use_leaves_color") &&
-                    extra_data["use_leaves_color"].get<bool>()) {
+                if (extra_data.contains("use_leaves_color") && extra_data["use_leaves_color"].get<bool>()) {
                     leaves_block_names.insert(block_name);
                 }
-                if (extra_data.contains("use_water_color") &&
-                    extra_data["use_water_color"].get<bool>()) {
+                if (extra_data.contains("use_water_color") && extra_data["use_water_color"].get<bool>()) {
                     water_block_names.insert(block_name);
                 }
 
@@ -242,18 +238,14 @@ namespace bl {
                 data[3 * (j + i * w) + 2] = color.b;
             }
         }
-
-        stbi_write_png(name.c_str(), w, h, c, data.data(), 0);
+        //        stbi_write_png(name.c_str(), w, h, c, data.data(), 0);
     }
     std::unordered_map<std::string, bl::color>& get_block_color_table() { return block_color_map; }
 
     bl::color blend_color_with_biome(const std::string& name, bl::color color, bl::biome b) {
-        if (water_block_names.count(name))
-            return blend_with_biome(biome_water_map, color, default_water_color, b);
-        if (grass_block_names.count(name))
-            return blend_with_biome(biome_grass_map, color, default_grass_color, b);
-        if (leaves_block_names.count(name))
-            return blend_with_biome(biome_leave_map, color, default_leave_color, b);
+        if (water_block_names.count(name)) return blend_with_biome(biome_water_map, color, default_water_color, b);
+        if (grass_block_names.count(name)) return blend_with_biome(biome_grass_map, color, default_grass_color, b);
+        if (leaves_block_names.count(name)) return blend_with_biome(biome_leave_map, color, default_leave_color, b);
         return color;
     }
 
