@@ -34,22 +34,15 @@ add_library(bedrock-level
 
 if (WIN32)
     MESSAGE(STATUS "Current compiler is Mingw")
-    set(EXTRA_LIBS ${PROJECT_SOURCE_DIR}/libs/libleveldb-mingw64.a ${PROJECT_SOURCE_DIR}/libs/libz-mingw64.a)
+    set(EXTRA_LIBS ${PROJECT_SOURCE_DIR}/libs/libleveldb.a ${PROJECT_SOURCE_DIR}/libs/libzs.a)
     add_compile_options(-std=c++17 -O2 -Wall -g)
     target_link_libraries(bedrock-level ${EXTRA_LIBS})
 endif (WIN32)
 
 
 if (UNIX)
-    add_compile_options(-std=c++17 -Wall -g)
-    MESSAGE(STATUS "Current compiler is GUN gcc")
-    set(EXTRA_LIBS ${PROJECT_SOURCE_DIR}/libs/libleveldb-gnu.a)
-    add_compile_options(-fsanitize=address)
-    add_link_options(-fsanitize=address)
-    find_package(ZLIB)
-    target_link_libraries(bedrock-level ${EXTRA_LIBS} ZLIB::ZLIB)
+    MESSAGE(STATUS "Current compiler is GUN gcc, not support yet, please compile libz and leveldb-mcpe manually")
 endif (UNIX)
-
 
 message(STATUS "C compiler: ${CMAKE_C_COMPILER}")
 message(STATUS "C++ compiler: ${CMAKE_CXX_COMPILER}")

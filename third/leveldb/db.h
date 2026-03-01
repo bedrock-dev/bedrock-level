@@ -145,6 +145,9 @@ class LEVELDB_EXPORT DB {
   // Therefore the following call will compact the entire database:
   //    db->CompactRange(nullptr, nullptr);
   virtual void CompactRange(const Slice* begin, const Slice* end) = 0;
+
+  // modifiyed by hhhxiao, to get the last sequence number
+  virtual uint64_t LastSequence() { return static_cast<uint64_t>(-1); }
 };
 
 // Destroy the contents of the specified database.
