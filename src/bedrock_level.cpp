@@ -9,6 +9,7 @@
 
 #include "bedrock_key.h"
 #include "chunk.h"
+#include "include/utils.h"
 #include "leveldb/cache.h"
 #include "leveldb/comparator.h"
 #include "leveldb/db.h"
@@ -138,6 +139,15 @@ namespace bl {
             if (ck.valid()) continue;
             auto actor_key = bl::actor_key::parse(it->key().ToString());
             if (actor_key.valid()) continue;
+            f(it->key().ToString(), it->value().ToString());
+        }
+        delete it;
+    }
+
+    void bedrock_level::foreach_key_with_prefix(const std::string &prefix,
+                                                const std::function<void(const std::string &, const std::string &)> &f) {
+        auto *it = this->db_->NewIterator(this->read_option_);
+        for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
             f(it->key().ToString(), it->value().ToString());
         }
         delete it;

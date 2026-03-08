@@ -113,9 +113,7 @@ namespace bl {
     struct actor_key {
         int64_t actor_uid{static_cast<int64_t>(0xffffffffffffffff)};
 
-        [[nodiscard]] inline bool valid() const {
-            return this->actor_uid != static_cast<int64_t>(0xffffffffffffffff);
-        }
+        [[nodiscard]] inline bool valid() const { return this->actor_uid != static_cast<int64_t>(0xffffffffffffffff); }
 
         [[nodiscard]] std::string to_string() const;
 
@@ -139,9 +137,7 @@ namespace bl {
 
         static std::string village_key_type_to_str(key_type t);
 
-        [[nodiscard]] bool valid() const {
-            return this->uuid.size() == 36 && this->type != Unknown;
-        }
+        [[nodiscard]] bool valid() const { return this->uuid.size() == 36 && this->type != Unknown; }
 
         [[nodiscard]] std::string to_string() const;
 
@@ -154,13 +150,7 @@ namespace bl {
         key_type type{Unknown};
     };
 
-    enum HSAType : int8_t {
-        NetherFortress = 1,
-        SwampHut = 2,
-        OceanMonument = 3,
-        PillagerOutpost = 5,
-        Unknown = 6
-    };
+    enum HSAType : int8_t { NetherFortress = 1, SwampHut = 2, OceanMonument = 3, PillagerOutpost = 5, Unknown = 6 };
     struct hardcoded_spawn_area {
         HSAType type{Unknown};
         block_pos min_pos{0, 0, 0};
