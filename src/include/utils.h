@@ -77,6 +77,9 @@ namespace bl::utils {
 
     // 使用单个字符作为分隔符
     std::vector<std::string> splitStr(const std::string &str, char delimiter);
+
+    void printReadableBytes(const std::string &bytes);
+
 }  // namespace bl::utils
 
 #endif  // BEDROCK_LEVEL_UTILS_H

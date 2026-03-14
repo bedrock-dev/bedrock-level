@@ -4,10 +4,12 @@
 
 #include "chunk.h"
 
+#include <string>
 #include <utility>
 
 #include "bedrock_key.h"
 #include "bedrock_level.h"
+#include "color.h"
 #include "utils.h"
 
 namespace bl {
@@ -68,17 +70,6 @@ namespace bl {
         }
         return it->second->get_block_fast(cx, offset, cz);
     }
-
-    //    block_info chunk::get_top_block(int cx, int cz) {
-    //        auto height = this->get_height(cx, cz);
-    //        return this->get_block(cx, height - 1, cz);
-    //    }
-    //
-    //    palette::compound_tag *chunk::get_top_block_raw(int cx, int cz) {
-    //        auto height = this->get_height(cx, cz);
-    //        return this->get_block_raw(cx, height - 1, cz);
-    //    }
-    //
 
     palette::compound_tag *chunk::get_block_raw(int cx, int y, int cz) {
         int index;
@@ -268,14 +259,11 @@ namespace bl {
     }
 
     bl::color chunk::get_block_color(int cx, int y, int cz) {
-        auto *raw = this->get_block_raw(cx, y, cz);
-        if (!raw) return {};
-        return get_block_color_from_SNBT(raw->to_raw());
+        auto b = this->get_block_fast(cx, y, cz);
+        auto c = get_block_by_name_tag(b.name);
+        if (b.name.find("dirt") != std::string::npos) {
+            BL_LOGGER("%s: %d %d %d %d", b.name.c_str(), c.r, c.g, c.b, c.a);
+        }
+        return c;
     }
-
-    //    bl::color chunk::get_top_block_color(int cx, int cz) {
-    //        auto height = this->get_height(cx, cz);
-    //        return this->get_block_color(cx, height - 1, cz);
-    //    }
-
 }  // namespace bl

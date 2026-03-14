@@ -4,21 +4,31 @@
 
 #include "color.h"
 
+#include <algorithm>
+#include <cstdint>
+#include <cstdio>
 #include <fstream>
 #include <iostream>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
+#include <vector>
 
 #include "json/json.hpp"
 #include "palette.h"
+#include "stb/stb_image_write.h"
+#include "utils.h"
 
 namespace bl {
     namespace {
+
+        bool debugColor = false;
         // biome id -> water
         // 和群系有关的颜色白名单
-        std::unordered_set<std::string> water_block_names;
-        std::unordered_set<std::string> leaves_block_names;
-        std::unordered_set<std::string> grass_block_names;
+        const std::vector<std::string> water_block_names{"water"};
+        const std::vector<std::string> leaves_block_names{"leave"};
+        const std::vector<std::string> grass_block_names{"grass"};
 
         std::unordered_map<biome, bl::color> biome_water_map;
         std::unordered_map<biome, bl::color> biome_leave_map;
@@ -34,8 +44,8 @@ namespace bl {
         // biome id -> biome color
         std::unordered_map<biome, bl::color> biome_color_map;
 
-        // key 是palette的raw形态
-        std::unordered_map<std::string, bl::color> block_color_map;
+        std::unordered_map<std::string, bl::color> single_block_color_map;
+        std::unordered_map<std::string, std::unordered_map<std::string, bl::color>> multi_block_color_map;
 
         bl::color blend_with_biome(const std::unordered_map<bl::biome, bl::color>& map, bl::color gray, bl::color default_color,
                                    bl::biome b) {
@@ -49,16 +59,33 @@ namespace bl {
 
     }  // namespace
 
+    void setUseColorDebugMode(bool enable) { debugColor = enable; }
+
     color get_biome_color(bl::biome b) {
         auto it = biome_color_map.find(b);
         return it == biome_color_map.end() ? bl::color() : it->second;
     }
-    color get_block_color_from_SNBT(const std::string& name) {
-        auto it = block_color_map.find(name);
-        if (it == block_color_map.end()) {
-            return {};
+
+    color get_block_by_name_tag(const std::string& name, const std::string& tag) {
+        auto it1 = single_block_color_map.find(name);
+        if (it1 != single_block_color_map.end()) {
+            return it1->second;
         }
-        return it->second;
+        auto it2 = multi_block_color_map.find(name);
+        if (it2 != multi_block_color_map.end() && !it2->second.empty()) {
+            auto& map = it2->second;
+            if (tag.empty()) return map.begin()->second;
+            for (auto& kv : map) {
+                if (kv.first.find(tag) != std::string::npos) {
+                    return kv.second;
+                }
+            }
+            return map.begin()->second;
+        }
+        if (debugColor) {
+            BL_ERROR("Can not found color for block %s-%s", name.c_str(), tag.c_str());
+        }
+        return {};
     }
 
     std::string get_biome_name(biome b) {
@@ -127,14 +154,13 @@ namespace bl {
         } catch (std::exception&) {
             return false;
         }
-
         BL_LOGGER("Water color Map: %zu", biome_water_map.size());
         BL_LOGGER("Leaves color Map: %zu", biome_leave_map.size());
         BL_LOGGER("Grass color Map: %zu", biome_grass_map.size());
         return true;
     }
 
-    bool init_block_color_palette_from_file(const std::string& filename) {
+    bool init_block_color_from_file(const std::string& filename) {
         try {
             std::ifstream f(filename);
             if (!f.is_open()) {
@@ -143,83 +169,31 @@ namespace bl {
             }
             nlohmann::json j;
             f >> j;
-            BL_LOGGER("Load json success: %s", filename.c_str());
-            for (auto& item : j) {
-                using namespace bl::palette;
-                auto extra_data = item["extra_data"];
-                auto block_name = item["name"].get<std::string>();
 
-                if (extra_data.contains("use_grass_color") && extra_data["use_grass_color"].get<bool>()) {
-                    grass_block_names.insert(block_name);
+            std::vector<std::pair<std::string, bl::color>> vec;
+            for (const auto& [blockname, value] : j.items()) {
+                vec.clear();
+                for (const auto& [tag, color] : value.items()) {
+                    bl::color c;
+                    c.r = color[0].get<uint8_t>();
+                    c.g = color[1].get<uint8_t>();
+                    c.b = color[2].get<uint8_t>();
+                    c.a = color[3].get<uint8_t>();
+                    vec.emplace_back(tag, c);
                 }
-                if (extra_data.contains("use_leaves_color") && extra_data["use_leaves_color"].get<bool>()) {
-                    leaves_block_names.insert(block_name);
-                }
-                if (extra_data.contains("use_water_color") && extra_data["use_water_color"].get<bool>()) {
-                    water_block_names.insert(block_name);
-                }
-
-                if (extra_data.contains("color")) {
-                    auto rgb = extra_data["color"];
-                    color c;
-                    c.r = static_cast<uint8_t>(rgb[0].get<double>() * 255.0);
-                    c.g = static_cast<uint8_t>(rgb[1].get<double>() * 255.0);
-                    c.b = static_cast<uint8_t>(rgb[2].get<double>() * 255.0);
-                    c.a = static_cast<uint8_t>(rgb[3].get<double>() * 255.0);
-
-                    auto* root = new compound_tag("");
-                    auto* name_key = new string_tag("name");
-                    name_key->value = block_name;
-                    auto* stat_tag = new compound_tag("states");
-                    if (item.contains("states")) {
-                        for (auto& [k, v] : item["states"].items()) {
-                            if (v.type() == nlohmann::json::value_t::string) {
-                                auto* t = new string_tag(k);
-                                t->value = v.get<std::string>();
-                                stat_tag->put(t);
-                            } else if (v.type() == nlohmann::json::value_t::boolean) {
-                                auto* t = new byte_tag(k);
-                                t->value = v.get<bool>();
-                                stat_tag->put(t);
-                            } else if (v.type() == nlohmann::json::value_t::number_float) {
-                                auto* t = new float_tag(k);
-                                t->value = v.get<float>();
-                                stat_tag->put(t);
-                            } else if (v.type() == nlohmann::json::value_t::number_integer) {
-                                auto* t = new int_tag(k);
-                                t->value = v.get<int>();
-                                stat_tag->put(t);
-                            } else if (v.type() == nlohmann::json::value_t::number_unsigned) {
-                                auto* t = new int_tag(k);
-                                t->value = v.get<unsigned>();
-                                stat_tag->put(t);
-                            }
-                        }
+                if (vec.size() == 1) {
+                    single_block_color_map["minecraft:" + blockname] = vec.begin()->second;
+                } else if (vec.size() > 1) {
+                    for (const auto& pair : vec) {
+                        multi_block_color_map["minecraft:" + blockname][pair.first] = pair.second;
                     }
-                    root->put(name_key);
-                    root->put(stat_tag);
-
-                    block_color_map[root->to_raw()] = c;
-                    delete root;
                 }
             }
+            BL_LOGGER("Load json success: %s", filename.c_str());
         } catch (std::exception& e) {
             std::cout << "Err: " << e.what() << std::endl;
             return false;
         }
-        BL_LOGGER("Water blocks:");
-        for (auto& b : water_block_names) {
-            BL_LOGGER(" - %s", b.c_str());
-        }
-        BL_LOGGER("Leaves blocks:");
-        for (auto& b : leaves_block_names) {
-            BL_LOGGER(" - %s", b.c_str());
-        }
-        BL_LOGGER("Grass blocks:");
-        for (auto& b : grass_block_names) {
-            BL_LOGGER(" - %s", b.c_str());
-        }
-
         return true;
     }
 
@@ -238,14 +212,22 @@ namespace bl {
                 data[3 * (j + i * w) + 2] = color.b;
             }
         }
-        //        stbi_write_png(name.c_str(), w, h, c, data.data(), 0);
+        stbi_write_png(name.c_str(), w, h, c, data.data(), 0);
     }
-    std::unordered_map<std::string, bl::color>& get_block_color_table() { return block_color_map; }
 
     bl::color blend_color_with_biome(const std::string& name, bl::color color, bl::biome b) {
-        if (water_block_names.count(name)) return blend_with_biome(biome_water_map, color, default_water_color, b);
-        if (grass_block_names.count(name)) return blend_with_biome(biome_grass_map, color, default_grass_color, b);
-        if (leaves_block_names.count(name)) return blend_with_biome(biome_leave_map, color, default_leave_color, b);
+        if (std::any_of(water_block_names.begin(), water_block_names.end(),
+                        [&name](const auto& str) { return name.find(str) != std::string::npos; })) {
+            return blend_with_biome(biome_water_map, color, default_water_color, b);
+        }
+        if (std::any_of(leaves_block_names.begin(), leaves_block_names.end(),
+                        [&name](const auto& str) { return name.find(str) != std::string::npos; })) {
+            return blend_with_biome(biome_leave_map, color, default_leave_color, b);
+        }
+        if (std::any_of(grass_block_names.begin(), grass_block_names.end(),
+                        [&name](const auto& str) { return name.find(str) != std::string::npos; })) {
+            return blend_with_biome(biome_grass_map, color, default_water_color, b);
+        }
         return color;
     }
 

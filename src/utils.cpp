@@ -4,10 +4,12 @@
 
 #include "utils.h"
 
+#include <cctype>
 #include <cstdarg>
 #include <cstdio>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 
 #define KNRM "\x1B[0m"
 #define KRED "\x1B[31m"
@@ -29,8 +31,7 @@ void log(const char *file_name, const char *function_name, size_t line, const ch
 #endif
 }
 
-void error_msg(const char *file_name, const char *function_name, size_t line, const char *fmt,
-               ...) {
+void error_msg(const char *file_name, const char *function_name, size_t line, const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
     fprintf(stdout, "[ERROR] [%s:%zu @ %s]:", file_name, line, function_name);
@@ -59,8 +60,7 @@ namespace bl::utils {
             BL_ERROR("Can not open file %s", file_name.c_str());
             return {};
         }
-        std::vector<byte_t> bytes((std::istreambuf_iterator<char>(input)),
-                                  (std::istreambuf_iterator<char>()));
+        std::vector<byte_t> bytes((std::istreambuf_iterator<char>(input)), (std::istreambuf_iterator<char>()));
         input.close();
         return bytes;
     }
@@ -106,5 +106,13 @@ namespace bl::utils {
             tokens.push_back(token);
         }
         return tokens;
+    }
+
+    void printReadableBytes(const std::string &bytes) {
+        for (const auto &c : bytes) {
+            if (std::isprint(c)) {
+                printf("%c", c);
+            }
+        }
     }
 }  // namespace bl::utils

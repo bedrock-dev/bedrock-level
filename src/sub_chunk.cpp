@@ -41,8 +41,7 @@ namespace bl {
             if (version == 9) {
                 int8_t y_index = stream[2];
                 if (y_index != sub_chunk->y_index()) {
-                    BL_ERROR("Invalid Y index value(new(%d)  != default(%d))", y_index,
-                             sub_chunk->y_index());
+                    BL_ERROR("Invalid Y index value(new(%d)  != default(%d))", y_index, sub_chunk->y_index());
                 }
                 sub_chunk->set_y_index(y_index);
                 read++;
@@ -50,8 +49,7 @@ namespace bl {
             return true;
         }
 
-        bool read_palettes(bl::sub_chunk::layer *layer, const byte_t *stream, size_t number,
-                           size_t len, int &read) {
+        bool read_palettes(bl::sub_chunk::layer *layer, const byte_t *stream, size_t number, size_t len, int &read) {
             read = 0;
             for (auto i = 0u; i < number; i++) {
                 int r = 0;
@@ -68,8 +66,7 @@ namespace bl {
             return true;
         }
 
-        bool read_one_layer(bl::sub_chunk::layer *layer, const byte_t *stream, size_t len,
-                            int &read) {
+        bool read_one_layer(bl::sub_chunk::layer *layer, const byte_t *stream, size_t len, int &read) {
             read = 0;
             constexpr auto BLOCK_NUM = 16 * 16 * 16;
             if (!layer || !stream) return false;
@@ -86,8 +83,7 @@ namespace bl {
                 for (int wordi = 0; wordi < wordCount; wordi++) {
                     auto word = *reinterpret_cast<const int *>(stream + read + wordi * 4);
                     for (int block = 0; block < block_per_word; block++) {
-                        int state = (word >> ((position % block_per_word) * layer->bits)) &
-                                    ((1 << layer->bits) - 1);
+                        int state = (word >> ((position % block_per_word) * layer->bits)) & ((1 << layer->bits) - 1);
                         if (position < static_cast<int>(layer->blocks.size())) {
                             layer->blocks[position] = state;
                         }
@@ -149,9 +145,8 @@ namespace bl {
         if (id == palette->value.end()) {
             return {};
         }
-
-        return {dynamic_cast<bl::palette::string_tag *>(id->second)->value,
-                bl::get_block_color_from_SNBT(palette->to_raw())};
+        auto name = dynamic_cast<bl::palette::string_tag *>(id->second)->value;
+        return {name, bl::get_block_by_name_tag(name)};
     }
 
     block_info sub_chunk::get_block_fast(int rx, int ry, int rz) {

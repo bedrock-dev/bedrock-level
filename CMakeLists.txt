@@ -29,7 +29,9 @@ add_library(bedrock-level
         src/global.cpp
         src/color.cpp
         src/level_dat.cpp
-)
+        #third
+        third/stb/stb_image_write.cpp
+        )
 
 
 if (WIN32)
@@ -56,9 +58,7 @@ function(create_app name files)
 endfunction(create_app)
 
 create_app(biome_png app/biome_png.cpp)
-create_app(mem_leak_check app/mem_leak_check.cpp)
-create_app(map_to_png app/map_to_png.cpp)
-create_app(block_color_merger app/block_color_merger.cpp)
+create_app(missing_color_finder app/missing_color_finder.cpp)
 
 #testing
 include(FetchContent)
