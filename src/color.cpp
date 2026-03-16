@@ -83,7 +83,9 @@ namespace bl {
             return map.begin()->second;
         }
         if (debugColor) {
-            BL_ERROR("Can not found color for block %s-%s", name.c_str(), tag.c_str());
+            if (name.find("element") == std::string::npos) {
+                BL_ERROR("Can not found color for block %s-%s", name.c_str(), tag.c_str());
+            }
         }
         return {};
     }
@@ -182,10 +184,10 @@ namespace bl {
                     vec.emplace_back(tag, c);
                 }
                 if (vec.size() == 1) {
-                    single_block_color_map["minecraft:" + blockname] = vec.begin()->second;
+                    single_block_color_map[blockname] = vec.begin()->second;
                 } else if (vec.size() > 1) {
                     for (const auto& pair : vec) {
-                        multi_block_color_map["minecraft:" + blockname][pair.first] = pair.second;
+                        multi_block_color_map[blockname][pair.first] = pair.second;
                     }
                 }
             }
