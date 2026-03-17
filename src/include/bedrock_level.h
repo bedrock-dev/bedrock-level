@@ -4,6 +4,7 @@
 
 #ifndef BEDROCK_LEVEL_BEDROCK_LEVEL_H
 #define BEDROCK_LEVEL_BEDROCK_LEVEL_H
+#include <atomic>
 #include <functional>
 #include <map>
 #include <optional>
@@ -54,7 +55,8 @@ namespace bl {
 
         void foreach_global_keys(const std::function<void(const std::string &, const std::string &)> &f);
 
-        void foreach_key_with_prefix(const std::string &prefix, const std::function<void(const std::string &, const std::string &)> &f);
+        void foreach_key_with_prefix(const std::string &prefix, const std::function<void(const std::string &, const std::string &)> &f,
+                                     std::atomic_bool &stop);
 
         // write
         bool remove_chunks(std::set<bl::chunk_pos> &positions);
