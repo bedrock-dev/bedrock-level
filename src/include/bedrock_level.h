@@ -56,7 +56,7 @@ namespace bl {
         void foreach_global_keys(const std::function<void(const std::string &, const std::string &)> &f);
 
         void foreach_key_with_prefix(const std::string &prefix, const std::function<void(const std::string &, const std::string &)> &f,
-                                     std::atomic_bool &stop);
+                                     std::atomic_bool &stop, int max = -1);
 
         // write
         bool remove_chunks(std::set<bl::chunk_pos> &positions);

@@ -17,8 +17,7 @@ namespace bl::palette {
      * @return
      */
     std::tuple<abstract_tag *, size_t> read_nbt(const byte_t *data);
-    std::tuple<compound_tag *, size_t> read_compound_value(const byte_t *data,
-                                                           const std::string &key);
+    std::tuple<compound_tag *, size_t> read_compound_value(const byte_t *data, const std::string &key);
 
     int read_string(const byte_t *data, std::string &val) {
         uint16_t len = *reinterpret_cast<const uint16_t *>(data);
@@ -33,8 +32,7 @@ namespace bl::palette {
         return 1;
     }
 
-    std::tuple<byte_array_tag *, size_t> read_byte_array_value(const byte_t *data,
-                                                               const std::string &key) {
+    std::tuple<byte_array_tag *, size_t> read_byte_array_value(const byte_t *data, const std::string &key) {
         auto *tag = new byte_array_tag(key);
         int32_t len = {0};
         memcpy(&len, data, 4);
@@ -43,8 +41,7 @@ namespace bl::palette {
         return {tag, len * 1 + 4};
     }
 
-    std::tuple<int_array_tag *, size_t> read_int_array_value(const byte_t *data,
-                                                             const std::string &key) {
+    std::tuple<int_array_tag *, size_t> read_int_array_value(const byte_t *data, const std::string &key) {
         auto *tag = new int_array_tag(key);
         int32_t len{0};
         memcpy(&len, data, 4);
@@ -53,8 +50,7 @@ namespace bl::palette {
         return {tag, len * 4 + 4};
     }
 
-    std::tuple<long_array_tag *, size_t> read_long_array_value(const byte_t *data,
-                                                               const std::string &key) {
+    std::tuple<long_array_tag *, size_t> read_long_array_value(const byte_t *data, const std::string &key) {
         auto *tag = new long_array_tag(key);
         int32_t len{0};
         memcpy(&len, data, 4);
@@ -123,15 +119,13 @@ namespace bl::palette {
                 read += sz;
                 tag->value.push_back(t);
             } else {
-                throw std::runtime_error("unsupported list child tag type " +
-                                         std::to_string((int)child_type));
+                throw std::runtime_error("unsupported list child tag type " + std::to_string((int)child_type));
             }
         }
         return {tag, read};
     }
 
-    std::tuple<compound_tag *, size_t> read_compound_value(const byte_t *data,
-                                                           const std::string &key) {
+    std::tuple<compound_tag *, size_t> read_compound_value(const byte_t *data, const std::string &key) {
         auto *tag = new compound_tag(key);
         size_t total = 0;
         while (true) {

@@ -54,17 +54,13 @@ namespace bl::palette {
         [[nodiscard]] virtual tag_type type() const = 0;
         [[nodiscard]] virtual std::string value_string() const = 0;
         [[nodiscard]] virtual abstract_tag *copy() const = 0;
-        [[nodiscard]] virtual std::string restricted_value_string() const {
-            return this->value_string();
-        }
+        [[nodiscard]] virtual std::string restricted_value_string() const { return this->value_string(); }
         /**
          *
          * 这个函数有bug，暂时不要使用
          * @return
          */
-        [[nodiscard]] virtual std::string to_raw() const {
-            return this->type_to_raw() + this->key_to_raw() + this->payload_to_raw();
-        }
+        [[nodiscard]] virtual std::string to_raw() const { return this->type_to_raw() + this->key_to_raw() + this->payload_to_raw(); }
 
         [[nodiscard]] std::string key() const { return this->key_; }
         void set_key(const std::string &key) { this->key_ = key; }
@@ -185,8 +181,7 @@ namespace bl::palette {
     struct string_tag : public abstract_tag {
         explicit string_tag(const std::string &key) : abstract_tag(key) {}
 
-        string_tag(const std::string &key, std::string value)
-            : abstract_tag(key), value(std::move(value)) {}
+        string_tag(const std::string &key, std::string value) : abstract_tag(key), value(std::move(value)) {}
 
         [[nodiscard]] tag_type type() const override { return String; }
 
@@ -225,9 +220,7 @@ namespace bl::palette {
             abstract_tag::write(o, indent);
             o << this->value << std::endl;
         }
-        [[nodiscard]] std::string value_string() const override {
-            return std::to_string(this->value);
-        };
+        [[nodiscard]] std::string value_string() const override { return std::to_string(this->value); };
         [[nodiscard]] abstract_tag *copy() const override {
             auto *res = new int_tag(this->key_);
             res->value = this->value;
@@ -258,9 +251,7 @@ namespace bl::palette {
             o << this->value << std::endl;
         }
 
-        [[nodiscard]] std::string value_string() const override {
-            return std::to_string(this->value);
-        }
+        [[nodiscard]] std::string value_string() const override { return std::to_string(this->value); }
         ~short_tag() override = default;
 
         [[nodiscard]] abstract_tag *copy() const override {
@@ -292,9 +283,7 @@ namespace bl::palette {
             o << this->value << std::endl;
         }
 
-        [[nodiscard]] std::string value_string() const override {
-            return std::to_string(this->value);
-        };
+        [[nodiscard]] std::string value_string() const override { return std::to_string(this->value); };
         [[nodiscard]] abstract_tag *copy() const override {
             auto *res = new long_tag(this->key_);
             res->value = this->value;
@@ -326,9 +315,7 @@ namespace bl::palette {
             o << this->value << std::endl;
         }
 
-        [[nodiscard]] std::string value_string() const override {
-            return std::to_string(this->value);
-        }
+        [[nodiscard]] std::string value_string() const override { return std::to_string(this->value); }
         [[nodiscard]] abstract_tag *copy() const override {
             auto *res = new float_tag(this->key_);
             res->value = this->value;
@@ -359,9 +346,7 @@ namespace bl::palette {
             o << this->value << std::endl;
         }
 
-        [[nodiscard]] std::string value_string() const override {
-            return std::to_string(this->value);
-        }
+        [[nodiscard]] std::string value_string() const override { return std::to_string(this->value); }
 
         [[nodiscard]] abstract_tag *copy() const override {
             auto *res = new double_tag(this->key_);
@@ -393,9 +378,7 @@ namespace bl::palette {
             abstract_tag::write(o, indent);
             o << static_cast<int>(this->value) << std::endl;
         }
-        [[nodiscard]] std::string value_string() const override {
-            return std::to_string(this->value);
-        }
+        [[nodiscard]] std::string value_string() const override { return std::to_string(this->value); }
 
         [[nodiscard]] abstract_tag *copy() const override {
             auto *res = new byte_tag(this->key_);
@@ -418,8 +401,7 @@ namespace bl::palette {
     struct byte_array_tag : public abstract_tag {
         explicit byte_array_tag(const std::string &key) : abstract_tag(key) {}
 
-        byte_array_tag(const std::string &key, std::vector<int8_t> value)
-            : abstract_tag(key), value(std::move(value)) {}
+        byte_array_tag(const std::string &key, std::vector<int8_t> value) : abstract_tag(key), value(std::move(value)) {}
 
         byte_array_tag(const std::string &key, const std::string &value) : abstract_tag(key) {
             this->value.resize(value.size());
@@ -430,12 +412,8 @@ namespace bl::palette {
             abstract_tag::write(o, indent);
             o << "[ ..." << this->value.size() << " X 1 bytes ... ]" << std::endl;
         }
-        [[nodiscard]] std::string value_string() const override {
-            return "[ ..." + std::to_string(this->value.size()) + "... ]";
-        }
-        std::string restricted_value_string() const override {
-            return bl::utils::numberVecToString(this->value);
-        }
+        [[nodiscard]] std::string value_string() const override { return "[ ..." + std::to_string(this->value.size()) + "... ]"; }
+        std::string restricted_value_string() const override { return bl::utils::numberVecToString(this->value); }
         [[nodiscard]] tag_type type() const override { return ByteArray; }
 
         [[nodiscard]] abstract_tag *copy() const override {
@@ -463,13 +441,9 @@ namespace bl::palette {
             abstract_tag::write(o, indent);
             o << "[ ..." << this->value.size() << " X 4 bytes ... ]" << std::endl;
         }
-        [[nodiscard]] std::string value_string() const override {
-            return "[ ..." + std::to_string(this->value.size()) + "... ]";
-        }
+        [[nodiscard]] std::string value_string() const override { return "[ ..." + std::to_string(this->value.size()) + "... ]"; }
 
-        std::string restricted_value_string() const override {
-            return bl::utils::numberVecToString(this->value);
-        }
+        std::string restricted_value_string() const override { return bl::utils::numberVecToString(this->value); }
         [[nodiscard]] tag_type type() const override { return ByteArray; }
 
         [[nodiscard]] abstract_tag *copy() const override {
@@ -497,12 +471,8 @@ namespace bl::palette {
             abstract_tag::write(o, indent);
             o << "[ ..." << this->value.size() << " X 8 bytes ... ]" << std::endl;
         }
-        [[nodiscard]] std::string value_string() const override {
-            return "[ ..." + std::to_string(this->value.size()) + "... ]";
-        }
-        std::string restricted_value_string() const override {
-            return bl::utils::numberVecToString(this->value);
-        }
+        [[nodiscard]] std::string value_string() const override { return "[ ..." + std::to_string(this->value.size()) + "... ]"; }
+        std::string restricted_value_string() const override { return bl::utils::numberVecToString(this->value); }
         [[nodiscard]] tag_type type() const override { return ByteArray; }
 
         [[nodiscard]] abstract_tag *copy() const override {

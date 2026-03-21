@@ -5,6 +5,7 @@
 #include "bedrock_level.h"
 
 #include <atomic>
+#include <cstddef>
 #include <filesystem>
 #include <string>
 
@@ -147,11 +148,13 @@ namespace bl {
 
     void bedrock_level::foreach_key_with_prefix(const std::string &prefix,
                                                 const std::function<void(const std::string &, const std::string &)> &f,
-                                                std::atomic_bool &stop) {
+                                                std::atomic_bool &stop, int max) {
         auto *it = this->db_->NewIterator(this->read_option_);
+        int count = 0;
         for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
             f(it->key().ToString(), it->value().ToString());
-            if (stop) {
+            count++;
+            if (count >= max || stop) {
                 delete it;
                 return;
             }
