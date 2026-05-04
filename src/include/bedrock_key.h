@@ -162,12 +162,11 @@ namespace std {
 
     template <>
     struct hash<bl::chunk_pos> {
-        std::size_t operator()(const bl::chunk_pos &k) const {
-            size_t hash = 3241;
-            hash = 3457689L * hash + k.x;
-            hash = 8734625L * hash + k.z;
-            hash = 2873465L * hash + k.dim;
-            return hash;
+        size_t operator()(const bl::chunk_pos &cp) const noexcept {
+            size_t h1 = hash<int32_t>{}(cp.x);
+            size_t h2 = hash<int32_t>{}(cp.z);
+            size_t h3 = hash<int32_t>{}(cp.dim);
+            return h1 ^ (h2 << 7) ^ (h3 << 15);
         }
     };
 }  // namespace std

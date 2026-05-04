@@ -145,7 +145,12 @@ namespace bl::palette {
             this->value.erase(key);
         }
 
-        abstract_tag *get(const std::string &key) {
+        [[nodiscard]] abstract_tag *get(const std::string &key) {
+            auto it = this->value.find(key);
+            return it == this->value.end() ? nullptr : it->second;
+        }
+
+        [[nodiscard]] const abstract_tag *get(const std::string &key) const {
             auto it = this->value.find(key);
             return it == this->value.end() ? nullptr : it->second;
         }
@@ -444,7 +449,7 @@ namespace bl::palette {
         [[nodiscard]] std::string value_string() const override { return "[ ..." + std::to_string(this->value.size()) + "... ]"; }
 
         std::string restricted_value_string() const override { return bl::utils::numberVecToString(this->value); }
-        [[nodiscard]] tag_type type() const override { return ByteArray; }
+        [[nodiscard]] tag_type type() const override { return IntArray; }
 
         [[nodiscard]] abstract_tag *copy() const override {
             auto *res = new int_array_tag(this->key_);
@@ -473,7 +478,7 @@ namespace bl::palette {
         }
         [[nodiscard]] std::string value_string() const override { return "[ ..." + std::to_string(this->value.size()) + "... ]"; }
         std::string restricted_value_string() const override { return bl::utils::numberVecToString(this->value); }
-        [[nodiscard]] tag_type type() const override { return ByteArray; }
+        [[nodiscard]] tag_type type() const override { return LongArray; }
 
         [[nodiscard]] abstract_tag *copy() const override {
             auto *res = new long_array_tag(this->key_);
@@ -503,6 +508,9 @@ namespace bl::palette {
             }
         }
         list_tag &operator=(const list_tag &tag) {
+            if (this == &tag) return *this;
+            for (auto *item : this->value) delete item;
+            this->value.clear();
             this->key_ = tag.key_;
             for (auto &k : tag.value) {
                 this->value.push_back(k->copy());

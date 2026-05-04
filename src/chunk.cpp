@@ -31,8 +31,8 @@ namespace bl {
 
     bool chunk::valid_in_chunk_pos(int cx, int y, int cz, int dim) {
         if (cx < 0 || cx > 15 || cz < 0 || cz > 15 || dim < 0 || dim > 2) return false;
-        int min_h[]{-64, 0, 0};
-        int max_h[]{319, 127, 255};
+        static constexpr int min_h[]{-64, 0, 0};
+        static constexpr int max_h[]{319, 127, 255};
         return y >= min_h[dim] && y <= max_h[dim];
     }
 
@@ -118,20 +118,11 @@ namespace bl {
         if (this->version == New) {
             auto d3d_key = bl::chunk_key{chunk_key::Data3D, this->pos_};
             std::string d3d_raw;
-            if (level.load_raw(d3d_key.to_raw(), d3d_raw) && this->d3d_.load_from_d3d(d3d_raw.data(), d3d_raw.size())) {
-                return true;
-            } else {
-                return false;
-            }
-
+            return level.load_raw(d3d_key.to_raw(), d3d_raw) && this->d3d_.load_from_d3d(d3d_raw.data(), d3d_raw.size());
         } else {
             auto d2d_key = bl::chunk_key{chunk_key::Data2D, this->pos_};
             std::string d2d_raw;
-            if (level.load_raw(d2d_key.to_raw(), d2d_raw) && this->d3d_.load_from_d2d(d2d_raw.data(), d2d_raw.size())) {
-                return true;
-            } else {
-                return false;
-            }
+            return level.load_raw(d2d_key.to_raw(), d2d_raw) && this->d3d_.load_from_d2d(d2d_raw.data(), d2d_raw.size());
         }
     }
     bool chunk::load_pending_ticks(bedrock_level &level) {

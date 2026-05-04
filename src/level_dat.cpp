@@ -27,7 +27,7 @@ namespace bl {
             this->level_name_ = dynamic_cast<string_tag *>(name_tag)->value;
         }
 
-        auto x_tag = root_->get("spawnZ");
+        auto x_tag = root_->get("SpawnX");
         auto y_tag = root_->get("SpawnY");
         auto z_tag = root_->get("SpawnZ");
         if (x_tag && x_tag->type() == tag_type::Int) {

@@ -130,6 +130,10 @@ namespace bl {
             BL_ERROR("Invalid in chunk position %d %d %d", rx, ry, rz);
             return {};
         }
+        if (this->layers_.empty()) {
+            BL_ERROR("sub_chunk has no layers");
+            return {};
+        }
 
         auto idx = ry + rz * 16 + rx * 256;
         auto block = this->layers_[0]->blocks[idx];
@@ -154,6 +158,10 @@ namespace bl {
             BL_ERROR("Invalid in chunk position %d %d %d", rx, ry, rz);
             return {};
         }
+        if (this->layers_.empty()) {
+            BL_ERROR("sub_chunk has no layers");
+            return {};
+        }
 
         auto idx = ry + rz * 16 + rx * 256;
         auto block = this->layers_[0]->blocks[idx];
@@ -175,6 +183,10 @@ namespace bl {
     palette::compound_tag *sub_chunk::get_block_raw(int rx, int ry, int rz) {
         if (rx < 0 || rx > 15 || ry < 0 || ry > 15 || rz < 0 || rz > 15) {
             BL_ERROR("Invalid in chunk position %d %d %d", rx, ry, rz);
+            return nullptr;
+        }
+        if (this->layers_.empty()) {
+            BL_ERROR("sub_chunk has no layers");
             return nullptr;
         }
 

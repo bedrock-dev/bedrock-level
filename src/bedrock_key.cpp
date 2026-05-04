@@ -15,12 +15,13 @@ namespace bl {
     chunk_key chunk_key::parse(const std::string &key) {
         auto sz = key.size();
         if (sz == 9 || sz == 10 || sz == 13 || sz == 14) {
-            auto x = *reinterpret_cast<const int *>(key.data());
-            auto z = *reinterpret_cast<const int *>(key.data() + 4);
+            int x, z;
+            memcpy(&x, key.data(), 4);
+            memcpy(&z, key.data() + 4, 4);
             auto dim = 0;
             auto key_type_idx = 8;
             if (sz == 13 || sz == 14) {  // nether or the end
-                dim = *reinterpret_cast<const int *>(key.data() + 8);
+                memcpy(&dim, key.data() + 8, 4);
                 key_type_idx = 12;
             }
 
@@ -53,7 +54,7 @@ namespace bl {
     actor_key actor_key::parse(const std::string &key) {
         actor_key res;
         if (key.size() != 19 || key.rfind("actorprefix", 0) != 0) return res;
-        res.actor_uid = *reinterpret_cast<const int64_t *>(key.data() + 11);
+        memcpy(&res.actor_uid, key.data() + 11, 8);
         return res;
     }
 
@@ -61,11 +62,11 @@ namespace bl {
         actor_digest_key res{};
         if (key.size() != 12 && key.size() != 16) return res;
         if (key.rfind("digp", 0) != 0) return res;
-        res.cp.x = *reinterpret_cast<const int32_t *>(key.data() + 4);
-        res.cp.z = *reinterpret_cast<const int32_t *>(key.data() + 8);
+        memcpy(&res.cp.x, key.data() + 4, 4);
+        memcpy(&res.cp.z, key.data() + 8, 4);
         res.cp.dim = 0;
         if (key.size() == 16) {
-            res.cp.dim = *reinterpret_cast<const int32_t *>(key.data() + 12);
+            memcpy(&res.cp.dim, key.data() + 12, 4);
         }
         return res;
     }

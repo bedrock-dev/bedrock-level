@@ -6,11 +6,11 @@
 #define BEDROCK_LEVEL_BEDROCK_LEVEL_H
 #include <atomic>
 #include <functional>
-#include <map>
 #include <optional>
 #include <set>
 #include <string>
 #include <tuple>
+#include <unordered_map>
 
 #include "bedrock_key.h"
 #include "chunk.h"
@@ -19,6 +19,7 @@
 #include "leveldb/db.h"
 #include "leveldb/options.h"
 #include "leveldb/write_batch.h"
+
 
 namespace bl {
 
@@ -83,7 +84,7 @@ namespace bl {
         bool is_open_{false};
         leveldb::DB *db_{nullptr};
         std::string root_name_;
-        std::map<chunk_pos, chunk *> chunk_data_cache_;
+        std::unordered_map<chunk_pos, chunk *> chunk_data_cache_;
         // data
         level_dat dat_;
         bl::village_data village_data_;

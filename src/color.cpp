@@ -200,6 +200,10 @@ namespace bl {
     }
 
     void export_image(const std::vector<std::vector<color>>& b, int ppi, const std::string& name) {
+        if (b.empty() || b[0].empty()) {
+            BL_ERROR("export_image: empty image data");
+            return;
+        }
         const int c = 3;
         const int h = (int)b.size() * ppi;
         const int w = (int)b[0].size() * ppi;
@@ -228,7 +232,7 @@ namespace bl {
         }
         if (std::any_of(grass_block_names.begin(), grass_block_names.end(),
                         [&name](const auto& str) { return name.find(str) != std::string::npos; })) {
-            return blend_with_biome(biome_grass_map, color, default_water_color, b);
+            return blend_with_biome(biome_grass_map, color, default_grass_color, b);
         }
         return color;
     }

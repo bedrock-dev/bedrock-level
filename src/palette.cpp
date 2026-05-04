@@ -20,9 +20,10 @@ namespace bl::palette {
     std::tuple<compound_tag *, size_t> read_compound_value(const byte_t *data, const std::string &key);
 
     int read_string(const byte_t *data, std::string &val) {
-        uint16_t len = *reinterpret_cast<const uint16_t *>(data);
+        uint16_t len;
+        memcpy(&len, data, 2);
         if (len != 0) {
-            val = std::string(data + 2, data + len + 2);
+            val.assign(data + 2, len);
         }
         return len + 2;
     }
