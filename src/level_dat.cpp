@@ -6,9 +6,35 @@
 
 #include <filesystem>
 
+#include "include/palette.h"
 #include "utils.h"
 
 namespace bl {
+
+    void ClientVersion::read(palette::list_tag *tag) {
+        if (!tag) return;
+        const auto &value = tag->value;
+        const size_t count = std::min(value.size(), this->version.size());
+        for (size_t i = 0; i < count; i++) {
+            if (value[i] && value[i]->type() == palette::tag_type::Int) {
+                this->version[i] = dynamic_cast<palette::int_tag *>(value[i])->value;
+            }
+        }
+    }
+
+    void ClientVersion::write(palette::list_tag *tag) const {
+        if (!tag) return;
+        for (auto *item : tag->value) delete item;
+        tag->value.clear();
+        for (int v : this->version) {
+            tag->value.push_back(new palette::int_tag("", v));
+        }
+    }
+
+    std::string ClientVersion::to_string() const {
+        return std::to_string(version[0]) + "." + std::to_string(version[1]) + "." + std::to_string(version[2]) + "." +
+               std::to_string(version[3]) + "." + std::to_string(version[4]);
+    }
 
     bool level_dat::load_from_file(const std::string &path) {
         using namespace bl::palette;
@@ -20,6 +46,7 @@ namespace bl {
         auto data = utils::read_file(path);
         return this->load_from_raw_data(data);
     }
+
     bool level_dat::preload_data() {
         using namespace bl::palette;
         auto name_tag = root_->get("LevelName");
@@ -39,6 +66,11 @@ namespace bl {
 
         if (z_tag && z_tag->type() == tag_type::Int) {
             this->spawn_position_.z = dynamic_cast<int_tag *>(z_tag)->value;
+        }
+
+        auto *ver_tag = root_->get("MinimumCompatibleClientVersion");
+        if (ver_tag && ver_tag->type() == tag_type::List) {
+            this->min_compat_version_.read(dynamic_cast<list_tag *>(ver_tag));
         }
 
         return true;
