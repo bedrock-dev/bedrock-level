@@ -7,17 +7,63 @@
 
 // cached chunks
 
-#include <unordered_map>
-#include <unordered_set>
+#include <array>
+#include <cstddef>
+#include <map>
+#include <string>
+#include <vector>
 
 #include "actor.h"
 #include "bedrock_key.h"
 #include "color.h"
 #include "data_3d.h"
+#include "leveldb/write_batch.h"
 #include "sub_chunk.h"
+#include "utils.h"
+
 namespace bl {
 
     class bedrock_level;
+
+    // all keys-values from level, without parse
+    class raw_chunk {
+       public:
+        explicit raw_chunk(const chunk_pos &pos) : pos_(pos) {}
+
+        raw_chunk() = default;
+        raw_chunk(const raw_chunk &other) = default;
+
+        [[nodiscard]] bool loaded() const { return loaded_; }
+
+        bool read(bedrock_level &level);
+
+        bool write(leveldb::WriteBatch &batch);
+
+        std::vector<byte_t> to_raw();
+
+        bool from_raw(const std::vector<byte_t> &data);
+
+        void clear_data();
+
+        std::string get_normal_key(chunk_key::key_type key) const;
+        std::string get_sub_chunk(int8_t yindex) const;
+        const std::map<chunk_key::key_type, std::string> &get_normal_data() const { return data_; }
+        const std::map<int8_t, std::string> &get_sub_chunks() const { return sub_chunk_data_; }
+        const std::string &get_actor_digest() const { return actor_digest_list_; }
+        const std::map<std::string, std::string> &get_entities() const { return entities_; }
+        const chunk_pos &pos() const { return pos_; }
+        void set_pos(const bl::chunk_pos &pos) { this->pos_ = pos; }
+        bool cleared() const { return cleared_; }
+
+       private:
+        bool loaded_{false};
+        bool cleared_{false};
+        chunk_pos pos_;
+        std::map<chunk_key::key_type, std::string> data_;
+        std::map<int8_t, std::string> sub_chunk_data_;
+        std::string actor_digest_list_;
+        std::map<std::string, std::string> entities_;
+    };
 
     class chunk {
        public:
@@ -59,23 +105,27 @@ namespace bl {
         std::vector<hardcoded_spawn_area> HSAs() { return this->HSAs_; }
 
         [[nodiscard]] ChunkVersion get_version() const { return this->version; }
+
+       public:
+        bool load_from_raw_chunk(const bl::raw_chunk &rc);
+
         ~chunk();
 
        private:
         bool load_data(bedrock_level &level, bool fast_load);
 
        private:
-        bool load_subchunks(bedrock_level &level);
+        bool load_subchunks(const bl::raw_chunk &rc);
 
-        bool load_biomes(bedrock_level &level);
+        bool load_biomes(const bl::raw_chunk &rc);
 
-        void load_entities(bedrock_level &level);
+        void load_entities(const bl::raw_chunk &rc);
 
-        bool load_pending_ticks(bedrock_level &level);
+        bool load_pending_ticks(const bl::raw_chunk &rc);
 
-        bool load_block_entities(bedrock_level &level);
+        bool load_block_entities(const bl::raw_chunk &rc);
 
-        void load_hsa(bedrock_level &level);
+        void load_hsa(const bl::raw_chunk &rc);
 
         bool loaded_{false};
         const chunk_pos pos_;

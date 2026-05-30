@@ -10,6 +10,8 @@
 #include "bedrock_key.h"
 #include "bedrock_level.h"
 #include "color.h"
+#include "include/utils.h"
+#include "leveldb/write_batch.h"
 #include "utils.h"
 
 namespace bl {
@@ -27,7 +29,248 @@ namespace bl {
             auto r = db->Get(leveldb::ReadOptions(), raw_key, &raw);
             return r.ok();
         }
+
+        void write_i32(std::vector<byte_t> &buf, int32_t v) {
+            buf.push_back(static_cast<byte_t>(v & 0xff));
+            buf.push_back(static_cast<byte_t>((v >> 8) & 0xff));
+            buf.push_back(static_cast<byte_t>((v >> 16) & 0xff));
+            buf.push_back(static_cast<byte_t>((v >> 24) & 0xff));
+        }
+
+        int32_t read_i32(const byte_t *&p) {
+            int32_t v = static_cast<int32_t>(static_cast<uint8_t>(p[0])) | (static_cast<int32_t>(static_cast<uint8_t>(p[1])) << 8) |
+                        (static_cast<int32_t>(static_cast<uint8_t>(p[2])) << 16) | (static_cast<int32_t>(static_cast<uint8_t>(p[3])) << 24);
+            p += 4;
+            return v;
+        }
+
+        void write_bytes(std::vector<byte_t> &buf, const std::string &s) {
+            write_i32(buf, static_cast<int32_t>(s.size()));
+            buf.insert(buf.end(), s.begin(), s.end());
+        }
+
+        std::string read_bytes(const byte_t *&p) {
+            int32_t size = read_i32(p);
+            std::string s(p, p + size);
+            p += size;
+            return s;
+        }
     }  // namespace
+
+    bool raw_chunk::read(bedrock_level &level) {
+        static const chunk_key::key_type keys[] = {
+            chunk_key::Data3D,
+            chunk_key::VersionNew,
+            chunk_key::VersionOld,
+            chunk_key::Data2D,
+            chunk_key::Data2DLegacy,
+            chunk_key::BlockEntity,
+            chunk_key::Entity,
+            chunk_key::PendingTicks,
+            chunk_key::BlockExtraData,
+            chunk_key::BiomeState,
+            chunk_key::FinalizedState,
+            chunk_key::ConversionData,
+            chunk_key::BorderBlocks,
+            chunk_key::HardCodedSpawnAreas,
+            chunk_key::RandomTicks,
+            chunk_key::Checksums,
+            chunk_key::GenerationSeed,
+            chunk_key::GeneratedPreCavesAndCliffsBlending,
+            chunk_key::BlendingBiomeHeight,
+            chunk_key::MetaDataHash,
+            chunk_key::BlendingData,
+            chunk_key::ActorDigestVersion,
+        };
+
+        for (auto kt : keys) {
+            bl::chunk_key key{kt, this->pos_};
+            std::string raw;
+            if (level.load_raw(key.to_raw(), raw) && !raw.empty()) {
+                this->data_[kt] = std::move(raw);
+            }
+        }
+
+        // read sub chunks
+        auto [min_index, max_index] = this->pos_.get_subchunk_index_range(ChunkVersion::New);
+        for (auto sub_index = min_index; sub_index <= max_index; sub_index++) {
+            bl::chunk_key key{chunk_key::SubChunkTerrain, this->pos_, sub_index};
+            std::string raw;
+            if (level.load_raw(key.to_raw(), raw) && !raw.empty()) {
+                this->sub_chunk_data_[sub_index] = std::move(raw);
+            }
+        }
+
+        // read actor digest and entities
+        {
+            bl::actor_digest_key digest_key{this->pos_};
+            std::string raw;
+            if (level.load_raw(digest_key.to_raw(), raw) && !raw.empty()) {
+                this->actor_digest_list_ = raw;
+                bl::actor_digest_list list;
+                list.load(raw);
+                for (auto &uid : list.actor_digests_) {
+                    auto actor_key = "actorprefix" + uid;
+                    std::string raw_actor;
+                    if (level.load_raw(actor_key, raw_actor) && !raw_actor.empty()) {
+                        this->entities_[uid] = std::move(raw_actor);
+                    }
+                }
+            }
+        }
+        this->loaded_ = !this->data_.empty();
+        return this->loaded_;
+    }
+
+    bool raw_chunk::write(leveldb::WriteBatch &batch) {
+        if (!this->loaded_) return false;
+
+        // write normal keys
+        for (auto &[kt, raw] : this->data_) {
+            bl::chunk_key key{kt, this->pos_};
+            if (raw.empty()) {
+                batch.Delete(key.to_raw());
+            } else {
+                batch.Put(key.to_raw(), raw);
+            }
+        }
+
+        // write sub chunks
+        for (auto &[index, raw] : this->sub_chunk_data_) {
+            bl::chunk_key key{chunk_key::SubChunkTerrain, this->pos_, index};
+            if (raw.empty()) {
+                batch.Delete(key.to_raw());
+            } else {
+                batch.Put(key.to_raw(), raw);
+            }
+        }
+
+        // write actor digest
+        if (!this->actor_digest_list_.empty()) {
+            bl::actor_digest_key digest_key{this->pos_};
+            batch.Put(digest_key.to_raw(), this->actor_digest_list_);
+        } else {
+            bl::actor_digest_key digest_key{this->pos_};
+            batch.Delete(digest_key.to_raw());
+        }
+
+        // write entities
+        for (auto &[uid, raw] : this->entities_) {
+            if (raw.empty()) {
+                batch.Delete("actorprefix" + uid);
+            } else {
+                batch.Put("actorprefix" + uid, raw);
+            }
+        }
+        return true;
+    }
+
+    // Binary format:
+
+    std::vector<byte_t> raw_chunk::to_raw() {
+        std::vector<byte_t> buf;
+        // magic
+        buf.insert(buf.end(), {'B', 'C', 'H', 'K'});
+        // pos
+        write_i32(buf, pos_.x);
+        write_i32(buf, pos_.z);
+        write_i32(buf, pos_.dim);
+
+        // normal keys
+        write_i32(buf, static_cast<int32_t>(data_.size()));
+        for (auto &[kt, raw] : data_) {
+            write_i32(buf, static_cast<int32_t>(kt));
+            write_bytes(buf, raw);
+        }
+
+        // sub chunks
+        write_i32(buf, static_cast<int32_t>(sub_chunk_data_.size()));
+        for (auto &[index, raw] : sub_chunk_data_) {
+            buf.push_back(static_cast<byte_t>(index));
+            write_bytes(buf, raw);
+        }
+
+        // actor digest
+        write_bytes(buf, actor_digest_list_);
+
+        // entities
+        write_i32(buf, static_cast<int32_t>(entities_.size()));
+        for (auto &[uid, raw] : entities_) {
+            write_bytes(buf, uid);
+            write_bytes(buf, raw);
+        }
+
+        return buf;
+    }
+
+    bool raw_chunk::from_raw(const std::vector<byte_t> &data) {
+        const byte_t *p = data.data();
+        const byte_t *end = data.data() + data.size();
+
+        // magic
+        if (static_cast<size_t>(end - p) < 4 || p[0] != 'B' || p[1] != 'C' || p[2] != 'H' || p[3] != 'K') {
+            return false;
+        }
+        p += 4;
+
+        // pos
+        pos_.x = read_i32(p);
+        pos_.z = read_i32(p);
+        pos_.dim = read_i32(p);
+
+        // normal keys
+        int32_t data_count = read_i32(p);
+        for (int32_t i = 0; i < data_count; i++) {
+            auto kt = static_cast<chunk_key::key_type>(read_i32(p));
+            data_[kt] = read_bytes(p);
+        }
+
+        // sub chunks
+        int32_t sub_count = read_i32(p);
+        for (int32_t i = 0; i < sub_count; i++) {
+            int8_t index = static_cast<int8_t>(*p++);
+            sub_chunk_data_[index] = read_bytes(p);
+        }
+
+        // actor digest
+        actor_digest_list_ = read_bytes(p);
+
+        // entities
+        int32_t entity_count = read_i32(p);
+        for (int32_t i = 0; i < entity_count; i++) {
+            std::string uid = read_bytes(p);
+            entities_[std::move(uid)] = read_bytes(p);
+        }
+
+        this->loaded_ = true;
+        return true;
+    }
+
+    void raw_chunk::clear_data() {
+        for (auto &[kt, raw] : this->data_) {
+            raw.clear();
+        }
+        for (auto &[index, raw] : this->sub_chunk_data_) {
+            raw.clear();
+        }
+        this->actor_digest_list_.clear();
+        for (auto &[uid, raw] : this->entities_) {
+            raw.clear();
+        }
+        cleared_ = true;
+    }
+
+    std::string raw_chunk::get_normal_key(chunk_key::key_type key) const {
+        auto it = this->data_.find(key);
+        if (it != this->data_.end()) return it->second;
+        return {};
+    }
+
+    std::string raw_chunk::get_sub_chunk(int8_t yindex) const {
+        auto it = this->sub_chunk_data_.find(yindex);
+        if (it != this->sub_chunk_data_.end()) return it->second;
+        return {};
+    }
 
     bool chunk::valid_in_chunk_pos(int cx, int y, int cz, int dim) {
         if (cx < 0 || cx > 15 || cz < 0 || cz > 15 || dim < 0 || dim > 2) return false;
@@ -42,13 +285,6 @@ namespace bl {
         if (offset < 0) offset += 16;
     }
 
-    /**
-     *
-     * @param cx 区块内x
-     * @param y  区块内y(同时也是主世界y)
-     * @param cz 区块内z
-     * @return
-     */
     block_info chunk::get_block(int cx, int y, int cz) {
         int index;
         int offset;
@@ -84,62 +320,50 @@ namespace bl {
 
     biome chunk::get_biome(int cx, int y, int cz) { return this->d3d_.get_biome(cx, y, cz); }
 
-    bool chunk::load_subchunks(bedrock_level &level) {
-        // 默认先用new,因为version字段太怪，看不懂版本
-        auto [min_index, max_index] = this->pos_.get_subchunk_index_range(ChunkVersion::New);
-        for (auto sub_index = min_index; sub_index <= max_index; sub_index++) {
-            // load all sub chunks
-            auto terrain_key = bl::chunk_key{chunk_key::SubChunkTerrain, this->pos_, sub_index};
-            std::string raw;
-            if (level.load_raw(terrain_key.to_raw(), raw)) {
-                auto *sb = new bl::sub_chunk();
-                sb->set_y_index(
-                    sub_index);  // set default index (no `sub-chunk index`  in version 8 chunks)
-                                 // //see
-                                 // https://gist.github.com/Tomcc/a96af509e275b1af483b25c543cfbf37?permalink_comment_id=3901255#gistcomment-3901255
-                if (!sb->load(raw.data(), raw.size())) {
-                    BL_ERROR("Can not load sub chunk %d %d %d %d", pos_.x, pos_.z, pos_.dim, sub_index);
-                    delete sb;  // delete error sub chunks
-                    continue;
-                }
-                this->sub_chunks_[sub_index] = sb;
+    bool chunk::load_subchunks(const bl::raw_chunk &rc) {
+        for (auto &[sub_index, raw] : rc.get_sub_chunks()) {
+            if (raw.empty()) continue;
+            auto *sb = new bl::sub_chunk();
+            sb->set_y_index(sub_index);
+            if (!sb->load(raw.data(), raw.size())) {
+                BL_ERROR("Can not load sub chunk %d %d %d %d", pos_.x, pos_.z, pos_.dim, sub_index);
+                delete sb;
+                continue;
             }
+            this->sub_chunks_[sub_index] = sb;
         }
-
-        if (!this->sub_chunks_.empty()) {
-            // 根据subchunk格式猜测一个 version，后面可能需要修改
+        if (sub_chunks_.empty()) {
+            BL_ERROR("Can not load terrain data of chunk ", pos_.to_string().c_str());
+        } else {
             this->version = this->sub_chunks_.begin()->second->version() == 9 ? New : Old;
         }
         return true;
     }
-    bool chunk::load_biomes(bedrock_level &level) {
+
+    bool chunk::load_biomes(const bl::raw_chunk &rc) {
         this->d3d_.set_chunk_pos(this->pos_);
         this->d3d_.set_version(this->version);
         if (this->version == New) {
-            auto d3d_key = bl::chunk_key{chunk_key::Data3D, this->pos_};
-            std::string d3d_raw;
-            return level.load_raw(d3d_key.to_raw(), d3d_raw) && this->d3d_.load_from_d3d(d3d_raw.data(), d3d_raw.size());
+            auto raw = rc.get_normal_key(chunk_key::Data3D);
+            return !raw.empty() && this->d3d_.load_from_d3d(raw.data(), raw.size());
         } else {
-            auto d2d_key = bl::chunk_key{chunk_key::Data2D, this->pos_};
-            std::string d2d_raw;
-            return level.load_raw(d2d_key.to_raw(), d2d_raw) && this->d3d_.load_from_d2d(d2d_raw.data(), d2d_raw.size());
+            auto raw = rc.get_normal_key(chunk_key::Data2D);
+            return !raw.empty() && this->d3d_.load_from_d2d(raw.data(), raw.size());
         }
     }
-    bool chunk::load_pending_ticks(bedrock_level &level) {
-        auto pt_key = bl::chunk_key{chunk_key::PendingTicks, this->pos_};
-        std::string block_entity_raw;
-        if (level.load_raw(pt_key.to_raw(), block_entity_raw) && !block_entity_raw.empty()) {
-            this->pending_ticks_ = palette::read_palette_to_end(block_entity_raw.data(), block_entity_raw.size());
-            //
+
+    bool chunk::load_pending_ticks(const bl::raw_chunk &rc) {
+        auto raw = rc.get_normal_key(chunk_key::PendingTicks);
+        if (!raw.empty()) {
+            this->pending_ticks_ = palette::read_palette_to_end(raw.data(), raw.size());
         }
         return true;
     }
-    void chunk::load_entities(bedrock_level &level) {
+    void chunk::load_entities(const bl::raw_chunk &rc) {
         // try read old version actors
-        auto entity_key = bl::chunk_key{chunk_key::Entity, this->pos_};
-        std::string block_entity_raw;
-        if (level.load_raw(entity_key.to_raw(), block_entity_raw) && !block_entity_raw.empty()) {
-            auto actors = palette::read_palette_to_end(block_entity_raw.data(), block_entity_raw.size());
+        auto raw = rc.get_normal_key(chunk_key::Entity);
+        if (!raw.empty()) {
+            auto actors = palette::read_palette_to_end(raw.data(), raw.size());
             for (auto &a : actors) {
                 auto *ac = new actor;
                 if (ac->load_from_nbt(a)) {
@@ -150,37 +374,29 @@ namespace bl {
                 delete a;
             }
         }
-        // new version actor key:
-        // 1. read key file  form digest
-        // 2. read actor from actor keys [actorprefix+uid]
-        bl::actor_digest_key key{this->pos_};
-        std::string raw;
-        // 没啥要解析的，不用管错误
-        if (!level.load_raw(key.to_raw(), raw)) {
-            return;
-        }
-
-        bl::actor_digest_list list;
-        list.load(raw);
-        for (auto &uid : list.actor_digests_) {
-            auto actor_key = "actorprefix" + uid;
-            std::string raw_actor;
-            if (level.load_raw(actor_key, raw_actor)) {
-                auto ac = new actor;
-                if (!ac->load(raw_actor.data(), raw_actor.size())) {
-                    delete ac;
-                } else {
-                    this->entities_.push_back(ac);
+        // new version actors from raw_chunk
+        const auto &digest_raw = rc.get_actor_digest();
+        if (!digest_raw.empty()) {
+            bl::actor_digest_list list;
+            list.load(digest_raw);
+            const auto &rc_entities = rc.get_entities();
+            for (auto &uid : list.actor_digests_) {
+                auto it = rc_entities.find(uid);
+                if (it != rc_entities.end() && !it->second.empty()) {
+                    auto ac = new actor;
+                    if (!ac->load(it->second.data(), it->second.size())) {
+                        delete ac;
+                    } else {
+                        this->entities_.push_back(ac);
+                    }
                 }
             }
         }
     }
 
-    void chunk::load_hsa(bedrock_level &level) {
-        auto hsa_key = bl::chunk_key{chunk_key::HardCodedSpawnAreas, this->pos_};
-        std::string raw;
-        if (!level.load_raw(hsa_key.to_raw(), raw)) return;
-        if (raw.size() < 4) return;
+    void chunk::load_hsa(const bl::raw_chunk &rc) {
+        auto raw = rc.get_normal_key(chunk_key::HardCodedSpawnAreas);
+        if (raw.empty() || raw.size() < 4) return;
         int count = *reinterpret_cast<const int *>(raw.data());
         if (raw.size() != count * 25ul + 4ul) return;
 
@@ -201,35 +417,29 @@ namespace bl {
             this->HSAs_.push_back(area);
         }
     }
-    bool chunk::load_block_entities(bedrock_level &level) {
-        auto be_key = bl::chunk_key{chunk_key::BlockEntity, this->pos_};
-        std::string block_entity_raw;
-        if (level.load_raw(be_key.to_raw(), block_entity_raw) && !block_entity_raw.empty()) {
-            this->block_entities_ = palette::read_palette_to_end(block_entity_raw.data(), block_entity_raw.size());
-        } else {
+    bool chunk::load_block_entities(const bl::raw_chunk &rc) {
+        auto raw = rc.get_normal_key(chunk_key::BlockEntity);
+        if (!raw.empty()) {
+            this->block_entities_ = palette::read_palette_to_end(raw.data(), raw.size());
         }
-
         return true;
     }
 
     bool chunk::load_data(bedrock_level &level, bool fast_load) {
         if (this->loaded()) return true;
-        if ((!contains_key(level.db(), bl::chunk_key{chunk_key::VersionOld, this->pos_}.to_raw())) &&
-            (!contains_key(level.db(), bl::chunk_key{chunk_key::VersionNew, this->pos_}.to_raw()))) {
-            return false;
-        }
+        bl::raw_chunk rc(this->pos_);
+        if (!rc.read(level)) return false;
+        return this->load_from_raw_chunk(rc);
+    }
 
-        this->load_subchunks(level);
+    bool chunk::load_from_raw_chunk(const bl::raw_chunk &rc) {
+        this->load_subchunks(rc);
         if (this->sub_chunks_.empty()) return false;
-        this->load_biomes(level);
-        this->load_entities(level);
-
-        if (!fast_load) {
-            this->load_block_entities(level);
-            this->load_pending_ticks(level);  // 有bug
-        }
-        this->load_hsa(level);
-        this->fast_load_mode_ = fast_load;
+        this->load_biomes(rc);
+        this->load_entities(rc);
+        this->load_block_entities(rc);
+        this->load_pending_ticks(rc);
+        this->load_hsa(rc);
         this->loaded_ = true;
         return this->loaded_;
     }
@@ -251,10 +461,6 @@ namespace bl {
 
     bl::color chunk::get_block_color(int cx, int y, int cz) {
         auto b = this->get_block_fast(cx, y, cz);
-        auto c = get_block_by_name_tag(b.name);
-        if (b.name.find("dirt") != std::string::npos) {
-            BL_LOGGER("%s: %d %d %d %d", b.name.c_str(), c.r, c.g, c.b, c.a);
-        }
-        return c;
+        return get_block_by_name_tag(b.name);
     }
 }  // namespace bl
