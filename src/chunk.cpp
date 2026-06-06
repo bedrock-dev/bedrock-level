@@ -57,6 +57,11 @@ namespace bl {
         }
     }  // namespace
 
+    // do not remove entities
+    void raw_chunk::clear_terrain() {
+        for (auto &kv : this->sub_chunk_data_) kv.second.clear();
+    }
+
     bool raw_chunk::read(bedrock_level &level) {
         static const chunk_key::key_type keys[] = {
             chunk_key::Data3D,
@@ -92,13 +97,12 @@ namespace bl {
         }
 
         // read sub chunks
-        auto [min_index, max_index] = this->pos_.get_subchunk_index_range(ChunkVersion::New);
+        auto [min_index, max_index] = this->pos_.get_subchunk_index_range(version());
+        std::string raw;
         for (auto sub_index = min_index; sub_index <= max_index; sub_index++) {
             bl::chunk_key key{chunk_key::SubChunkTerrain, this->pos_, sub_index};
-            std::string raw;
-            if (level.load_raw(key.to_raw(), raw) && !raw.empty()) {
-                this->sub_chunk_data_[sub_index] = std::move(raw);
-            }
+            level.load_raw(key.to_raw(), raw);
+            this->sub_chunk_data_[sub_index] = std::move(raw);
         }
 
         // read actor digest and entities
@@ -122,50 +126,44 @@ namespace bl {
         return this->loaded_;
     }
 
-    bool raw_chunk::write(leveldb::WriteBatch &batch) {
+    bool raw_chunk::write(leveldb::WriteBatch &batch, bool clear) {
         if (!this->loaded_) return false;
 
-        // write normal keys
         for (auto &[kt, raw] : this->data_) {
             bl::chunk_key key{kt, this->pos_};
-            if (raw.empty()) {
+            if (clear) {
                 batch.Delete(key.to_raw());
             } else {
                 batch.Put(key.to_raw(), raw);
             }
         }
 
-        // write sub chunks
         for (auto &[index, raw] : this->sub_chunk_data_) {
             bl::chunk_key key{chunk_key::SubChunkTerrain, this->pos_, index};
-            if (raw.empty()) {
+            if (clear) {
                 batch.Delete(key.to_raw());
             } else {
                 batch.Put(key.to_raw(), raw);
             }
         }
 
-        // write actor digest
-        if (!this->actor_digest_list_.empty()) {
-            bl::actor_digest_key digest_key{this->pos_};
-            batch.Put(digest_key.to_raw(), this->actor_digest_list_);
-        } else {
+        if (clear) {
+            for (auto &[uid, raw] : this->entities_) {
+                batch.Delete("actorprefix" + uid);
+            }
             bl::actor_digest_key digest_key{this->pos_};
             batch.Delete(digest_key.to_raw());
-        }
-
-        // write entities
-        for (auto &[uid, raw] : this->entities_) {
-            if (raw.empty()) {
-                batch.Delete("actorprefix" + uid);
-            } else {
+        } else {
+            if (!this->actor_digest_list_.empty()) {
+                bl::actor_digest_key digest_key{this->pos_};
+                batch.Put(digest_key.to_raw(), this->actor_digest_list_);
+            }
+            for (auto &[uid, raw] : this->entities_) {
                 batch.Put("actorprefix" + uid, raw);
             }
         }
         return true;
     }
-
-    // Binary format:
 
     std::vector<byte_t> raw_chunk::to_raw() {
         std::vector<byte_t> buf;
@@ -246,20 +244,6 @@ namespace bl {
         return true;
     }
 
-    void raw_chunk::clear_data() {
-        for (auto &[kt, raw] : this->data_) {
-            raw.clear();
-        }
-        for (auto &[index, raw] : this->sub_chunk_data_) {
-            raw.clear();
-        }
-        this->actor_digest_list_.clear();
-        for (auto &[uid, raw] : this->entities_) {
-            raw.clear();
-        }
-        cleared_ = true;
-    }
-
     std::string raw_chunk::get_normal_key(chunk_key::key_type key) const {
         auto it = this->data_.find(key);
         if (it != this->data_.end()) return it->second;
@@ -326,14 +310,14 @@ namespace bl {
             auto *sb = new bl::sub_chunk();
             sb->set_y_index(sub_index);
             if (!sb->load(raw.data(), raw.size())) {
-                BL_ERROR("Can not load sub chunk %d %d %d %d", pos_.x, pos_.z, pos_.dim, sub_index);
+                BL_ERROR("Can not load sub chunk %s / %d", pos_.to_string().c_str(), sub_index);
                 delete sb;
                 continue;
             }
             this->sub_chunks_[sub_index] = sb;
         }
         if (sub_chunks_.empty()) {
-            BL_ERROR("Can not load terrain data of chunk ", pos_.to_string().c_str());
+            // BL_ERROR("Can not load terrain data of chunk %s", pos_.to_string().c_str());
         } else {
             this->version = this->sub_chunks_.begin()->second->version() == 9 ? New : Old;
         }

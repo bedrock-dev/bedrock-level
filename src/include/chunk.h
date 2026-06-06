@@ -11,6 +11,7 @@
 #include <cstddef>
 #include <map>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "actor.h"
@@ -35,15 +36,19 @@ namespace bl {
 
         [[nodiscard]] bool loaded() const { return loaded_; }
 
+        [[nodiscard]] ChunkVersion version() const {
+            return get_normal_key(chunk_key::VersionNew).empty() ? ChunkVersion::Old : ChunkVersion::New;
+        }
+
+        void clear_terrain();
+
         bool read(bedrock_level &level);
 
-        bool write(leveldb::WriteBatch &batch);
+        bool write(leveldb::WriteBatch &batch, bool clear);
 
         std::vector<byte_t> to_raw();
 
         bool from_raw(const std::vector<byte_t> &data);
-
-        void clear_data();
 
         std::string get_normal_key(chunk_key::key_type key) const;
         std::string get_sub_chunk(int8_t yindex) const;
@@ -53,11 +58,9 @@ namespace bl {
         const std::map<std::string, std::string> &get_entities() const { return entities_; }
         const chunk_pos &pos() const { return pos_; }
         void set_pos(const bl::chunk_pos &pos) { this->pos_ = pos; }
-        bool cleared() const { return cleared_; }
 
        private:
         bool loaded_{false};
-        bool cleared_{false};
         chunk_pos pos_;
         std::map<chunk_key::key_type, std::string> data_;
         std::map<int8_t, std::string> sub_chunk_data_;
@@ -70,6 +73,7 @@ namespace bl {
         friend class bedrock_level;
         static bool valid_in_chunk_pos(int cx, int y, int cz, int dim);
         static void map_y_to_subchunk(int y, int &index, int &offset);
+        static std::tuple<int, int> subchunk_index_to_y_range(int y);
 
        public:
         [[nodiscard]] inline bool fast_load() const { return this->fast_load_mode_; }
