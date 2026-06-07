@@ -4,8 +4,11 @@
 
 #include "actor.h"
 
+#include <cstdint>
 #include <iostream>
+#include <random>
 
+#include "bedrock_level.h"
 #include "palette.h"
 
 namespace bl {
@@ -76,4 +79,52 @@ namespace bl {
         return read_pos && read_identifier && read_uid;
     }
     actor::~actor() { delete this->root_; }
+
+    int64_t actor::reassign_uid(bedrock_level *level) {
+        if (!level) return -1;
+        static std::random_device rd;
+        static std::mt19937_64 gen(rd());
+        std::uniform_int_distribution<int64_t> dist;
+        for (int i = 0; i < 10; i++) {
+            int64_t uid = dist(gen);
+            // check if actorprefix + uid key already exists
+            std::string raw_uid(8, 0);
+            memcpy(raw_uid.data(), &uid, 8);
+            std::string dummy;
+            if (!level->load_raw("actorprefix" + raw_uid, dummy)) {
+                // key does not exist, assign the new uid
+                this->uid_ = uid;
+                // update the UniqueID tag in nbt
+                if (root_) {
+                    auto it = root_->value.find("UniqueID");
+                    if (it != root_->value.end()) {
+                        auto *lt = dynamic_cast<bl::palette::long_tag *>(it->second);
+                        if (lt) {
+                            lt->value = uid;
+                        }
+                    }
+                }
+                return uid;
+            }
+        }
+        return -1;
+    }
+
+    void actor::offset_pos(float dx, float dz) {
+        if (!root_) return;
+        auto it = root_->value.find("Pos");
+        if (it == root_->value.end()) return;
+        auto *pos_tag = dynamic_cast<bl::palette::list_tag *>(it->second);
+        if (!pos_tag || pos_tag->value.size() != 3) return;
+        auto *tx = dynamic_cast<bl::palette::float_tag *>(pos_tag->value[0]);
+        auto *tz = dynamic_cast<bl::palette::float_tag *>(pos_tag->value[2]);
+        if (tx) {
+            tx->value += dx;
+            pos_.x = tx->value;
+        }
+        if (tz) {
+            tz->value += dz;
+            pos_.z = tz->value;
+        }
+    }
 }  // namespace bl

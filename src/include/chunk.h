@@ -7,11 +7,14 @@
 
 // cached chunks
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <map>
+#include <numeric>
 #include <string>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 #include "actor.h"
@@ -34,7 +37,9 @@ namespace bl {
         raw_chunk() = default;
         raw_chunk(const raw_chunk &other) = default;
 
-        [[nodiscard]] bool loaded() const { return loaded_; }
+        [[nodiscard]] bool loaded() const {
+            return std::any_of(data_.begin(), data_.end(), [](const auto &p) { return p.second.size() > 0; });
+        }
 
         [[nodiscard]] ChunkVersion version() const {
             return get_normal_key(chunk_key::VersionNew).empty() ? ChunkVersion::Old : ChunkVersion::New;
@@ -42,29 +47,35 @@ namespace bl {
 
         void clear_terrain();
 
+        // read raw chunk from leveldb
         bool read(bedrock_level &level);
 
+        // write raw chunk to leveldb
         bool write(leveldb::WriteBatch &batch, bool clear);
 
+        // seri and deseri (custom format)
         std::vector<byte_t> to_raw();
-
         bool from_raw(const std::vector<byte_t> &data);
 
+        // getter
         std::string get_normal_key(chunk_key::key_type key) const;
         std::string get_sub_chunk(int8_t yindex) const;
         const std::map<chunk_key::key_type, std::string> &get_normal_data() const { return data_; }
         const std::map<int8_t, std::string> &get_sub_chunks() const { return sub_chunk_data_; }
-        const std::string &get_actor_digest() const { return actor_digest_list_; }
+        const std::string &get_actor_digest() const { return actor_digest_; }
         const std::map<std::string, std::string> &get_entities() const { return entities_; }
         const chunk_pos &pos() const { return pos_; }
-        void set_pos(const bl::chunk_pos &pos) { this->pos_ = pos; }
+
+        // setter
+        void set_pos(const bl::chunk_pos &pos, bedrock_level *level);
+        void set_normal(chunk_key::key_type key, const std::string &data) { data_[key] = data; }
+        void set_entities(const std::vector<bl::actor *> actors);
 
        private:
-        bool loaded_{false};
         chunk_pos pos_;
         std::map<chunk_key::key_type, std::string> data_;
         std::map<int8_t, std::string> sub_chunk_data_;
-        std::string actor_digest_list_;
+        std::string actor_digest_;
         std::map<std::string, std::string> entities_;
     };
 

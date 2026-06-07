@@ -8,11 +8,17 @@
 #include "palette.h"
 #include "utils.h"
 namespace bl {
+    class bedrock_level;
     class actor {
        public:
         bool load(const byte_t* data, size_t len);
 
         bool load_from_nbt(bl::palette::compound_tag* nbt);
+
+        /// Offset the entity's Pos x/z by (dx, dz), modify nbt in place
+        void offset_pos(float dx, float dz);
+
+        int64_t reassign_uid(bedrock_level* level);
 
         [[nodiscard]] inline int64_t uid() const { return this->uid_; }
         [[nodiscard]] inline std::string uid_raw() const {
