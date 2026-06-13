@@ -4,6 +4,8 @@
 
 #include "chunk.h"
 
+#include <float.h>
+
 #include <cstddef>
 #include <string>
 #include <utility>
@@ -65,31 +67,35 @@ namespace bl {
         for (auto &kv : this->sub_chunk_data_) kv.second.clear();
     }
 
+    void raw_chunk::clear_entities() {
+        this->actor_digest_.clear();
+        this->entities_.clear();
+    }
+
     bool raw_chunk::read(bedrock_level &level) {
-        static const chunk_key::key_type keys[] = {
-            chunk_key::Data3D,
-            chunk_key::VersionNew,
-            chunk_key::VersionOld,
-            chunk_key::Data2D,
-            chunk_key::Data2DLegacy,
-            chunk_key::BlockEntity,
-            chunk_key::Entity,
-            chunk_key::PendingTicks,
-            chunk_key::BlockExtraData,
-            chunk_key::BiomeState,
-            chunk_key::FinalizedState,
-            chunk_key::ConversionData,
-            chunk_key::BorderBlocks,
-            chunk_key::HardCodedSpawnAreas,
-            chunk_key::RandomTicks,
-            chunk_key::Checksums,
-            chunk_key::GenerationSeed,
-            chunk_key::GeneratedPreCavesAndCliffsBlending,
-            chunk_key::BlendingBiomeHeight,
-            chunk_key::MetaDataHash,
-            chunk_key::BlendingData,
-            chunk_key::ActorDigestVersion,
-        };
+        static const chunk_key::key_type keys[] = {chunk_key::Data3D,
+                                                   chunk_key::VersionNew,
+                                                   chunk_key::VersionOld,
+                                                   chunk_key::Data2D,
+                                                   chunk_key::Data2DLegacy,
+                                                   chunk_key::BlockEntity,
+                                                   chunk_key::Entity,
+                                                   chunk_key::PendingTicks,
+                                                   chunk_key::BlockExtraData,
+                                                   chunk_key::BiomeState,
+                                                   chunk_key::FinalizedState,
+                                                   chunk_key::ConversionData,
+                                                   chunk_key::BorderBlocks,
+                                                   chunk_key::HardCodedSpawnAreas,
+                                                   chunk_key::RandomTicks,
+                                                   chunk_key::Checksums,
+                                                   chunk_key::GenerationSeed,
+                                                   chunk_key::GeneratedPreCavesAndCliffsBlending,
+                                                   chunk_key::BlendingBiomeHeight,
+                                                   chunk_key::MetaDataHash,
+                                                   chunk_key::BlendingData,
+                                                   chunk_key::ActorDigestVersion,
+                                                   chunk_key::VersionOld};
         size_t read = 0;
         for (auto kt : keys) {
             bl::chunk_key key{kt, this->pos_};
@@ -123,6 +129,8 @@ namespace bl {
                     std::string raw_actor;
                     if (level.load_raw(actor_key, raw_actor) && !raw_actor.empty()) {
                         this->entities_[uid] = std::move(raw_actor);
+                    } else {
+                        BL_ERROR("actor key %s in empty", actor_key.c_str());
                     }
                 }
             }
@@ -277,6 +285,29 @@ namespace bl {
             for (auto *p : palette) data += p->to_raw();
             for (auto *p : palette) delete p;
         }
+
+        // pending ticks
+        if (auto it = data_.find(chunk_key::PendingTicks); it != data_.end()) {
+            auto &data = it->second;
+            auto palette = palette::read_palette_to_end(data.data(), data.size());
+            for (auto *p : palette) {
+                if (!p) continue;
+                auto *tickList = dynamic_cast<bl::palette::list_tag *>(p->get("tickList"));
+                if (!tickList) continue;
+                for (auto *item : tickList->value) {
+                    auto *pt = dynamic_cast<palette::compound_tag *>(item);
+                    if (!pt) continue;
+                    auto *xtag = dynamic_cast<palette::int_tag *>(pt->get("x"));
+                    auto *ztag = dynamic_cast<palette::int_tag *>(pt->get("z"));
+                    if (xtag) xtag->value += dx;
+                    if (ztag) ztag->value += dz;
+                }
+            }
+            data.clear();
+            for (auto *p : palette) data += p->to_raw();
+            for (auto *p : palette) delete p;
+        }
+
         // entities (old version: concatenated in Entity key)
         if (auto it = data_.find(chunk_key::Entity); it != data_.end()) {
             auto &data = it->second;
@@ -297,27 +328,24 @@ namespace bl {
         }
 
         // entities (new version: actorprefix+uid)
-        std::vector<std::tuple<std::string, std::string, std::string>> pending_updates;  // old_uid, new_uid_raw, new_data
+        std::map<std::string, std::string> new_entities;
         for (auto &[uid, raw] : entities_) {
             actor ac;
             if (ac.load(reinterpret_cast<const byte_t *>(raw.data()), raw.size())) {
                 ac.offset_pos(static_cast<float>(dx), static_cast<float>(dz));
                 int64_t new_uid = ac.reassign_uid(level);
                 if (new_uid != -1) {
-                    pending_updates.emplace_back(uid, ac.uid_raw(), ac.root()->to_raw());
+                    new_entities.emplace(ac.uid_raw(), ac.root()->to_raw());
                 }
+            } else {
+                BL_ERROR("load actor %s failed when reset raw chunk position", uid.c_str());
             }
         }
-        for (auto &[old_uid, new_uid_raw, new_data] : pending_updates) {
-            entities_.erase(old_uid);
-            entities_[new_uid_raw] = std::move(new_data);
-        }
-        // rebuild actor digest from updated entities_
-        if (!entities_.empty()) {
-            actor_digest_.clear();
-            for (auto &[uid, raw] : entities_) {
-                actor_digest_ += uid;
-            }
+        // rebuild actor digest and nbts from updated entities_
+        entities_ = std::move(new_entities);
+        actor_digest_.clear();
+        for (auto &[uid, raw] : entities_) {
+            actor_digest_ += uid;
         }
     }
 
@@ -452,7 +480,6 @@ namespace bl {
             bl::actor_digest_list list;
             list.load(digest_raw);
             const auto &rc_entities = rc.get_entities();
-            BL_LOGGER("Load entities for chunk %s with %zu in it", pos_.to_string().c_str(), list.actor_digests_.size());
             for (auto &uid : list.actor_digests_) {
                 auto it = rc_entities.find(uid);
                 if (it != rc_entities.end() && !it->second.empty()) {

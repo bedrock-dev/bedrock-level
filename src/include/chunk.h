@@ -47,6 +47,8 @@ namespace bl {
 
         void clear_terrain();
 
+        void clear_entities();
+
         // read raw chunk from leveldb
         bool read(bedrock_level &level);
 
