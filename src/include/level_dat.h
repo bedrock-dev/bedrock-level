@@ -5,6 +5,7 @@
 #ifndef BEDROCK_LEVEL_LEVEL_DAT_H
 #define BEDROCK_LEVEL_LEVEL_DAT_H
 #include <array>
+#include <cstdint>
 #include <memory>
 #include <string>
 
@@ -33,6 +34,7 @@ namespace bl {
         [[nodiscard]] inline ClientVersion min_compat_version() { return this->min_compat_version_; }
         [[nodiscard]] inline std::string level_name() const { return this->level_name_; }
         [[nodiscard]] bl::palette::compound_tag* root() { return this->root_; }
+        [[nodiscard]] int64_t world_start_count() { return this->world_start_count_; }
 
         [[nodiscard]] std::string to_raw() const;
 
@@ -49,6 +51,7 @@ namespace bl {
         ClientVersion min_compat_version_;
         bl::palette::compound_tag* root_{nullptr};
         std::string header_;
+        int64_t world_start_count_{0xffffffff};
     };
 }  // namespace bl
 
