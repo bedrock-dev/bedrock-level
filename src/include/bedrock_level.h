@@ -5,11 +5,9 @@
 #ifndef BEDROCK_LEVEL_BEDROCK_LEVEL_H
 #define BEDROCK_LEVEL_BEDROCK_LEVEL_H
 #include <atomic>
+#include <cstdint>
 #include <functional>
-#include <optional>
-#include <set>
 #include <string>
-#include <tuple>
 #include <unordered_map>
 
 #include "bedrock_key.h"
@@ -18,8 +16,6 @@
 #include "level_dat.h"
 #include "leveldb/db.h"
 #include "leveldb/options.h"
-#include "leveldb/write_batch.h"
-
 
 namespace bl {
 
@@ -59,8 +55,8 @@ namespace bl {
         void foreach_key_with_prefix(const std::string &prefix, const std::function<void(const std::string &, const std::string &)> &f,
                                      std::atomic_bool &stop, int max = -1);
 
-        // write
-        bool remove_chunks(std::set<bl::chunk_pos> &positions);
+        // others
+        uint64_t generate_actor_uid();
 
         static const std::string LEVEL_DATA;
         static const std::string LEVEL_DB;
@@ -72,7 +68,6 @@ namespace bl {
         chunk *load_chunk(const bl::chunk_pos &cp, bool fast_load);
         bool load_db();
         // write
-        void remove_chunk_in_batch(const chunk_pos &cp, leveldb::WriteBatch &batch);
 
        private:
         // option
@@ -91,6 +86,8 @@ namespace bl {
         bl::general_kv_nbts player_data_;
         bl::general_kv_nbts map_item_data_;
         bl::general_kv_nbts other_data_;
+
+        uint64_t wsc_uid{1};
     };
 }  // namespace bl
 

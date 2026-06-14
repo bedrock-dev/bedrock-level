@@ -80,6 +80,9 @@ namespace bl::utils {
 
     void printReadableBytes(const std::string &bytes);
 
+    void printByteArray(const std::string &bytes);
+
+    std::string toHexStr(const std::string &bytes, int n = 2);
 }  // namespace bl::utils
 
 #endif  // BEDROCK_LEVEL_UTILS_H

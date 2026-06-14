@@ -212,7 +212,6 @@ namespace bl::palette {
             if (res == nullptr) return {nullptr, 0};
             return {res, len + read};
         } else if (type == LongArray) {
-            BL_LOGGER("key size(%d)", key.size());
             auto [res, len] = read_array_value<long_array_tag, int64_t>(data + read, data_len - read, key);
             if (res == nullptr) return {nullptr, 0};
             return {res, len + read};

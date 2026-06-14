@@ -5,7 +5,7 @@
 #include "bedrock_level.h"
 
 #include <atomic>
-#include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <string>
 
@@ -162,13 +162,11 @@ namespace bl {
         delete it;
     }
 
-    bool bedrock_level::remove_chunks(std::set<bl::chunk_pos> &positions) {
-        leveldb::WriteBatch batch;
-        for (const auto &pos : positions) {
-            remove_chunk_in_batch(pos, batch);
-        }
-        auto s = this->db_->Write(leveldb::WriteOptions(), &batch);
-        return s.ok();
+    uint64_t bedrock_level::generate_actor_uid() {
+        auto wsc = static_cast<uint64_t>(dat_.world_start_count() - 1) & 0x00000000ffffffff;
+        auto uid = (wsc << 32) | wsc_uid;
+        wsc_uid++;
+        return uid;
     }
 
     // private
@@ -197,35 +195,4 @@ namespace bl {
         }
         return status.ok();
     }
-
-    void bedrock_level::remove_chunk_in_batch(const chunk_pos &cp, leveldb::WriteBatch &batch) {
-        // remove new chunk  actors
-        // bl::actor_digest_key key{cp};
-        // std::string raw;
-        // if (load_raw(this->db_, key.to_raw(), raw)) {
-        //     bl::actor_digest_list ads;
-        //     ads.load(raw);
-        //     for (auto &uid : ads.actor_digests_) {
-        //         batch.Delete("actorprefix" + uid);
-        //     }
-        // }
-
-        // terrain
-        for (int8_t i = -4; i <= 20; i++) {
-            bl::chunk_key terrain_key{chunk_key::SubChunkTerrain, cp, i};
-            batch.Delete(terrain_key.to_raw());
-        }
-        // others (old entities included)
-        for (int i = 43; i <= 65; i++) {
-            auto t = static_cast<chunk_key::key_type>(i);
-            if (t != chunk_key::SubChunkTerrain) {
-                auto dk = bl::chunk_key{t, cp};
-                batch.Delete(dk.to_raw());
-            }
-        }
-        // version
-        bl::chunk_key version_key{chunk_key::VersionOld, cp};
-        batch.Delete(version_key.to_raw());
-    }
-
 }  // namespace bl

@@ -115,4 +115,40 @@ namespace bl::utils {
             }
         }
     }
+
+    void printByteArray(const std::string &bytes) {
+        for (const auto &c : bytes) {
+            printf("%02X ", static_cast<unsigned char>(c));
+        }
+        printf("\n");
+    }
+
+    std::string toHexStr(const std::string &bytes, int n) {
+        static const char hex_chars[] = "0123456789ABCDEF";
+        std::string result;
+        size_t len = bytes.size();
+        if (len == 0) return result;
+        result.reserve(len * 3);
+        int group_in_line = 0;  // which 8-byte group within current line (0..n-1)
+        int byte_in_group = 0;  // which byte within current 8-byte group (0..7)
+        for (size_t i = 0; i < len; i++) {
+            auto uc = static_cast<unsigned char>(bytes[i]);
+            result.push_back(hex_chars[uc >> 4]);
+            result.push_back(hex_chars[uc & 0x0F]);
+            byte_in_group++;
+            if (byte_in_group == 8) {
+                byte_in_group = 0;
+                group_in_line++;
+                if (group_in_line == n) {
+                    group_in_line = 0;
+                    if (i + 1 < len) result += "\n";
+                } else {
+                    if (i + 1 < len) result += "  ";
+                }
+            } else {
+                if (i + 1 < len) result += ' ';
+            }
+        }
+        return result;
+    }
 }  // namespace bl::utils

@@ -124,13 +124,13 @@ namespace bl {
                 this->actor_digest_ = raw;
                 bl::actor_digest_list list;
                 list.load(raw);
-                for (auto &uid : list.actor_digests_) {
-                    auto actor_key = "actorprefix" + uid;
+                for (auto &key : list.actor_digests_) {
+                    auto actor_key = "actorprefix" + key;
                     std::string raw_actor;
                     if (level.load_raw(actor_key, raw_actor) && !raw_actor.empty()) {
-                        this->entities_[uid] = std::move(raw_actor);
+                        this->entities_[key] = std::move(raw_actor);
                     } else {
-                        BL_ERROR("actor key %s in empty", actor_key.c_str());
+                        BL_ERROR("actor key '%s' is empty", actor_key.c_str());
                     }
                 }
             }
@@ -166,10 +166,8 @@ namespace bl {
             bl::actor_digest_key digest_key{this->pos_};
             batch.Delete(digest_key.to_raw());
         } else {
-            if (!this->actor_digest_.empty()) {
-                bl::actor_digest_key digest_key{this->pos_};
-                batch.Put(digest_key.to_raw(), this->actor_digest_);
-            }
+            bl::actor_digest_key digest_key{this->pos_};
+            batch.Put(digest_key.to_raw(), this->actor_digest_);
             for (auto &[uid, raw] : this->entities_) {
                 batch.Put("actorprefix" + uid, raw);
             }
@@ -317,8 +315,9 @@ namespace bl {
                 if (!p) continue;
                 actor ac;
                 if (ac.load_from_nbt(p)) {
+                    auto uid = level->generate_actor_uid();
+                    ac.reassign_uid(uid);
                     ac.offset_pos(static_cast<float>(dx), static_cast<float>(dz));
-                    ac.reassign_uid(level);
                     data += ac.root()->to_raw();
                 } else {
                     data += p->to_raw();
@@ -332,13 +331,12 @@ namespace bl {
         for (auto &[uid, raw] : entities_) {
             actor ac;
             if (ac.load(reinterpret_cast<const byte_t *>(raw.data()), raw.size())) {
+                auto new_uid = level->generate_actor_uid();
+                ac.reassign_uid(new_uid);
                 ac.offset_pos(static_cast<float>(dx), static_cast<float>(dz));
-                int64_t new_uid = ac.reassign_uid(level);
-                if (new_uid != -1) {
-                    new_entities.emplace(ac.uid_raw(), ac.root()->to_raw());
-                }
+                new_entities.emplace(ac.storage_key_raw(), ac.root()->to_raw());
             } else {
-                BL_ERROR("load actor %s failed when reset raw chunk position", uid.c_str());
+                BL_ERROR("load actor (uid len=%zu) failed when reset raw chunk position", uid.size());
             }
         }
         // rebuild actor digest and nbts from updated entities_
@@ -365,8 +363,8 @@ namespace bl {
         } else {
             std::string digest;
             for (auto *ac : entities) {
-                entities_[ac->uid_raw()] = ac->root()->to_raw();
-                this->actor_digest_ += ac->uid_raw();
+                entities_[ac->storage_key_raw()] = ac->root()->to_raw();
+                this->actor_digest_ += ac->storage_key_raw();
             }
         }
     }

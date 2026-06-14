@@ -39,6 +39,7 @@ namespace bl {
         this->root_ = dynamic_cast<bl::palette::compound_tag *>(nbt->copy());
         return true;
     }
+
     bool actor::preload(bl::palette::compound_tag *root) {
         if (!root) return false;
         bool read_pos = false;
@@ -80,34 +81,32 @@ namespace bl {
     }
     actor::~actor() { delete this->root_; }
 
-    int64_t actor::reassign_uid(bedrock_level *level) {
-        if (!level) return -1;
-        static std::random_device rd;
-        static std::mt19937_64 gen(rd());
-        std::uniform_int_distribution<int64_t> dist;
-        for (int i = 0; i < 10; i++) {
-            int64_t uid = dist(gen);
-            // check if actorprefix + uid key already exists
-            std::string raw_uid(8, 0);
-            memcpy(raw_uid.data(), &uid, 8);
-            std::string dummy;
-            if (!level->load_raw("actorprefix" + raw_uid, dummy)) {
-                // key does not exist, assign the new uid
-                this->uid_ = uid;
-                // update the UniqueID tag in nbt
-                if (root_) {
-                    auto it = root_->value.find("UniqueID");
-                    if (it != root_->value.end()) {
-                        auto *lt = dynamic_cast<bl::palette::long_tag *>(it->second);
-                        if (lt) {
-                            lt->value = uid;
-                        }
-                    }
-                }
-                return uid;
+    void actor::reassign_uid(int64_t uid) {
+        this->uid_ = uid;
+        if (!root_) return;
+
+        // update UniqueID
+        auto it = root_->value.find("UniqueID");
+        if (it != root_->value.end()) {
+            auto *lt = dynamic_cast<bl::palette::long_tag *>(it->second);
+            if (lt) {
+                lt->value = uid;
             }
         }
-        return -1;
+
+        // update internalComponents -> EntityStorageKeyComponent -> StorageKey
+        auto storage_key = this->storage_key_raw();
+        auto *ic = dynamic_cast<bl::palette::compound_tag *>(root_->get("internalComponents"));
+        if (!ic) {
+            ic = new bl::palette::compound_tag("internalComponents");
+            root_->put(ic);
+        }
+        auto *eskc = dynamic_cast<bl::palette::compound_tag *>(ic->get("EntityStorageKeyComponent"));
+        if (!eskc) {
+            eskc = new bl::palette::compound_tag("EntityStorageKeyComponent");
+            ic->put(eskc);
+        }
+        eskc->put(new bl::palette::string_tag("StorageKey", storage_key));
     }
 
     void actor::offset_pos(float dx, float dz) {

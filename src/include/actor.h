@@ -4,9 +4,12 @@
 
 #ifndef BEDROCK_LEVEL_ACRTOR_H
 #define BEDROCK_LEVEL_ACRTOR_H
+#include <cstdint>
+
 #include "bedrock_key.h"
 #include "palette.h"
 #include "utils.h"
+
 namespace bl {
     class bedrock_level;
     class actor {
@@ -18,13 +21,25 @@ namespace bl {
         /// Offset the entity's Pos x/z by (dx, dz), modify nbt in place
         void offset_pos(float dx, float dz);
 
-        int64_t reassign_uid(bedrock_level* level);
+        void reassign_uid(int64_t uid);
 
         [[nodiscard]] inline int64_t uid() const { return this->uid_; }
-        [[nodiscard]] inline std::string uid_raw() const {
-            std::string res(8, 0);
-            memcpy(res.data(), &this->uid_, 8);
-            return res;
+
+        [[nodiscard]] int64_t storage_key() const {
+            auto u = static_cast<uint64_t>(this->uid_);
+            auto wsc = u >> 32;
+            auto index = u & 0x00000000ffffffff;
+            auto key = static_cast<int64_t>(((0x00000000FFFFFFFFULL - wsc) << 32) | index);
+            return key;
+        }
+
+        [[nodiscard]] std::string storage_key_raw() const {
+            auto key = storage_key();
+            std::string result(8, '\0');
+            for (int i = 0; i < 8; i++) {
+                result[i] = static_cast<char>((key >> (56 - i * 8)) & 0xFF);
+            }
+            return result;
         }
 
         void dump();
