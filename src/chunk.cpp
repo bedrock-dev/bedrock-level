@@ -369,6 +369,26 @@ namespace bl {
         }
     }
 
+    void raw_chunk::set_biome(biome biome) {
+        auto v = version();
+        biome3d d3d;
+        d3d.set_chunk_pos(pos_);
+        d3d.set_version(v);
+
+        if (v == ChunkVersion::New) {
+            auto raw = get_normal_key(chunk_key::Data3D);
+            if (raw.empty()) return;
+            if (!d3d.load_from_d3d(reinterpret_cast<const byte_t *>(raw.data()), raw.size())) return;
+        } else {
+            auto raw = get_normal_key(chunk_key::Data2D);
+            if (raw.empty()) raw = get_normal_key(chunk_key::Data2DLegacy);
+            if (raw.empty()) return;
+            if (!d3d.load_from_d2d(reinterpret_cast<const byte_t *>(raw.data()), raw.size())) return;
+        }
+        d3d.set_all(biome);
+        data_[v == ChunkVersion::New ? chunk_key::Data3D : chunk_key::Data2D] = d3d.to_raw();
+    }
+
     // chunk
     bool chunk::valid_in_chunk_pos(int cx, int y, int cz, int dim) {
         if (cx < 0 || cx > 15 || cz < 0 || cz > 15 || dim < 0 || dim > 2) return false;

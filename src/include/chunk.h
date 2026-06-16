@@ -73,6 +73,8 @@ namespace bl {
         void set_normal(chunk_key::key_type key, const std::string &data) { data_[key] = data; }
         void set_entities(const std::vector<bl::actor *> actors);
 
+        void set_biome(biome biome);
+
        private:
         chunk_pos pos_;
         std::map<chunk_key::key_type, std::string> data_;

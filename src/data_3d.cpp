@@ -73,8 +73,7 @@ namespace bl {
             int read = 0;
             auto sub_chunk_biome = load_subchunk_biome(data + index, read, len);
             for (int y = 0; y < 16; y++) {
-                auto layer =
-                    std::vector<std::vector<bl::biome>>(16, std::vector<bl::biome>(16, bl::none));
+                auto layer = std::vector<std::vector<bl::biome>>(16, std::vector<bl::biome>(16, bl::none));
                 for (int x = 0; x < 16; x++) {
                     for (int z = 0; z < 16; z++) {
                         layer[x][z] = sub_chunk_biome[x * 256 + z * 16 + y];
@@ -104,9 +103,7 @@ namespace bl {
 
     std::vector<std::vector<biome>> biome3d::get_biome_y(int y) {
         if (this->version_ == Old) {
-            return this->biomes_.empty() ? std::vector<std::vector<bl::biome>>(
-                                               16, std::vector<bl::biome>(16, bl::none))
-                                         : this->biomes_[0];
+            return this->biomes_.empty() ? std::vector<std::vector<bl::biome>>(16, std::vector<bl::biome>(16, bl::none)) : this->biomes_[0];
         }
         auto [my, _] = pos_.get_y_range(this->version_);
         y -= my;
@@ -125,7 +122,7 @@ namespace bl {
         return y < 0 ? biome::none : this->biomes_[y][cx][cz];
     }
     bool biome3d::load_from_d2d(const byte_t *data, size_t len) {
-        if (len != 768) {  // height map: 512bytes biome: 256 * 4 = 1024 bytes
+        if (len != 768) {  // height map: 512bytes biome: 256 bytes
             BL_ERROR("Invalid Data2d format (%zu)", len);
             return false;
         }
@@ -138,6 +135,45 @@ namespace bl {
         }
         this->biomes_.push_back(layer);
         return true;
+    }
+
+    void biome3d::set_all(biome b) {
+        for (auto &layer : biomes_) {
+            for (auto &col : layer) {
+                std::fill(col.begin(), col.end(), b);
+            }
+        }
+    }
+
+    std::string biome3d::to_raw() const {
+        if (version_ == Old) {
+            std::string result(512 + 256, '\0');
+            memcpy(result.data(), height_map_.data(), 512);
+            if (!biomes_.empty()) {
+                for (int x = 0; x < 16; x++) {
+                    for (int z = 0; z < 16; z++) {
+                        result[512 + x + 16 * z] = static_cast<char>(biomes_[0][x][z]);
+                    }
+                }
+            }
+            return result;
+        }
+
+        std::string result;
+        result.reserve(512 + biomes_.size() * 5);  // header(1) + id(4) = 5 per subchunk
+        result.append(reinterpret_cast<const char *>(height_map_.data()), 512);
+
+        size_t layer_count = biomes_.size();
+        size_t sub_chunk_count = (layer_count + 15) / 16;
+
+        for (size_t sc = 0; sc < sub_chunk_count; sc++) {
+            // header bits=0 → single palette (no index, no palette_len on disk)
+            result.push_back('\0');
+            biome b = biomes_[sc * 16][0][0];
+            int32_t id = static_cast<int32_t>(b);
+            result.append(reinterpret_cast<const char *>(&id), 4);
+        }
+        return result;
     }
 
 }  // namespace bl

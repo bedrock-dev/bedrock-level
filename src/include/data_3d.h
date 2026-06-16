@@ -8,9 +8,12 @@
 #include <array>
 #include <cstdint>
 #include <cstdio>
+#include <string>
 
 #include "bedrock_key.h"
+#include "magic-enum/magic_enum.hpp"
 #include "utils.h"
+
 namespace bl {
 
     // clang-format off
@@ -108,6 +111,18 @@ namespace bl {
     };
     // clang-format on
 
+}  // namespace bl
+
+namespace magic_enum::customize {
+    template <>
+    struct enum_range<bl::biome> {
+        static constexpr int min = 0;
+        static constexpr int max = 255;
+    };
+}  // namespace magic_enum::customize
+
+namespace bl {
+
     class biome3d {
        public:
         bool load_from_d3d(const byte_t *data, size_t len);
@@ -119,9 +134,7 @@ namespace bl {
             return this->height_map_[x + z * 16] + my;
         }
 
-        [[nodiscard]] inline std::array<int16_t, 256> height_map() const {
-            return this->height_map_;
-        }
+        [[nodiscard]] inline std::array<int16_t, 256> height_map() const { return this->height_map_; }
 
         biome get_biome(int cx, int y, int cz);
 
@@ -131,6 +144,10 @@ namespace bl {
 
         void set_chunk_pos(const bl::chunk_pos &cp) { this->pos_ = cp; }
         void set_version(ChunkVersion version) { this->version_ = version; }
+
+        void set_all(biome b);
+
+        [[nodiscard]] std::string to_raw() const;
 
        private:
         std::array<int16_t, 256> height_map_;

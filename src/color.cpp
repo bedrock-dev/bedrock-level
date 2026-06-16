@@ -38,9 +38,6 @@ namespace bl {
         bl::color default_leave_color{113, 167, 77};
         bl::color default_grass_color{142, 185, 113};
 
-        //
-        // biome id -> name
-        std::unordered_map<biome, std::string> biome_id_map;
         // biome id -> biome color
         std::unordered_map<biome, bl::color> biome_color_map;
 
@@ -91,8 +88,8 @@ namespace bl {
     }
 
     std::string get_biome_name(biome b) {
-        auto it = biome_id_map.find(b);
-        return it == biome_id_map.end() ? "unknown" : it->second;
+        auto name = magic_enum::enum_name(b);
+        return name.empty() ? "unknown" : std::string(name);
     }
 
     bool init_biome_color_palette_from_file(const std::string& filename) {
@@ -106,7 +103,6 @@ namespace bl {
             f >> j;
             for (auto& [key, value] : j.items()) {
                 int id = value["id"].get<int>();
-                biome_id_map[static_cast<biome>(id)] = key;
 
                 if (value.contains("rgb")) {
                     auto rgb = value["rgb"];
