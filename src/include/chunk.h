@@ -99,8 +99,6 @@ namespace bl {
 
         palette::compound_tag *get_block_raw(int cx, int y, int cz);
 
-        bl::color get_block_color(int cx, int y, int cz);
-
         biome get_biome(int cx, int y, int cz);
 
         std::vector<std::vector<biome>> get_biome_y(int y);

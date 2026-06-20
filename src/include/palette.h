@@ -67,6 +67,11 @@ namespace bl::palette {
 
         [[nodiscard]] virtual std::string payload_to_raw() const = 0;
 
+        template <typename T>
+        T as() {
+            return dynamic_cast<T>(this);
+        }
+
        public:
         virtual void write(std::ostream &o, int indent) const {
             if (indent != 0) {

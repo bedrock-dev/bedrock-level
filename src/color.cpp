@@ -80,6 +80,7 @@ namespace bl {
             return map.begin()->second;
         }
         if (debugColor) {
+            // exclude edu ver blocks
             if (name.find("element") == std::string::npos) {
                 BL_ERROR("Can not found color for block %s-%s", name.c_str(), tag.c_str());
             }

@@ -579,9 +579,4 @@ namespace bl {
         for (auto &p : this->block_entities_) delete p;
         for (auto &e : this->entities_) delete e;
     }
-
-    bl::color chunk::get_block_color(int cx, int y, int cz) {
-        auto b = this->get_block_fast(cx, y, cz);
-        return get_block_by_name_tag(b.name);
-    }
 }  // namespace bl

@@ -134,6 +134,7 @@ namespace bl {
             BL_ERROR("sub_chunk has no layers");
             return {};
         }
+        using bl::palette::string_tag, bl::palette::compound_tag;
 
         auto idx = ry + rz * 16 + rx * 256;
         auto block = this->layers_[0]->blocks[idx];
@@ -143,14 +144,19 @@ namespace bl {
             return {};
         }
 
-        auto &palette = this->layers_[0]->palettes[block];
+        auto &b = this->layers_[0]->palettes[block];
 
-        auto id = palette->value.find("name");
-        if (id == palette->value.end()) {
-            return {};
+        std::string name, extra_tag;
+        if (auto *name_tag = b->get("name")->as<string_tag *>(); name_tag) {
+            name = name_tag->value;
         }
-        auto name = dynamic_cast<bl::palette::string_tag *>(id->second)->value;
-        return {name, bl::get_block_by_name_tag(name)};
+
+        if (auto *stat_tag = b->get("states")->as<compound_tag *>(); stat_tag) {
+            if (auto *color_tag = stat_tag->get("color")->as<string_tag *>(); color_tag) {
+                extra_tag = color_tag->value;
+            }
+        }
+        return {name, bl::get_block_by_name_tag(name, extra_tag)};
     }
 
     block_info sub_chunk::get_block_fast(int rx, int ry, int rz) {
