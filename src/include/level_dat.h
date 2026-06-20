@@ -32,9 +32,10 @@ namespace bl {
         [[nodiscard]] inline block_pos spawn_position() const { return this->spawn_position_; }
         [[deprecated("Wrong API")]] inline uint64_t storage_version() const { return this->storage_version_; }
         [[nodiscard]] inline ClientVersion min_compat_version() { return this->min_compat_version_; }
-        [[nodiscard]] inline std::string level_name() const { return this->level_name_; }
+        [[nodiscard]] inline const std::string& level_name() const { return this->level_name_; }
         [[nodiscard]] bl::palette::compound_tag* root() { return this->root_; }
         [[nodiscard]] int64_t world_start_count() { return this->world_start_count_; }
+        [[nodiscard]] const std::string& header() { return this->header_; }
 
         [[nodiscard]] std::string to_raw() const;
 
