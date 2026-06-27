@@ -567,6 +567,30 @@ namespace bl {
 
     // 从0开始的数据
     int chunk::get_height(int cx, int cz) { return this->d3d_.height(cx, cz); }
+
+    std::pair<int, int> chunk::getTopY(int cx, int cz, int max_y) {
+        auto [min_y, _] = get_pos().get_y_range(this->version);
+        int top_y = min_y - 1;
+        int solid_y = min_y - 1;
+
+        for (int y = max_y; y >= min_y; y--) {
+            auto b = get_block_fast(cx, y, cz);
+            if (b.name == "minecraft:unknown") continue;
+
+            if (top_y < min_y && b.name != "minecraft:air") {
+                top_y = y;
+            }
+
+            // solid_y is the highest non-air, non-water block at or below top_y
+            if (b.name != "minecraft:air" && b.name != "minecraft:water" && solid_y < min_y) {
+                solid_y = y;
+            }
+
+            if (top_y >= min_y && solid_y >= min_y) break;
+        }
+
+        return {top_y, solid_y};
+    }
     biome chunk::get_top_biome(int cx, int cz) { return this->d3d_.get_top_biome(cx, cz); }
 
     std::vector<std::vector<biome>> chunk::get_biome_y(int y) { return this->d3d_.get_biome_y(y); }

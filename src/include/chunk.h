@@ -109,6 +109,8 @@ namespace bl {
 
         int get_height(int cx, int cz);
 
+        std::pair<int, int> getTopY(int cx, int cz, int max_y);
+
         explicit chunk(const chunk_pos &pos) : loaded_(false), pos_(pos) {};
 
         chunk() = delete;
