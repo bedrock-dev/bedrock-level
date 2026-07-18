@@ -568,7 +568,7 @@ namespace bl {
     // 从0开始的数据
     int chunk::get_height(int cx, int cz) { return this->d3d_.height(cx, cz); }
 
-    std::pair<int, int> chunk::getTopY(int cx, int cz, int max_y) {
+    std::pair<int, int> chunk::get_top_y(int cx, int cz, int max_y) {
         auto [min_y, _] = get_pos().get_y_range(this->version);
         int top_y = min_y - 1;
         int solid_y = min_y - 1;
