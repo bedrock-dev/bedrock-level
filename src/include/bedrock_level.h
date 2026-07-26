@@ -40,6 +40,7 @@ namespace bl {
         bl::general_kv_nbts &map_item_data() { return this->map_item_data_; }
         bl::general_kv_nbts &other_item_data() { return this->other_data_; }
         level_dat &dat() { return this->dat_; }
+        const std::unordered_map<std::string, int> &custom_dimension_table() const { return custom_dimension_table_; }
         chunk *get_chunk(const chunk_pos &cp, bool fast_load = false);
 
         // setter
@@ -60,6 +61,8 @@ namespace bl {
 
         static const std::string LEVEL_DATA;
         static const std::string LEVEL_DB;
+        static const std::string CUSTOM_DIM_KEY_PREFIX;
+        static const std::string CUSTOM_DIM_TABLE_KEY;
 
        private:
         // cache
@@ -67,6 +70,7 @@ namespace bl {
         // read
         chunk *load_chunk(const bl::chunk_pos &cp, bool fast_load);
         bool load_db();
+        void load_dimension_name_id_table();
         // write
 
        private:
@@ -86,6 +90,7 @@ namespace bl {
         bl::general_kv_nbts player_data_;
         bl::general_kv_nbts map_item_data_;
         bl::general_kv_nbts other_data_;
+        std::unordered_map<std::string, int> custom_dimension_table_;
 
         uint64_t wsc_uid{1};
     };

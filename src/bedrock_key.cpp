@@ -25,10 +25,6 @@ namespace bl {
                 key_type_idx = 12;
             }
 
-            if (dim < 0 || dim > 2) {  // invalid dimension key
-                return INVALID_CHUNK_KEY;
-            }
-
             auto type = static_cast<chunk_key::key_type>(key[key_type_idx]);
 
             if ((type < 43 || type > 65) && type != 118) {
@@ -228,16 +224,17 @@ namespace bl {
         return {0, -1};
     }
     std::tuple<int8_t, int8_t> chunk_pos::get_subchunk_index_range(ChunkVersion v) const {
-        if (this->dim == 1) return {0, 7};
-        if (this->dim == 2) return {0, 15};
-        if (this->dim == 0) {
-            if (v == New) {
-                return {-4, 19};
-            } else {
-                return {0, 15};
-            }
-        }
-        return {0, -1};
+        return {-4, 19};
+        // if (this->dim == 1) return {0, 7};
+        // if (this->dim == 2) return {0, 15};
+        // if (this->dim == 0) {
+        //     if (v == New) {
+        //         return {-4, 19};
+        //     } else {
+        //         return {0, 15};
+        //     }
+        // }
+        // return {0, -1};
     }
 
     bool chunk_pos::is_slime() const {

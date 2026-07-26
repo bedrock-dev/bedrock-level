@@ -8,10 +8,7 @@
 // cached chunks
 
 #include <algorithm>
-#include <array>
-#include <cstddef>
 #include <map>
-#include <numeric>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -19,7 +16,6 @@
 
 #include "actor.h"
 #include "bedrock_key.h"
-#include "color.h"
 #include "data_3d.h"
 #include "leveldb/write_batch.h"
 #include "sub_chunk.h"

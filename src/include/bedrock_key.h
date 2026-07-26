@@ -26,7 +26,7 @@ namespace bl {
 
         chunk_pos() = default;
 
-        [[nodiscard]] bool valid() const { return this->dim >= 0 && this->dim <= 2; }
+        [[nodiscard]] bool valid() const { return this->dim >= 0; }
 
         [[nodiscard]] std::string to_string() const;
 

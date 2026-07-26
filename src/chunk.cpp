@@ -391,10 +391,11 @@ namespace bl {
 
     // chunk
     bool chunk::valid_in_chunk_pos(int cx, int y, int cz, int dim) {
-        if (cx < 0 || cx > 15 || cz < 0 || cz > 15 || dim < 0 || dim > 2) return false;
-        static constexpr int min_h[]{-64, 0, 0};
-        static constexpr int max_h[]{319, 127, 255};
-        return y >= min_h[dim] && y <= max_h[dim];
+        // if (cx < 0 || cx > 15 || cz < 0 || cz > 15 || dim < 0 || dim > 2) return false;
+        // static constexpr int min_h[]{-64, 0, 0};
+        // static constexpr int max_h[]{319, 127, 255};
+        // return y >= min_h[dim] && y <= max_h[dim];
+        return true;
     }
 
     void chunk::map_y_to_subchunk(int y, int &index, int &offset) {

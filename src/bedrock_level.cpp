@@ -7,6 +7,7 @@
 #include <atomic>
 #include <cstdint>
 #include <filesystem>
+#include <iostream>
 #include <string>
 
 #include "bedrock_key.h"
@@ -21,12 +22,15 @@
 #include "leveldb/options.h"
 #include "leveldb/write_batch.h"
 #include "leveldb/zlib_compressor.h"
+#include "palette.h"
 
 class SlowEnv : public leveldb::Env {};
 
 namespace bl {
     const std::string bedrock_level::LEVEL_DATA = "level.dat";
     const std::string bedrock_level::LEVEL_DB = "db";
+    const std::string bedrock_level::CUSTOM_DIM_KEY_PREFIX = "custom_dim:";
+    const std::string bedrock_level::CUSTOM_DIM_TABLE_KEY = "DimensionNameIdTable";
 
     bedrock_level::bedrock_level() {
         options_.filter_policy = leveldb::NewBloomFilterPolicy(10);
@@ -74,10 +78,6 @@ namespace bl {
             return nullptr;
         }
 
-        if (!cp.valid()) {
-            BL_ERROR("Invalid Chunk position %s.", cp.to_string().c_str());
-            return nullptr;
-        }
         if (this->enable_cache_) {
             auto it = this->chunk_data_cache_.find(cp);
             if (it != this->chunk_data_cache_.end()) {
@@ -154,7 +154,7 @@ namespace bl {
         for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
             f(it->key().ToString(), it->value().ToString());
             count++;
-            if (count >= max || stop) {
+            if ((count >= max && max > 0) || stop) {
                 delete it;
                 return;
             }
@@ -192,7 +192,35 @@ namespace bl {
         leveldb::Status status = leveldb::DB::Open(this->options_, bl::utils::UTF8ToGBEx(path.string().c_str()), &this->db_);
         if (!status.ok()) {
             BL_ERROR("Can not open level database: [%s].", status.ToString().c_str());
+        } else {
+            load_dimension_name_id_table();
         }
         return status.ok();
     }
+
+    void bedrock_level::load_dimension_name_id_table() {
+        if (!db_) return;
+        std::string value;
+        auto r = this->db_->Get(read_option_, CUSTOM_DIM_TABLE_KEY, &value);
+        if (!r.ok()) return;
+        int read;
+        auto *nbt = bl::palette::read_one_palette(value.c_str(), read);
+        if (!nbt) return;
+
+        auto *entries = nbt->get("entries");
+        if (entries) {
+            auto *entries_compound = dynamic_cast<bl::palette::compound_tag *>(entries);
+            if (entries_compound) {
+                custom_dimension_table_.clear();
+                for (auto &[dim_name, tag] : entries_compound->value) {
+                    auto *int_tag = dynamic_cast<bl::palette::int_tag *>(tag);
+                    if (int_tag) {
+                        custom_dimension_table_[dim_name] = int_tag->value;
+                    }
+                }
+            }
+        }
+        delete nbt;
+    }
+
 }  // namespace bl
