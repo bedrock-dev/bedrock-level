@@ -18,7 +18,6 @@
 
 namespace bl::palette {
 
-    // TODD: 使用模板重写这个库
     enum tag_type : int8_t {
         End = 0,
         Byte = 1,
@@ -55,16 +54,16 @@ namespace bl::palette {
         [[nodiscard]] virtual std::string value_string() const = 0;
         [[nodiscard]] virtual abstract_tag *copy() const = 0;
         [[nodiscard]] virtual std::string restricted_value_string() const { return this->value_string(); }
-        /**
-         *
-         * 这个函数有bug，暂时不要使用
-         * @return
-         */
-        [[nodiscard]] virtual std::string to_raw() const { return this->type_to_raw() + this->key_to_raw() + this->payload_to_raw(); }
-
-        [[nodiscard]] std::string key() const { return this->key_; }
+        [[nodiscard]] virtual std::string to_raw() const {
+            std::string res;
+            res.reserve(3 + this->key_.size());
+            res += this->type_to_raw();
+            res += this->key_to_raw();
+            res += this->payload_to_raw();
+            return res;
+        }
+        [[nodiscard]] const std::string &key() const { return this->key_; }
         void set_key(const std::string &key) { this->key_ = key; }
-
         [[nodiscard]] virtual std::string payload_to_raw() const = 0;
 
         template <typename T>
@@ -85,10 +84,12 @@ namespace bl::palette {
 
        protected:
         [[nodiscard]] std::string key_to_raw() const {
-            std::string res(2, '0');
+            std::string res;
+            res.reserve(2 + this->key_.size());
             auto size = static_cast<uint16_t>(this->key_.size());
-            memcpy(res.data(), &size, 2);
-            return res + this->key_;
+            res.append(reinterpret_cast<const char *>(&size), 2);
+            res += this->key_;
+            return res;
         }
 
         [[nodiscard]] std::string type_to_raw() const {
@@ -188,121 +189,6 @@ namespace bl::palette {
         std::map<std::string, abstract_tag *> value;
     };
 
-    template <typename ValueType, tag_type TT, size_t ValueSize>
-    struct scalar_tag : public abstract_tag {
-        explicit scalar_tag(const std::string &key) : abstract_tag(key) {}
-        scalar_tag(const std::string &key, ValueType v) : abstract_tag(key), value(v) {}
-
-        [[nodiscard]] tag_type type() const override { return TT; }
-
-        void write(std::ostream &o, int indent) const override {
-            abstract_tag::write(o, indent);
-            o << this->value << std::endl;
-        }
-        [[nodiscard]] std::string value_string() const override { return std::to_string(this->value); }
-        [[nodiscard]] abstract_tag *copy() const override {
-            auto *res = new scalar_tag(this->key_);
-            res->value = this->value;
-            return res;
-        }
-
-        ~scalar_tag() override = default;
-        ValueType value{};
-
-       protected:
-        [[nodiscard]] std::string payload_to_raw() const override {
-            std::string res(ValueSize, '\0');
-            memcpy(res.data(), &this->value, ValueSize);
-            return res;
-        }
-    };
-
-    using short_tag = scalar_tag<int16_t, Short, 2>;
-    using int_tag = scalar_tag<int32_t, Int, 4>;
-    using long_tag = scalar_tag<int64_t, Long, 8>;
-    using float_tag = scalar_tag<float, Float, 4>;
-    using double_tag = scalar_tag<double, Double, 8>;
-
-    struct string_tag : public abstract_tag {
-        explicit string_tag(const std::string &key) : abstract_tag(key) {}
-
-        string_tag(const std::string &key, std::string value) : abstract_tag(key), value(std::move(value)) {}
-
-        [[nodiscard]] tag_type type() const override { return String; }
-
-        void write(std::ostream &o, int indent) const override {
-            abstract_tag::write(o, indent);
-            o << "'" << this->value << "'" << std::endl;
-        }
-        [[nodiscard]] std::string value_string() const override { return this->value; };
-
-        [[nodiscard]] abstract_tag *copy() const override {
-            auto *res = new string_tag(this->key_);
-            res->value = this->value;
-            return res;
-        }
-
-        ~string_tag() override = default;
-        std::string value;
-
-       protected:
-        [[nodiscard]] std::string payload_to_raw() const override {
-            std::string res(2, '\0');
-            auto len = static_cast<uint16_t>(this->value.size());
-            memcpy(res.data(), &len, 2);
-            return res + this->value;
-        }
-    };
-
-    // byte_tag kept standalone for static_cast<int> in write()
-    struct byte_tag : public scalar_tag<int8_t, Byte, 1> {
-        using scalar_tag::scalar_tag;
-        void write(std::ostream &o, int indent) const override {
-            abstract_tag::write(o, indent);
-            o << static_cast<int>(this->value) << std::endl;
-        }
-        [[nodiscard]] abstract_tag *copy() const override {
-            auto *res = new byte_tag(this->key_);
-            res->value = this->value;
-            return res;
-        }
-    };
-
-    template <typename ElemType, tag_type TT>
-    struct array_tag : public abstract_tag {
-        explicit array_tag(const std::string &key) : abstract_tag(key) {}
-        array_tag(const std::string &key, std::vector<ElemType> v) : abstract_tag(key), value(std::move(v)) {}
-
-        void write(std::ostream &o, int indent) const override {
-            abstract_tag::write(o, indent);
-            o << "[ ..." << this->value.size() << " X " << sizeof(ElemType) << " bytes ... ]" << std::endl;
-        }
-        [[nodiscard]] std::string value_string() const override { return "[ ..." + std::to_string(this->value.size()) + "... ]"; }
-        [[nodiscard]] std::string restricted_value_string() const override { return bl::utils::numberVecToString(this->value); }
-        [[nodiscard]] tag_type type() const override { return TT; }
-
-        [[nodiscard]] abstract_tag *copy() const override {
-            auto *res = new array_tag(this->key_);
-            res->value = this->value;
-            return res;
-        }
-        ~array_tag() override = default;
-        std::vector<ElemType> value;
-
-       protected:
-        [[nodiscard]] std::string payload_to_raw() const override {
-            std::string raw(4 + this->value.size() * sizeof(ElemType), 0);
-            auto size = static_cast<int32_t>(this->value.size());
-            memcpy(raw.data(), &size, 4);
-            memcpy(raw.data() + 4, this->value.data(), this->value.size() * sizeof(ElemType));
-            return raw;
-        }
-    };
-
-    using byte_array_tag = array_tag<int8_t, ByteArray>;
-    using int_array_tag = array_tag<int32_t, IntArray>;
-    using long_array_tag = array_tag<int64_t, LongArray>;
-
     struct list_tag : public abstract_tag {
         friend class abstract_tag;
 
@@ -337,6 +223,7 @@ namespace bl::palette {
             }
             o << "}\n";
         }
+        [[nodiscard]] std::string value_string() const override { return "[...]"; };
         [[nodiscard]] abstract_tag *copy() const override {
             auto *res = new list_tag(this->key_);
             for (auto &item : this->value) {
@@ -345,8 +232,6 @@ namespace bl::palette {
 
             return res;
         }
-
-        [[nodiscard]] std::string value_string() const override { return "[...]"; };
         void append(abstract_tag *tag) {
             if (tag) {
                 this->value.push_back(tag);
@@ -398,6 +283,122 @@ namespace bl::palette {
             return res;
         }
     };
+
+    struct string_tag : public abstract_tag {
+        explicit string_tag(const std::string &key) : abstract_tag(key) {}
+
+        string_tag(const std::string &key, std::string value) : abstract_tag(key), value(std::move(value)) {}
+
+        [[nodiscard]] tag_type type() const override { return String; }
+
+        void write(std::ostream &o, int indent) const override {
+            abstract_tag::write(o, indent);
+            o << "'" << this->value << "'" << std::endl;
+        }
+        [[nodiscard]] std::string value_string() const override { return this->value; };
+
+        [[nodiscard]] abstract_tag *copy() const override {
+            auto *res = new string_tag(this->key_);
+            res->value = this->value;
+            return res;
+        }
+
+        ~string_tag() override = default;
+        std::string value;
+
+       protected:
+        [[nodiscard]] std::string payload_to_raw() const override {
+            std::string res(2, '\0');
+            auto len = static_cast<uint16_t>(this->value.size());
+            memcpy(res.data(), &len, 2);
+            return res + this->value;
+        }
+    };
+
+    template <typename ValueType, tag_type TT, size_t ValueSize>
+    struct scalar_tag : public abstract_tag {
+        explicit scalar_tag(const std::string &key) : abstract_tag(key) {}
+        scalar_tag(const std::string &key, ValueType v) : abstract_tag(key), value(v) {}
+
+        [[nodiscard]] tag_type type() const override { return TT; }
+
+        void write(std::ostream &o, int indent) const override {
+            abstract_tag::write(o, indent);
+            o << this->value << std::endl;
+        }
+        [[nodiscard]] std::string value_string() const override { return std::to_string(this->value); }
+        [[nodiscard]] abstract_tag *copy() const override {
+            auto *res = new scalar_tag(this->key_);
+            res->value = this->value;
+            return res;
+        }
+
+        ~scalar_tag() override = default;
+        ValueType value{};
+
+       protected:
+        [[nodiscard]] std::string payload_to_raw() const override {
+            std::string res(ValueSize, '\0');
+            memcpy(res.data(), &this->value, ValueSize);
+            return res;
+        }
+    };
+
+    using short_tag = scalar_tag<int16_t, Short, 2>;
+    using int_tag = scalar_tag<int32_t, Int, 4>;
+    using long_tag = scalar_tag<int64_t, Long, 8>;
+    using float_tag = scalar_tag<float, Float, 4>;
+    using double_tag = scalar_tag<double, Double, 8>;
+
+    // byte_tag kept standalone for static_cast<int> in write()
+    struct byte_tag : public scalar_tag<int8_t, Byte, 1> {
+        using scalar_tag::scalar_tag;
+        void write(std::ostream &o, int indent) const override {
+            abstract_tag::write(o, indent);
+            o << static_cast<int>(this->value) << std::endl;
+        }
+        [[nodiscard]] abstract_tag *copy() const override {
+            auto *res = new byte_tag(this->key_);
+            res->value = this->value;
+            return res;
+        }
+    };
+
+    template <typename ElemType, tag_type TT>
+    struct array_tag : public abstract_tag {
+        explicit array_tag(const std::string &key) : abstract_tag(key) {}
+        array_tag(const std::string &key, std::vector<ElemType> v) : abstract_tag(key), value(std::move(v)) {}
+
+        [[nodiscard]] tag_type type() const override { return TT; }
+
+        void write(std::ostream &o, int indent) const override {
+            abstract_tag::write(o, indent);
+            o << "[ ..." << this->value.size() << " X " << sizeof(ElemType) << " bytes ... ]" << std::endl;
+        }
+        [[nodiscard]] std::string value_string() const override { return "[ ..." + std::to_string(this->value.size()) + "... ]"; }
+        [[nodiscard]] std::string restricted_value_string() const override { return bl::utils::numberVecToString(this->value); }
+
+        [[nodiscard]] abstract_tag *copy() const override {
+            auto *res = new array_tag(this->key_);
+            res->value = this->value;
+            return res;
+        }
+        ~array_tag() override = default;
+        std::vector<ElemType> value;
+
+       protected:
+        [[nodiscard]] std::string payload_to_raw() const override {
+            std::string raw(4 + this->value.size() * sizeof(ElemType), 0);
+            auto size = static_cast<int32_t>(this->value.size());
+            memcpy(raw.data(), &size, 4);
+            memcpy(raw.data() + 4, this->value.data(), this->value.size() * sizeof(ElemType));
+            return raw;
+        }
+    };
+
+    using byte_array_tag = array_tag<int8_t, ByteArray>;
+    using int_array_tag = array_tag<int32_t, IntArray>;
+    using long_array_tag = array_tag<int64_t, LongArray>;
 
     compound_tag *read_one_palette(const byte_t *data, int &read);
     compound_tag *read_one_palette(const byte_t *data, size_t data_len, int &read);
