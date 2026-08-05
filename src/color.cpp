@@ -54,6 +54,15 @@ namespace bl {
             return gray;
         }
 
+        bl::color read_rgb_color(const nlohmann::json& arr) {
+            bl::color c;
+            if (arr.size() < 3) return c;
+            c.r = static_cast<uint8_t>(arr[0].get<int>());
+            c.g = static_cast<uint8_t>(arr[1].get<int>());
+            c.b = static_cast<uint8_t>(arr[2].get<int>());
+            return c;
+        }
+
     }  // namespace
 
     void setUseColorDebugMode(bool enable) { debugColor = enable; }
@@ -106,45 +115,24 @@ namespace bl {
                 int id = value["id"].get<int>();
 
                 if (value.contains("rgb")) {
-                    auto rgb = value["rgb"];
-                    assert(rgb.size() == 3);
-                    color c;
-                    c.r = static_cast<uint8_t>(rgb[0].get<int>());
-                    c.g = static_cast<uint8_t>(rgb[1].get<int>());
-                    c.b = static_cast<uint8_t>(rgb[2].get<int>());
-                    biome_color_map[static_cast<biome>(id)] = c;
+                    biome_color_map[static_cast<biome>(id)] = read_rgb_color(value["rgb"]);
                 }
 
                 // water
                 if (value.contains("water")) {
-                    auto water = value["water"];
-                    assert(water.size() == 3);
-                    color c;
-                    c.r = static_cast<uint8_t>(water[0].get<int>());
-                    c.g = static_cast<uint8_t>(water[1].get<int>());
-                    c.b = static_cast<uint8_t>(water[2].get<int>());
+                    auto c = read_rgb_color(value["water"]);
                     biome_water_map[static_cast<biome>(id)] = c;
                     if (key == "default") default_water_color = c;
                 }
 
                 if (value.contains("grass")) {
-                    auto grass = value["grass"];
-                    assert(grass.size() == 3);
-                    color c;
-                    c.r = static_cast<uint8_t>(grass[0].get<int>());
-                    c.g = static_cast<uint8_t>(grass[1].get<int>());
-                    c.b = static_cast<uint8_t>(grass[2].get<int>());
+                    auto c = read_rgb_color(value["grass"]);
                     biome_grass_map[static_cast<biome>(id)] = c;
                     if (key == "default") default_grass_color = c;
                 }
 
                 if (value.contains("leaves")) {
-                    auto leaves = value["leaves"];
-                    assert(leaves.size() == 3);
-                    color c;
-                    c.r = static_cast<uint8_t>(leaves[0].get<int>());
-                    c.g = static_cast<uint8_t>(leaves[1].get<int>());
-                    c.b = static_cast<uint8_t>(leaves[2].get<int>());
+                    auto c = read_rgb_color(value["leaves"]);
                     biome_leave_map[static_cast<biome>(id)] = c;
                     if (key == "default") default_leave_color = c;
                 }

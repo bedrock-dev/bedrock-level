@@ -7,6 +7,7 @@
 #include <cstring>
 #include <random>
 
+#include "magic-enum/magic_enum.hpp"
 #include "utils.h"
 
 namespace bl {
@@ -120,72 +121,13 @@ namespace bl {
         return "VILLAGE_" + this->uuid + "_" + village_key_type_to_str(this->type);
     }
     std::string village_key::village_key_type_to_str(village_key::key_type t) {
-        switch (t) {
-            case INFO:
-                return "INFO";
-            case DWELLERS:
-                return "DWELLERS";
-            case PLAYERS:
-                return "PLAYERS";
-            case POI:
-                return "POI";
-            case Unknown:
-                return "UNKNOWN";
-        }
-        return "UNKNOWN";
+        auto name = magic_enum::enum_name(t);
+        return name.empty() ? "UNKNOWN" : std::string(name);
     }
 
     std::string chunk_key::chunk_key_to_str(bl::chunk_key::key_type key) {
-        switch (key) {
-            case Data3D:
-                return "Data3D";
-            case VersionNew:
-                return "VersionNew";
-            case Data2D:
-                return "Data2D";
-            case Data2DLegacy:
-                return "Data2DLegacy";
-            case SubChunkTerrain:
-                return "SubChunkTerrain";
-            case LegacyTerrain:
-                return "LegacyTerrain";
-            case BlockEntity:
-                return "BlockEntity";
-            case Entity:
-                return "Entity";
-            case PendingTicks:
-                return "PendingTicks";
-            case BlockExtraData:
-                return "BlockExtraData";
-            case BiomeState:
-                return "BiomeState";
-            case FinalizedState:
-                return "FinalizedState";
-            case BorderBlocks:
-                return "BorderBlocks";
-            case HardCodedSpawnAreas:
-                return "HardCodedSpawnAreas";
-            case Checksums:
-                return "Checksums";
-            case VersionOld:
-                return "VersionOld";
-            case Unknown:
-                return "Unknown";
-            case GenerationSeed:
-                return "GenerationSeed";
-            case BlendingBiomeHeight:
-                return "BlendingBiomeHeight";
-            case MetaDataHash:
-                return "MetaDataHash";
-            case BlendingData:
-                return "BlendingData";
-            case ActorDigestVersion:
-                return "ActorDigestVersion";
-            case RandomTicks:
-                return "RandomTicks";
-                break;
-        }
-        return "Unknown";
+        auto name = magic_enum::enum_name(key);
+        return name.empty() ? "Unknown" : std::string(name);
     }
 
     std::string chunk_pos::to_string() const {
