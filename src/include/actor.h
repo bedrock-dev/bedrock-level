@@ -18,6 +18,9 @@ namespace bl {
 
         bool load_from_nbt(bl::palette::compound_tag* nbt);
 
+        /// Take ownership of nbt (no deep copy); on failure the caller keeps ownership
+        bool load_from_nbt_owned(bl::palette::compound_tag* nbt);
+
         /// Offset the entity's Pos x/z by (dx, dz), modify nbt in place
         void offset_pos(float dx, float dz);
 

@@ -176,7 +176,23 @@ namespace bl {
     }
 
     std::vector<byte_t> raw_chunk::to_raw() {
+        // pre-compute exact size so the buffer is only reallocated once
+        size_t size = 4 /*magic*/ + 3 * 4 /*pos*/ + 4 /*data count*/;
+        for (auto &[kt, raw] : data_) {
+            size += 4 /*kt*/ + 4 /*len*/ + raw.size();
+        }
+        size += 4 /*sub count*/;
+        for (auto &[index, raw] : sub_chunk_data_) {
+            size += 1 /*index*/ + 4 /*len*/ + raw.size();
+        }
+        size += 4 + actor_digest_.size();  // len + digest
+        size += 4 /*entity count*/;
+        for (auto &[uid, raw] : entities_) {
+            size += 4 + uid.size() + 4 + raw.size();
+        }
+
         std::vector<byte_t> buf;
+        buf.reserve(size);
         // magic
         buf.insert(buf.end(), {'B', 'C', 'H', 'K'});
         // pos
@@ -391,10 +407,7 @@ namespace bl {
 
     // chunk
     bool chunk::valid_in_chunk_pos(int cx, int y, int cz, int dim) {
-        // if (cx < 0 || cx > 15 || cz < 0 || cz > 15 || dim < 0 || dim > 2) return false;
-        // static constexpr int min_h[]{-64, 0, 0};
-        // static constexpr int max_h[]{319, 127, 255};
-        // return y >= min_h[dim] && y <= max_h[dim];
+        // all positions are accepted: custom dimensions may use any dim id and y range
         return true;
     }
 
@@ -485,12 +498,13 @@ namespace bl {
             auto actors = palette::read_palette_to_end(raw.data(), raw.size());
             for (auto &a : actors) {
                 auto *ac = new actor;
-                if (ac->load_from_nbt(a)) {
+                // takes ownership of a on success, avoiding a deep copy per actor
+                if (ac->load_from_nbt_owned(a)) {
                     this->entities_.push_back(ac);
                 } else {
                     delete ac;
+                    delete a;
                 }
-                delete a;
             }
         }
         // new version actors from raw_chunk

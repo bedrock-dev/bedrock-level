@@ -5,10 +5,8 @@
 #include "data_3d.h"
 
 #include <cstdio>
-#include <memory>
 
 #include "bedrock_key.h"
-#include "chunk.h"
 #include "utils.h"
 
 namespace bl {
@@ -73,10 +71,10 @@ namespace bl {
             int read = 0;
             auto sub_chunk_biome = load_subchunk_biome(data + index, read, len);
             for (int y = 0; y < 16; y++) {
-                auto layer = std::vector<std::vector<bl::biome>>(16, std::vector<bl::biome>(16, bl::none));
+                std::array<biome, 256> layer{};
                 for (int x = 0; x < 16; x++) {
                     for (int z = 0; z < 16; z++) {
-                        layer[x][z] = sub_chunk_biome[x * 256 + z * 16 + y];
+                        layer[x * 16 + z] = sub_chunk_biome[x * 256 + z * 16 + y];
                     }
                 }
 
@@ -89,7 +87,7 @@ namespace bl {
 
     biome biome3d::get_biome(int cx, int y, int cz) {
         if (this->version_ == Old) {
-            return this->biomes_.empty() ? bl::biome::none : this->biomes_[0][cx][cz];
+            return this->biomes_.empty() ? bl::biome::none : this->biomes_[0][cx * 16 + cz];
         }
         auto [my, _] = pos_.get_y_range(this->version_);
         y -= my;
@@ -98,28 +96,41 @@ namespace bl {
         if (y >= static_cast<int>(this->biomes_.size()) || y < 0) {
             return biome::none;
         }
-        return this->biomes_[y][cx][cz];
+        return this->biomes_[y][cx * 16 + cz];
     }
 
     std::vector<std::vector<biome>> biome3d::get_biome_y(int y) {
+        std::vector<std::vector<biome>> layer(16, std::vector<biome>(16, bl::biome::none));
         if (this->version_ == Old) {
-            return this->biomes_.empty() ? std::vector<std::vector<bl::biome>>(16, std::vector<bl::biome>(16, bl::none)) : this->biomes_[0];
+            if (!this->biomes_.empty()) {
+                for (int x = 0; x < 16; x++) {
+                    for (int z = 0; z < 16; z++) {
+                        layer[x][z] = this->biomes_[0][x * 16 + z];
+                    }
+                }
+            }
+            return layer;
         }
         auto [my, _] = pos_.get_y_range(this->version_);
         y -= my;
-        if (y >= static_cast<int>(this->biomes_.size())) {
+        if (y < 0 || y >= static_cast<int>(this->biomes_.size())) {
             return {};
         }
-        return this->biomes_[y];
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
+                layer[x][z] = this->biomes_[y][x * 16 + z];
+            }
+        }
+        return layer;
     }
 
     biome biome3d::get_top_biome(int cx, int cz) {
         if (this->version_ == Old) return this->get_biome(cx, 0, cz);
         int y = (int)this->biomes_.size() - 1;
-        while (y >= 0 && this->biomes_[y][cx][cz] == none) {
+        while (y >= 0 && this->biomes_[y][cx * 16 + cz] == none) {
             y--;
         }
-        return y < 0 ? biome::none : this->biomes_[y][cx][cz];
+        return y < 0 ? biome::none : this->biomes_[y][cx * 16 + cz];
     }
     bool biome3d::load_from_d2d(const byte_t *data, size_t len) {
         if (len != 768) {  // height map: 512bytes biome: 256 bytes
@@ -127,10 +138,10 @@ namespace bl {
             return false;
         }
         memcpy(this->height_map_.data(), data, 512);
-        auto layer = std::vector<std::vector<biome>>(16, std::vector<biome>(16, bl::biome::none));
+        std::array<biome, 256> layer{};
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
-                layer[x][z] = static_cast<biome>(data[512 + x + 16 * z]);
+                layer[x * 16 + z] = static_cast<biome>(data[512 + x + 16 * z]);
             }
         }
         this->biomes_.push_back(layer);
@@ -139,9 +150,7 @@ namespace bl {
 
     void biome3d::set_all(biome b) {
         for (auto &layer : biomes_) {
-            for (auto &col : layer) {
-                std::fill(col.begin(), col.end(), b);
-            }
+            std::fill(layer.begin(), layer.end(), b);
         }
     }
 
@@ -152,7 +161,7 @@ namespace bl {
             if (!biomes_.empty()) {
                 for (int x = 0; x < 16; x++) {
                     for (int z = 0; z < 16; z++) {
-                        result[512 + x + 16 * z] = static_cast<char>(biomes_[0][x][z]);
+                        result[512 + x + 16 * z] = static_cast<char>(biomes_[0][x * 16 + z]);
                     }
                 }
             }
@@ -169,7 +178,7 @@ namespace bl {
         for (size_t sc = 0; sc < sub_chunk_count; sc++) {
             // header bits=0 → single palette (no index, no palette_len on disk)
             result.push_back('\0');
-            biome b = biomes_[sc * 16][0][0];
+            biome b = biomes_[sc * 16][0];
             int32_t id = static_cast<int32_t>(b);
             result.append(reinterpret_cast<const char *>(&id), 4);
         }

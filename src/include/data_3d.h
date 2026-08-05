@@ -151,7 +151,8 @@ namespace bl {
 
        private:
         std::array<int16_t, 256> height_map_;
-        std::vector<std::vector<std::vector<biome>>> biomes_;
+        // one 16x16 biome layer per y slice, indexed [layer][x*16+z]
+        std::vector<std::array<biome, 256>> biomes_;
         bl::chunk_pos pos_;
         ChunkVersion version_;
     };

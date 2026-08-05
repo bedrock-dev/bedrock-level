@@ -5,9 +5,9 @@
 #ifndef BEDROCK_LEVEL_PALETTE_H
 #define BEDROCK_LEVEL_PALETTE_H
 
+#include <algorithm>
 #include <cstdlib>
 #include <cstring>
-#include <map>
 #include <ostream>
 #include <sstream>
 #include <string>
@@ -54,17 +54,24 @@ namespace bl::palette {
         [[nodiscard]] virtual std::string value_string() const = 0;
         [[nodiscard]] virtual abstract_tag *copy() const = 0;
         [[nodiscard]] virtual std::string restricted_value_string() const { return this->value_string(); }
-        [[nodiscard]] virtual std::string to_raw() const {
-            std::string res;
-            res.reserve(3 + this->key_.size());
-            res += this->type_to_raw();
-            res += this->key_to_raw();
-            res += this->payload_to_raw();
-            return res;
+        [[nodiscard]] std::string to_raw() const {
+            std::string out;
+            out.reserve(3 + this->key_.size());
+            this->write_raw(out);
+            return out;
         }
         [[nodiscard]] const std::string &key() const { return this->key_; }
         void set_key(const std::string &key) { this->key_ = key; }
-        [[nodiscard]] virtual std::string payload_to_raw() const = 0;
+
+        // append type + key + payload into out, avoids intermediate strings
+        void write_raw(std::string &out) const {
+            out.push_back(static_cast<char>(this->type()));
+            this->write_key(out);
+            this->write_payload(out);
+        }
+
+        // append payload only (list elements carry no type/key)
+        virtual void write_payload(std::string &out) const = 0;
 
         template <typename T>
         T as() {
@@ -83,22 +90,77 @@ namespace bl::palette {
         virtual ~abstract_tag() = default;
 
        protected:
-        [[nodiscard]] std::string key_to_raw() const {
-            std::string res;
-            res.reserve(2 + this->key_.size());
+        void write_key(std::string &out) const {
             auto size = static_cast<uint16_t>(this->key_.size());
-            res.append(reinterpret_cast<const char *>(&size), 2);
-            res += this->key_;
-            return res;
-        }
-
-        [[nodiscard]] std::string type_to_raw() const {
-            std::string res;
-            res.push_back(static_cast<char>(type()));
-            return res;
+            out.append(reinterpret_cast<const char *>(&size), 2);
+            out += this->key_;
         }
 
         std::string key_;
+    };
+
+    // flat sorted map: faster and more compact than std::map for small child counts
+    class tag_map {
+       public:
+        using value_type = std::pair<std::string, abstract_tag *>;
+        using iterator = std::vector<value_type>::iterator;
+        using const_iterator = std::vector<value_type>::const_iterator;
+
+        [[nodiscard]] iterator begin() { return vec_.begin(); }
+        [[nodiscard]] iterator end() { return vec_.end(); }
+        [[nodiscard]] const_iterator begin() const { return vec_.begin(); }
+        [[nodiscard]] const_iterator end() const { return vec_.end(); }
+        [[nodiscard]] size_t size() const { return vec_.size(); }
+        [[nodiscard]] bool empty() const { return vec_.empty(); }
+
+        [[nodiscard]] iterator find(const std::string &key) {
+            auto it = lower_bound(key);
+            return (it != vec_.end() && it->first == key) ? it : vec_.end();
+        }
+
+        [[nodiscard]] const_iterator find(const std::string &key) const {
+            auto it = lower_bound(key);
+            return (it != vec_.end() && it->first == key) ? it : vec_.end();
+        }
+
+        [[nodiscard]] size_t count(const std::string &key) const { return find(key) == end() ? 0 : 1; }
+
+        abstract_tag *&operator[](const std::string &key) {
+            auto it = lower_bound(key);
+            if (it != vec_.end() && it->first == key) return it->second;
+            return vec_.emplace(it, key, nullptr)->second;
+        }
+
+        // replace-or-insert: deletes the previous child on duplicate key (single lookup)
+        void assign(abstract_tag *tag) {
+            auto it = lower_bound(tag->key());
+            if (it != vec_.end() && it->first == tag->key()) {
+                delete it->second;
+                it->second = tag;
+            } else {
+                vec_.emplace(it, tag->key(), tag);
+            }
+        }
+
+        size_t erase(const std::string &key) {
+            auto it = find(key);
+            if (it == vec_.end()) return 0;
+            vec_.erase(it);
+            return 1;
+        }
+
+        void clear() { vec_.clear(); }
+
+       private:
+        [[nodiscard]] iterator lower_bound(const std::string &key) {
+            return std::lower_bound(vec_.begin(), vec_.end(), key, [](const value_type &a, const std::string &k) { return a.first < k; });
+        }
+
+        [[nodiscard]] const_iterator lower_bound(const std::string &key) const {
+            return std::lower_bound(vec_.begin(), vec_.end(), key, [](const value_type &a, const std::string &k) { return a.first < k; });
+        }
+
+        std::vector<value_type> vec_;
     };
 
     struct compound_tag : public abstract_tag {
@@ -111,6 +173,9 @@ namespace bl::palette {
         }
 
         compound_tag &operator=(const compound_tag &tag) {
+            if (this == &tag) return *this;
+            for (auto &kv : this->value) delete kv.second;
+            this->value.clear();
             this->key_ = tag.key_;
             for (auto &kv : tag.value) {
                 this->value[kv.first] = kv.second->copy();
@@ -135,13 +200,7 @@ namespace bl::palette {
 
         [[nodiscard]] std::string value_string() const override { return "(...)"; };
 
-        void put(abstract_tag *tag) {
-            auto it = this->value.find(tag->key());
-            if (it != this->value.end()) {
-                delete it->second;
-            }
-            this->value[tag->key()] = tag;
-        }
+        void put(abstract_tag *tag) { this->value.assign(tag); }
 
         void remove(const std::string &key) {
             auto it = this->value.find(key);
@@ -175,18 +234,15 @@ namespace bl::palette {
             }
         }
 
-       protected:
-        [[nodiscard]] std::string payload_to_raw() const override {
-            std::string res;
+       public:
+        void write_payload(std::string &out) const override {
             for (auto &kv : this->value) {
-                res += kv.second->to_raw();
+                kv.second->write_raw(out);
             }
-            res += std::string(1, static_cast<char>(bl::palette::tag_type::End));
-            return res;
+            out.push_back(static_cast<char>(bl::palette::tag_type::End));
         }
 
-       public:
-        std::map<std::string, abstract_tag *> value;
+        tag_map value;
     };
 
     struct list_tag : public abstract_tag {
@@ -266,21 +322,19 @@ namespace bl::palette {
         ~list_tag() override;
         std::vector<abstract_tag *> value;
 
-       protected:
-        [[nodiscard]] std::string payload_to_raw() const override {
-            std::string res(5, 0);
+       public:
+        void write_payload(std::string &out) const override {
             auto child_type = End;
             if (!value.empty()) {
                 // assume on nullptr in list
                 child_type = value[0]->type();
             }
-            res[0] = static_cast<char>(child_type);
+            out.push_back(static_cast<char>(child_type));
             auto sz = static_cast<int32_t>(value.size());
-            memcpy(res.data() + 1, &sz, 4);
-            for (auto &child : value) {
-                res += child->payload_to_raw();
+            out.append(reinterpret_cast<const char *>(&sz), 4);
+            for (auto *child : value) {
+                child->write_payload(out);
             }
-            return res;
         }
     };
 
@@ -306,12 +360,11 @@ namespace bl::palette {
         ~string_tag() override = default;
         std::string value;
 
-       protected:
-        [[nodiscard]] std::string payload_to_raw() const override {
-            std::string res(2, '\0');
+       public:
+        void write_payload(std::string &out) const override {
             auto len = static_cast<uint16_t>(this->value.size());
-            memcpy(res.data(), &len, 2);
-            return res + this->value;
+            out.append(reinterpret_cast<const char *>(&len), 2);
+            out += this->value;
         }
     };
 
@@ -336,12 +389,8 @@ namespace bl::palette {
         ~scalar_tag() override = default;
         ValueType value{};
 
-       protected:
-        [[nodiscard]] std::string payload_to_raw() const override {
-            std::string res(ValueSize, '\0');
-            memcpy(res.data(), &this->value, ValueSize);
-            return res;
-        }
+       public:
+        void write_payload(std::string &out) const override { out.append(reinterpret_cast<const char *>(&this->value), ValueSize); }
     };
 
     using short_tag = scalar_tag<int16_t, Short, 2>;
@@ -386,13 +435,13 @@ namespace bl::palette {
         ~array_tag() override = default;
         std::vector<ElemType> value;
 
-       protected:
-        [[nodiscard]] std::string payload_to_raw() const override {
-            std::string raw(4 + this->value.size() * sizeof(ElemType), 0);
+       public:
+        void write_payload(std::string &out) const override {
             auto size = static_cast<int32_t>(this->value.size());
-            memcpy(raw.data(), &size, 4);
-            memcpy(raw.data() + 4, this->value.data(), this->value.size() * sizeof(ElemType));
-            return raw;
+            out.append(reinterpret_cast<const char *>(&size), 4);
+            if (!this->value.empty()) {
+                out.append(reinterpret_cast<const char *>(this->value.data()), this->value.size() * sizeof(ElemType));
+            }
         }
     };
 

@@ -24,8 +24,6 @@ add_library(bedrock-level
         src/data_3d.cpp
         src/chunk.cpp
         src/actor.cpp
-        src/player.cpp
-        src/scoreboard.cpp
         src/global.cpp
         src/color.cpp
         src/level_dat.cpp
@@ -59,6 +57,7 @@ endfunction(create_app)
 
 create_app(biome_png app/biome_png.cpp)
 create_app(missing_color_finder app/missing_color_finder.cpp)
+create_app(dump_chunks app/dump_chunks.cpp)
 
 #testing
 include(FetchContent)
@@ -78,21 +77,19 @@ function(create_test name files)
             ${files}
     )
     target_link_libraries(${name} PRIVATE GTest::gtest_main bedrock-level)
+    target_compile_definitions(${name} PRIVATE TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/data")
     #    add_test(NAME ${name} COMMAND ${name})
 endfunction(create_test)
 
 create_test(sub_chunk_test tests/sub_chunk_test.cpp)
 create_test(utils_test tests/utils_test.cpp)
-create_test(bit_tools_test tests/bit_tools_test.cpp)
 create_test(data3d_test tests/data3d_test.cpp)
 create_test(data_dump_level_test tests/data_dump_test.cpp)
 create_test(palette_test tests/palettes_test.cpp)
-create_test(actor_test tests/actor_test.cpp)
 create_test(key_test tests/key_test.cpp)
 create_test(bedrock_level_test tests/bedrock_level_test.cpp)
 create_test(chunk_test tests/chunk_test.cpp)
 create_test(stb_image_test tests/stb_image_test.cpp)
 create_test(color_test tests/color_test.cpp)
 create_test(level_dat_test tests/level_dat_test.cpp)
-#create_test(nbt_test tests/nbt_test.cpp)
 

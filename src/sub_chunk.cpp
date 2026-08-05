@@ -52,10 +52,18 @@ namespace bl {
             read = 0;
             for (auto i = 0u; i < number; i++) {
                 int r = 0;
-                auto *tag = bl::palette::read_one_palette(stream + read, r);
+                auto *tag = bl::palette::read_one_palette(stream + read, len - read, r);
                 if (tag) {
                     tag->remove("version");  // remove version tag(compatibility for color table)
                     layer->palettes.push_back(tag);
+                    // pre-resolve block name so per-block lookups become O(1) indexing
+                    std::string name{"minecraft:unknown"};
+                    if (auto *name_tag = tag->get("name"); name_tag) {
+                        if (auto *st = name_tag->as<bl::palette::string_tag *>(); st) {
+                            name = st->value;
+                        }
+                    }
+                    layer->names.push_back(std::move(name));
                 } else {
                     BL_ERROR("Can not read block palette");
                     return false;
@@ -138,17 +146,15 @@ namespace bl {
         auto idx = ry + rz * 16 + rx * 256;
         auto block = this->layers_[0]->blocks[idx];
 
-        if (block >= this->layers_[0]->palettes.size() || block < 0) {
+        auto &names = this->layers_[0]->names;
+        if (block < 0 || block >= names.size()) {
             BL_ERROR("Invalid block index with value %d", block);
             return {};
         }
-
         auto &b = this->layers_[0]->palettes[block];
 
-        std::string name, extra_tag;
-        if (auto *name_tag = b->get("name")->as<string_tag *>(); name_tag) {
-            name = name_tag->value;
-        }
+        std::string extra_tag;
+        std::string name = names[block];
 
         if (auto *stat_tag = b->get("states")->as<compound_tag *>(); stat_tag) {
             if (auto *color_tag = stat_tag->get("color")->as<string_tag *>(); color_tag) {
@@ -171,18 +177,13 @@ namespace bl {
         auto idx = ry + rz * 16 + rx * 256;
         auto block = this->layers_[0]->blocks[idx];
 
-        if (block >= this->layers_[0]->palettes.size() || block < 0) {
+        auto &names = this->layers_[0]->names;
+        if (block >= names.size() || block < 0) {
             BL_ERROR("Invalid block index with value %d", block);
             return {};
         }
 
-        auto &palette = this->layers_[0]->palettes[block];
-        auto id = palette->value.find("name");
-        if (id == palette->value.end()) {
-            return {};
-        }
-
-        return {dynamic_cast<bl::palette::string_tag *>(id->second)->value, bl::color{}};
+        return {names[block], bl::color{}};
     }
 
     palette::compound_tag *sub_chunk::get_block_raw(int rx, int ry, int rz) {

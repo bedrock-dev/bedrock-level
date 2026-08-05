@@ -5,10 +5,8 @@
 #ifndef BEDROCK_LEVEL_SUB_CHUNK_H
 #define BEDROCK_LEVEL_SUB_CHUNK_H
 
-#include <array>
 #include <cstdint>
 #include <cstdio>
-#include <memory>
 #include <vector>
 
 #include "color.h"
@@ -28,6 +26,8 @@ namespace bl {
             uint32_t palette_len{};
             std::vector<uint16_t> blocks{};
             std::vector<bl::palette::compound_tag *> palettes;
+            // pre-resolved block names, index-aligned with palettes; avoids a lookup per block
+            std::vector<std::string> names;
 
             ~layer();
         };

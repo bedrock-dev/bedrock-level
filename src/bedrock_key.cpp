@@ -118,6 +118,11 @@ namespace bl {
     }
     std::string village_key::to_raw() const {
         if (!this->valid()) return {};
+        // keep the dimension segment so parse(to_raw(k)) == k; 3-segment form is kept for dim 0
+        if (this->dim == 1 || this->dim == 2) {
+            return "VILLAGE_" + std::string(this->dim == 1 ? "Nether" : "TheEnd") + "_" + this->uuid + "_" +
+                   village_key_type_to_str(this->type);
+        }
         return "VILLAGE_" + this->uuid + "_" + village_key_type_to_str(this->type);
     }
     std::string village_key::village_key_type_to_str(village_key::key_type t) {
@@ -163,7 +168,8 @@ namespace bl {
                 return {0, 255};
             }
         }
-        return {0, -1};
+        // custom dimensions may have any height; fall back to the 1.18+ world range
+        return {-64, 319};
     }
     std::tuple<int8_t, int8_t> chunk_pos::get_subchunk_index_range(ChunkVersion v) const {
         return {-4, 19};

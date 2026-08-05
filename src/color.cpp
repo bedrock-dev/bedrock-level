@@ -4,12 +4,12 @@
 
 #include "color.h"
 
-#include <algorithm>
 #include <cstdint>
 #include <cstdio>
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -29,6 +29,32 @@ namespace bl {
         const std::vector<std::string> water_block_names{"water"};
         const std::vector<std::string> leaves_block_names{"leave"};
         const std::vector<std::string> grass_block_names{"grass"};
+
+        // which biome tint applies to a block name
+        enum class tint_kind : uint8_t { none, water, leaves, grass };
+
+        tint_kind classify_tint(std::string_view name) {
+            for (const auto& s : water_block_names) {
+                if (name.find(s) != std::string_view::npos) return tint_kind::water;
+            }
+            for (const auto& s : leaves_block_names) {
+                if (name.find(s) != std::string_view::npos) return tint_kind::leaves;
+            }
+            for (const auto& s : grass_block_names) {
+                if (name.find(s) != std::string_view::npos) return tint_kind::grass;
+            }
+            return tint_kind::none;
+        }
+
+        // block names repeat heavily in a world, so classify each unique name once
+        tint_kind get_tint_kind(const std::string& name) {
+            static std::unordered_map<std::string, tint_kind> cache;
+            auto it = cache.find(name);
+            if (it != cache.end()) return it->second;
+            auto kind = classify_tint(name);
+            cache.emplace(name, kind);
+            return kind;
+        }
 
         std::unordered_map<biome, bl::color> biome_water_map;
         std::unordered_map<biome, bl::color> biome_leave_map;
@@ -207,19 +233,16 @@ namespace bl {
     }
 
     bl::color blend_color_with_biome(const std::string& name, bl::color color, bl::biome b) {
-        if (std::any_of(water_block_names.begin(), water_block_names.end(),
-                        [&name](const auto& str) { return name.find(str) != std::string::npos; })) {
-            return blend_with_biome(biome_water_map, color, default_water_color, b);
+        switch (get_tint_kind(name)) {
+            case tint_kind::water:
+                return blend_with_biome(biome_water_map, color, default_water_color, b);
+            case tint_kind::leaves:
+                return blend_with_biome(biome_leave_map, color, default_leave_color, b);
+            case tint_kind::grass:
+                return blend_with_biome(biome_grass_map, color, default_grass_color, b);
+            default:
+                return color;
         }
-        if (std::any_of(leaves_block_names.begin(), leaves_block_names.end(),
-                        [&name](const auto& str) { return name.find(str) != std::string::npos; })) {
-            return blend_with_biome(biome_leave_map, color, default_leave_color, b);
-        }
-        if (std::any_of(grass_block_names.begin(), grass_block_names.end(),
-                        [&name](const auto& str) { return name.find(str) != std::string::npos; })) {
-            return blend_with_biome(biome_grass_map, color, default_grass_color, b);
-        }
-        return color;
     }
 
 }  // namespace bl

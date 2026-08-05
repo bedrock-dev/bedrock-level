@@ -106,7 +106,7 @@ namespace bl::palette {
             if (read == 0) break;
             total += read;
             if (child) {
-                tag->value[child->key()] = child;
+                tag->value.assign(child);
             } else {
                 break;
             }

@@ -45,3 +45,4 @@ data/dumps/*
 build
 worlds
 *.png
+tests/data

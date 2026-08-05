@@ -40,6 +40,13 @@ namespace bl {
         return true;
     }
 
+    bool actor::load_from_nbt_owned(bl::palette::compound_tag *nbt) {
+        if (!this->preload(nbt)) return false;
+        this->root_ = nbt;
+        this->loaded_ = true;
+        return true;
+    }
+
     bool actor::preload(bl::palette::compound_tag *root) {
         if (!root) return false;
         bool read_pos = false;
