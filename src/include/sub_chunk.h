@@ -36,6 +36,9 @@ namespace bl {
 
         block_info get_block_fast(int rx, int ry, int rz);
 
+        /// Block name without copying (lives as long as the sub_chunk); "minecraft:unknown" on miss
+        [[nodiscard]] const std::string &get_block_name(int rx, int ry, int rz);
+
         palette::compound_tag *get_block_raw(int rx, int ry, int rz);
 
         sub_chunk() = default;

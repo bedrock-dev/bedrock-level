@@ -439,6 +439,18 @@ namespace bl {
         return it->second->get_block_fast(cx, offset, cz);
     }
 
+    const std::string &chunk::get_block_name(int cx, int y, int cz) {
+        static const std::string unknown = "minecraft:unknown";
+        int index;
+        int offset;
+        map_y_to_subchunk(y, index, offset);
+        auto it = this->sub_chunks_.find(index);
+        if (it == this->sub_chunks_.end()) {
+            return unknown;
+        }
+        return it->second->get_block_name(cx, offset, cz);
+    }
+
     palette::compound_tag *chunk::get_block_raw(int cx, int y, int cz) {
         int index;
         int offset;
@@ -580,7 +592,6 @@ namespace bl {
         return this->loaded_;
     }
 
-    // 从0开始的数据
     int chunk::get_height(int cx, int cz) { return this->d3d_.height(cx, cz); }
 
     std::pair<int, int> chunk::get_top_y(int cx, int cz, int max_y) {
@@ -589,15 +600,15 @@ namespace bl {
         int solid_y = min_y - 1;
 
         for (int y = max_y; y >= min_y; y--) {
-            auto b = get_block_fast(cx, y, cz);
-            if (b.name == "minecraft:unknown") continue;
+            const auto &name = get_block_name(cx, y, cz);  // no per-block string copy
+            if (name == "minecraft:unknown") continue;
 
-            if (top_y < min_y && b.name != "minecraft:air") {
+            if (top_y < min_y && name != "minecraft:air") {
                 top_y = y;
             }
 
             // solid_y is the highest non-air, non-water block at or below top_y
-            if (b.name != "minecraft:air" && b.name != "minecraft:water" && solid_y < min_y) {
+            if (name != "minecraft:air" && name != "minecraft:water" && solid_y < min_y) {
                 solid_y = y;
             }
 

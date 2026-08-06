@@ -180,3 +180,24 @@ TEST_F(ChunkBenchmark, ScanBlocksFast) {
     EXPECT_GT(total, 0u);
     for (auto *c : loaded) delete c;
 }
+
+// get_block_name must match get_block_fast, and miss outside the world must return "minecraft:unknown"
+TEST_F(ChunkBenchmark, BlockNameConsistent) {
+    for (auto &rc : chunks_) {
+        auto *c = new bl::chunk(rc.pos());
+        if (!c->load_from_raw_chunk(rc)) {
+            delete c;
+            continue;
+        }
+        for (int cx = 0; cx < 16; cx++) {
+            for (int cz = 0; cz < 16; cz++) {
+                for (int y = -64; y < 320; y++) {
+                    EXPECT_EQ(c->get_block_name(cx, y, cz), c->get_block_fast(cx, y, cz).name);
+                }
+            }
+        }
+        // empty subchunk slot (e.g. y below world) -> unknown name, no crash
+        EXPECT_EQ(c->get_block_name(0, -500, 0), "minecraft:unknown");
+        delete c;
+    }
+}

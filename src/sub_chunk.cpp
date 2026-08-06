@@ -156,12 +156,32 @@ namespace bl {
         std::string extra_tag;
         std::string name = names[block];
 
-        if (auto *stat_tag = b->get("states")->as<compound_tag *>(); stat_tag) {
-            if (auto *color_tag = stat_tag->get("color")->as<string_tag *>(); color_tag) {
-                extra_tag = color_tag->value;
+        // states/color may be absent on simple blocks, guard each level
+        if (auto *stat_tag = b->get("states"); stat_tag) {
+            if (auto *st = stat_tag->as<compound_tag *>(); st) {
+                if (auto *color_tag = st->get("color"); color_tag) {
+                    if (auto *ct = color_tag->as<string_tag *>(); ct) {
+                        extra_tag = ct->value;
+                    }
+                }
             }
         }
         return {name, bl::get_block_by_name_tag(name, extra_tag)};
+    }
+
+    const std::string &sub_chunk::get_block_name(int rx, int ry, int rz) {
+        static const std::string unknown = "minecraft:unknown";
+        if (rx < 0 || rx > 15 || ry < 0 || ry > 15 || rz < 0 || rz > 15 || this->layers_.empty()) {
+            return unknown;
+        }
+
+        auto idx = ry + rz * 16 + rx * 256;
+        auto block = this->layers_[0]->blocks[idx];
+        auto &names = this->layers_[0]->names;
+        if (block < 0 || block >= static_cast<int>(names.size())) {
+            return unknown;
+        }
+        return names[block];
     }
 
     block_info sub_chunk::get_block_fast(int rx, int ry, int rz) {

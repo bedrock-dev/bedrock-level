@@ -93,6 +93,9 @@ namespace bl {
 
         block_info get_block_fast(int cx, int y, int cz);
 
+        /// Block name without copying (lives as long as the chunk); "minecraft:unknown" on miss
+        [[nodiscard]] const std::string &get_block_name(int cx, int y, int cz);
+
         palette::compound_tag *get_block_raw(int cx, int y, int cz);
 
         biome get_biome(int cx, int y, int cz);
