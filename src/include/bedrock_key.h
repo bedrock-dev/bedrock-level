@@ -5,9 +5,11 @@
 #ifndef BEDROCK_LEVEL_BEDROCK_KEY_H
 #define BEDROCK_LEVEL_BEDROCK_KEY_H
 
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <string>
+#include <vector>
 
 namespace bl {
 
@@ -155,6 +157,38 @@ namespace bl {
         HSAType type{Unknown};
         block_pos min_pos{0, 0, 0};
         block_pos max_pos{0, 0, 0};
+    };
+
+    // hardcoded spawn areas of a chunk, with (de)serialization for the HardCodedSpawnAreas key
+    class hardcoded_spawn_area_list {
+       public:
+        using iterator = std::vector<hardcoded_spawn_area>::iterator;
+        using const_iterator = std::vector<hardcoded_spawn_area>::const_iterator;
+
+        [[nodiscard]] bool empty() const { return areas_.empty(); }
+        [[nodiscard]] size_t size() const { return areas_.size(); }
+        [[nodiscard]] iterator begin() { return areas_.begin(); }
+        [[nodiscard]] iterator end() { return areas_.end(); }
+        [[nodiscard]] const_iterator begin() const { return areas_.begin(); }
+        [[nodiscard]] const_iterator end() const { return areas_.end(); }
+
+        std::vector<hardcoded_spawn_area> &areas() { return areas_; }
+        const std::vector<hardcoded_spawn_area> &areas() const { return areas_; }
+
+        void clear() { areas_.clear(); }
+        void add(const hardcoded_spawn_area &area) { areas_.push_back(area); }
+        bool remove(size_t idx) {
+            if (idx >= areas_.size()) return false;
+            areas_.erase(areas_.begin() + static_cast<std::ptrdiff_t>(idx));
+            return true;
+        }
+
+        // payload layout: int32 count, then count * (min x/y/z, max x/y/z int32s + 1 type byte)
+        bool from_raw(const std::string &raw);
+        [[nodiscard]] std::string to_raw() const;
+
+       private:
+        std::vector<hardcoded_spawn_area> areas_;
     };
 }  // namespace bl
 

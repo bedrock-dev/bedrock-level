@@ -238,4 +238,51 @@ namespace bl {
         if (oz < 0) oz += 16;
         return {ox, oz, -1};
     }
+
+    // 25 bytes per area: min(x,y,z) + max(x,y,z) as int32s + 1 type byte
+    static constexpr size_t HSA_AREA_SIZE = 24 + 1;
+
+    bool hardcoded_spawn_area_list::from_raw(const std::string &raw) {
+        this->areas_.clear();
+        if (raw.size() < 4) return false;
+        int32_t count = 0;
+        memcpy(&count, raw.data(), 4);
+        if (raw.size() != static_cast<size_t>(count) * HSA_AREA_SIZE + 4) return false;
+
+        const char *d = raw.data() + 4;
+        this->areas_.reserve(static_cast<size_t>(count));
+        for (int32_t i = 0; i < count; i++) {
+            hardcoded_spawn_area area;
+            const char *p = d + static_cast<size_t>(i) * HSA_AREA_SIZE;
+            memcpy(&area.min_pos.x, p, 4);
+            memcpy(&area.min_pos.y, p + 4, 4);
+            memcpy(&area.min_pos.z, p + 8, 4);
+            memcpy(&area.max_pos.x, p + 12, 4);
+            memcpy(&area.max_pos.y, p + 16, 4);
+            memcpy(&area.max_pos.z, p + 20, 4);
+            auto type = static_cast<int8_t>(p[24]);
+            if (type == SwampHut || type == OceanMonument || type == NetherFortress || type == PillagerOutpost) {
+                area.type = static_cast<HSAType>(type);
+            }
+            this->areas_.push_back(area);
+        }
+        return true;
+    }
+
+    std::string hardcoded_spawn_area_list::to_raw() const {
+        std::string raw;
+        raw.reserve(4 + this->areas_.size() * HSA_AREA_SIZE);
+        int32_t count = static_cast<int32_t>(this->areas_.size());
+        raw.append(reinterpret_cast<const char *>(&count), 4);
+        for (const auto &area : this->areas_) {
+            raw.append(reinterpret_cast<const char *>(&area.min_pos.x), 4);
+            raw.append(reinterpret_cast<const char *>(&area.min_pos.y), 4);
+            raw.append(reinterpret_cast<const char *>(&area.min_pos.z), 4);
+            raw.append(reinterpret_cast<const char *>(&area.max_pos.x), 4);
+            raw.append(reinterpret_cast<const char *>(&area.max_pos.y), 4);
+            raw.append(reinterpret_cast<const char *>(&area.max_pos.z), 4);
+            raw.push_back(static_cast<char>(area.type));
+        }
+        return raw;
+    }
 }  // namespace bl

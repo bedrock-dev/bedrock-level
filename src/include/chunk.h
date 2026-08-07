@@ -120,7 +120,7 @@ namespace bl {
 
         std::vector<bl::actor *> entities() & { return this->entities_; }
 
-        std::vector<hardcoded_spawn_area> HSAs() { return this->HSAs_; }
+        hardcoded_spawn_area_list &HSAs() { return this->HSAs_; }
 
         [[nodiscard]] ChunkVersion get_version() const { return this->version; }
 
@@ -158,7 +158,7 @@ namespace bl {
         std::vector<bl::palette::compound_tag *> block_entities_;
         std::vector<bl::palette::compound_tag *> pending_ticks_;
 
-        std::vector<bl::hardcoded_spawn_area> HSAs_;
+        bl::hardcoded_spawn_area_list HSAs_;
         ChunkVersion version{New};
         bool fast_load_mode_{false};
     };

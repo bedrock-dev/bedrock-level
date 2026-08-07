@@ -158,3 +158,57 @@ TEST(BlockPos, Conversions) {
     EXPECT_EQ(b2.to_chunk_pos(), (chunk_pos{-1, -2, -1}));
     EXPECT_EQ(b2.in_chunk_offset(), (chunk_pos{15, 15, -1}));
 }
+
+// hardcoded_spawn_area_list serialize -> parse must reproduce every field
+TEST(HardcodedSpawnAreaList, RoundTrip) {
+    using namespace bl;
+    hardcoded_spawn_area_list list;
+    list.add({HSAType::NetherFortress, block_pos{0, 4, 0}, block_pos{15, 127, 15}});
+    list.add({HSAType::OceanMonument, block_pos{-5, 40, -3}, block_pos{20, 80, 12}});
+    list.add({HSAType::SwampHut, block_pos{1, 63, 2}, block_pos{4, 66, 5}});
+    list.add({HSAType::PillagerOutpost, block_pos{-10, 70, -8}, block_pos{25, 90, 30}});
+
+    auto raw = list.to_raw();
+    EXPECT_EQ(raw.size(), 4 + 4u * 25u);
+
+    hardcoded_spawn_area_list parsed;
+    EXPECT_TRUE(parsed.from_raw(raw));
+    EXPECT_EQ(parsed.size(), 4u);
+    for (size_t i = 0; i < parsed.size(); i++) {
+        const auto &a = list.areas()[i];
+        const auto &b = parsed.areas()[i];
+        EXPECT_EQ(static_cast<int>(b.type), static_cast<int>(a.type));
+        EXPECT_EQ(b.min_pos.x, a.min_pos.x);
+        EXPECT_EQ(b.min_pos.y, a.min_pos.y);
+        EXPECT_EQ(b.min_pos.z, a.min_pos.z);
+        EXPECT_EQ(b.max_pos.x, a.max_pos.x);
+        EXPECT_EQ(b.max_pos.y, a.max_pos.y);
+        EXPECT_EQ(b.max_pos.z, a.max_pos.z);
+    }
+    EXPECT_EQ(parsed.to_raw(), raw);
+}
+
+TEST(HardcodedSpawnAreaList, ParseInvalid) {
+    using namespace bl;
+    hardcoded_spawn_area_list list;
+    EXPECT_FALSE(list.from_raw(""));                         // too short (no count field)
+    EXPECT_FALSE(list.from_raw(std::string(5, '\0')));       // count field present but payload truncated
+    EXPECT_FALSE(list.from_raw(std::string(4 + 24, '\0')));  // wrong area size for count=0
+    // count=0 is a valid empty list payload
+    EXPECT_TRUE(list.from_raw(std::string(4, '\0')));
+    EXPECT_TRUE(list.empty());
+}
+
+TEST(HardcodedSpawnAreaList, EditOps) {
+    using namespace bl;
+    hardcoded_spawn_area_list list;
+    list.add({HSAType::NetherFortress, block_pos{0, 0, 0}, block_pos{1, 1, 1}});
+    list.add({HSAType::SwampHut, block_pos{2, 2, 2}, block_pos{3, 3, 3}});
+    EXPECT_EQ(list.size(), 2u);
+    EXPECT_TRUE(list.remove(0));
+    EXPECT_EQ(list.size(), 1u);
+    EXPECT_EQ(list.areas()[0].type, HSAType::SwampHut);
+    EXPECT_FALSE(list.remove(5));  // out of range
+    list.clear();
+    EXPECT_TRUE(list.empty());
+}

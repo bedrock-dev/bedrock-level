@@ -544,26 +544,8 @@ namespace bl {
 
     void chunk::load_hsa(const bl::raw_chunk &rc) {
         auto raw = rc.get_normal_key(chunk_key::HardCodedSpawnAreas);
-        if (raw.empty() || raw.size() < 4) return;
-        int count = *reinterpret_cast<const int *>(raw.data());
-        if (raw.size() != count * 25ul + 4ul) return;
-
-        auto *d = raw.data();
-        for (int i = 0; i < count; i++) {
-            hardcoded_spawn_area area;
-            int offset = i * 25 + 4;
-            area.min_pos.x = *reinterpret_cast<const int *>(d + offset);
-            area.min_pos.y = *reinterpret_cast<const int *>(d + offset + 4);
-            area.min_pos.z = *reinterpret_cast<const int *>(d + offset + 8);
-            area.max_pos.x = *reinterpret_cast<const int *>(d + offset + 12);
-            area.max_pos.y = *reinterpret_cast<const int *>(d + offset + 16);
-            area.max_pos.z = *reinterpret_cast<const int *>(d + offset + 20);
-            auto type = d[offset + 24];
-            if (type == SwampHut || type == OceanMonument || type == NetherFortress || type == PillagerOutpost) {
-                area.type = static_cast<HSAType>(type);
-            }
-            this->HSAs_.push_back(area);
-        }
+        if (raw.empty()) return;
+        this->HSAs_.from_raw(raw);
     }
     bool chunk::load_block_entities(const bl::raw_chunk &rc) {
         auto raw = rc.get_normal_key(chunk_key::BlockEntity);
