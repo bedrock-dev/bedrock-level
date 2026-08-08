@@ -46,7 +46,7 @@ namespace {
 
     std::vector<std::string> list_chunk_files() {
         std::vector<std::string> files;
-        for (auto &entry : fs::directory_iterator(TEST_DATA_DIR)) {
+        for (auto &entry : fs::directory_iterator(TEST_DATA_DIR "/chunks")) {
             if (entry.path().extension() == ".chunk") {
                 files.push_back(entry.path().string());
             }
