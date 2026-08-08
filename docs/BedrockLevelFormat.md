@@ -190,7 +190,7 @@ Y 到子区块的映射函数 `map_y_to_subchunk`：
 2. 加载子区块（遍历所有 Y 索引，读取 `SubChunkTerrain` 键）
 3. 加载生物群系和高度图
 4. 加载实体
-5. 可选（fast_load=false）：加载方块实体、待处理刻
+5. 按策略位掩码加载（Terrain/PendingTick/Actor/BlockActor/Others，默认 All）
 6. 加载 HSA（硬编码生成区域）
 
 ## 3. 生物群系和高度图

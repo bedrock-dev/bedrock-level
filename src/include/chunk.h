@@ -25,6 +25,24 @@ namespace bl {
 
     class bedrock_level;
 
+    // bitmask of chunk data to read/parse; combine with | (default All)
+    enum chunk_load_policy : uint8_t {
+        Terrain = 1 << 0,      // subchunks + biome/height map
+        PendingTick = 1 << 1,  // pending ticks key
+        Actor = 1 << 2,        // entities (actors) + digest
+        BlockActor = 1 << 3,   // block entities key
+        Others = 1 << 4,       // version keys, HSA and remaining normal keys
+        All = Terrain | PendingTick | Actor | BlockActor | Others
+    };
+
+    constexpr chunk_load_policy operator|(chunk_load_policy a, chunk_load_policy b) {
+        return static_cast<chunk_load_policy>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
+    }
+
+    constexpr bool has_flag(chunk_load_policy value, chunk_load_policy flag) {
+        return (static_cast<uint8_t>(value) & static_cast<uint8_t>(flag)) != 0;
+    }
+
     // all keys-values from level, without parse
     class raw_chunk {
        public:
@@ -46,7 +64,7 @@ namespace bl {
         void clear_entities();
 
         // read raw chunk from leveldb
-        bool read(bedrock_level &level);
+        bool read(bedrock_level &level, chunk_load_policy policy = chunk_load_policy::All);
 
         // write raw chunk to leveldb
         bool write(leveldb::WriteBatch &batch, bool clear);
@@ -125,12 +143,12 @@ namespace bl {
         [[nodiscard]] ChunkVersion get_version() const { return this->version; }
 
        public:
-        bool load_from_raw_chunk(const bl::raw_chunk &rc);
+        bool load_from_raw_chunk(const bl::raw_chunk &rc, chunk_load_policy policy = chunk_load_policy::All);
 
         ~chunk();
 
        private:
-        bool load_data(bedrock_level &level, bool fast_load);
+        bool load_data(bedrock_level &level, chunk_load_policy policy);
 
        private:
         bool load_subchunks(const bl::raw_chunk &rc);

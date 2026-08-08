@@ -32,7 +32,6 @@ namespace bl {
         bool is_open() const { return this->is_open_; }
         leveldb::DB *&db() { return this->db_; }
         std::string root_path() const { return this->root_name_; }
-        size_t cached_chunk_size() const { return chunk_data_cache_.size(); };
 
         // getter (data)
         general_kv_nbts &player_data() { return this->player_data_; }
@@ -41,10 +40,7 @@ namespace bl {
         bl::general_kv_nbts &other_item_data() { return this->other_data_; }
         level_dat &dat() { return this->dat_; }
         const std::unordered_map<std::string, int> &custom_dimension_table() const { return custom_dimension_table_; }
-        chunk *get_chunk(const chunk_pos &cp, bool fast_load = false);
-
-        // setter
-        void set_cache(bool enable);
+        chunk *get_chunk(const chunk_pos &cp, chunk_load_policy policy = chunk_load_policy::All);
 
         // read(load)
         bool load_raw(const std::string &key, std::string &value);
@@ -65,17 +61,14 @@ namespace bl {
         static const std::string CUSTOM_DIM_TABLE_KEY;
 
        private:
-        // cache
-        void clear_cache();
         // read
-        chunk *load_chunk(const bl::chunk_pos &cp, bool fast_load);
+        chunk *load_chunk(const bl::chunk_pos &cp, chunk_load_policy policy);
         bool load_db();
         void load_dimension_name_id_table();
         // write
 
        private:
         // option
-        bool enable_cache_{false};
         leveldb::Options options_{};
         leveldb::ReadOptions read_option_{};
 
@@ -83,7 +76,6 @@ namespace bl {
         bool is_open_{false};
         leveldb::DB *db_{nullptr};
         std::string root_name_;
-        std::unordered_map<chunk_pos, chunk *> chunk_data_cache_;
         // data
         level_dat dat_;
         bl::village_data village_data_;

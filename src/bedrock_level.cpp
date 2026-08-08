@@ -62,10 +62,6 @@ namespace bl {
     }
 
     void bedrock_level::close() {
-        for (auto &kv : this->chunk_data_cache_) {
-            delete kv.second;
-        }
-        this->clear_cache();
         this->village_data_.clear_data();
         this->player_data_.clear_data();
         delete this->db_;
@@ -73,32 +69,11 @@ namespace bl {
         this->is_open_ = false;
     }
 
-    chunk *bedrock_level::get_chunk(const chunk_pos &cp, bool fast_load) {
+    chunk *bedrock_level::get_chunk(const chunk_pos &cp, chunk_load_policy policy) {
         if (!this->is_open()) {
             return nullptr;
         }
-
-        if (this->enable_cache_) {
-            auto it = this->chunk_data_cache_.find(cp);
-            if (it != this->chunk_data_cache_.end()) {
-                return it->second;
-            } else {
-                auto *ch = this->load_chunk(cp, fast_load);
-                if (ch) {
-                    this->chunk_data_cache_[cp] = ch;
-                }
-                return ch;
-            }
-        } else {
-            return this->load_chunk(cp, fast_load);
-        }
-    }
-
-    void bedrock_level::set_cache(bool enable) {
-        this->enable_cache_ = enable;
-        if (!this->enable_cache_) {
-            this->clear_cache();
-        }
+        return this->load_chunk(cp, policy);
     }
 
     bool bedrock_level::load_raw(const std::string &key, std::string &value) {
@@ -170,14 +145,9 @@ namespace bl {
     }
 
     // private
-    void bedrock_level::clear_cache() {
-        for (auto &kv : this->chunk_data_cache_) delete kv.second;
-        this->chunk_data_cache_.clear();
-    }
-
-    chunk *bedrock_level::load_chunk(const chunk_pos &cp, bool fast_load) {
+    chunk *bedrock_level::load_chunk(const chunk_pos &cp, chunk_load_policy policy) {
         auto *chunk = new bl::chunk(cp);
-        if (!chunk->load_data(*this, fast_load)) {
+        if (!chunk->load_data(*this, policy)) {
             delete chunk;
             return nullptr;
         } else {

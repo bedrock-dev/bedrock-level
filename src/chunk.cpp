@@ -72,7 +72,7 @@ namespace bl {
         this->entities_.clear();
     }
 
-    bool raw_chunk::read(bedrock_level &level) {
+    bool raw_chunk::read(bedrock_level &level, chunk_load_policy policy) {
         static const chunk_key::key_type keys[] = {chunk_key::Data3D,
                                                    chunk_key::VersionNew,
                                                    chunk_key::VersionOld,
@@ -97,7 +97,24 @@ namespace bl {
                                                    chunk_key::ActorDigestVersion,
                                                    chunk_key::VersionOld};
         size_t read = 0;
+        auto flagFor = [](chunk_key::key_type kt) -> chunk_load_policy {
+            switch (kt) {
+                case chunk_key::Data3D:
+                case chunk_key::Data2D:
+                case chunk_key::Data2DLegacy:
+                    return chunk_load_policy::Terrain;
+                case chunk_key::BlockEntity:
+                    return chunk_load_policy::BlockActor;
+                case chunk_key::Entity:
+                    return chunk_load_policy::Actor;
+                case chunk_key::PendingTicks:
+                    return chunk_load_policy::PendingTick;
+                default:
+                    return chunk_load_policy::Others;
+            }
+        };
         for (auto kt : keys) {
+            if (!has_flag(policy, flagFor(kt))) continue;
             bl::chunk_key key{kt, this->pos_};
             std::string raw;
             if (level.load_raw(key.to_raw(), raw) && !raw.empty()) {
@@ -108,16 +125,18 @@ namespace bl {
         if (read == 0) return false;
 
         // read sub chunks
-        auto [min_index, max_index] = this->pos_.get_subchunk_index_range(version());
-        std::string raw;
-        for (auto sub_index = min_index; sub_index <= max_index; sub_index++) {
-            bl::chunk_key key{chunk_key::SubChunkTerrain, this->pos_, sub_index};
-            level.load_raw(key.to_raw(), raw);
-            this->sub_chunk_data_[sub_index] = std::move(raw);
+        if (has_flag(policy, chunk_load_policy::Terrain)) {
+            auto [min_index, max_index] = this->pos_.get_subchunk_index_range(version());
+            std::string raw;
+            for (auto sub_index = min_index; sub_index <= max_index; sub_index++) {
+                bl::chunk_key key{chunk_key::SubChunkTerrain, this->pos_, sub_index};
+                level.load_raw(key.to_raw(), raw);
+                this->sub_chunk_data_[sub_index] = std::move(raw);
+            }
         }
 
         // read actor digest and entities
-        {
+        if (has_flag(policy, chunk_load_policy::Actor)) {
             bl::actor_digest_key digest_key{this->pos_};
             std::string raw;
             if (level.load_raw(digest_key.to_raw(), raw) && !raw.empty()) {
@@ -570,21 +589,32 @@ namespace bl {
         return true;
     }
 
-    bool chunk::load_data(bedrock_level &level, bool fast_load) {
+    bool chunk::load_data(bedrock_level &level, chunk_load_policy policy) {
         if (this->loaded()) return true;
         bl::raw_chunk rc(this->pos_);
-        if (!rc.read(level)) return false;
-        return this->load_from_raw_chunk(rc);
+        if (!rc.read(level, policy)) return false;
+        return this->load_from_raw_chunk(rc, policy);
     }
 
-    bool chunk::load_from_raw_chunk(const bl::raw_chunk &rc) {
-        this->load_subchunks(rc);
-        if (this->sub_chunks_.empty()) return false;
-        this->load_biomes(rc);
-        this->load_entities(rc);
-        this->load_block_entities(rc);
-        this->load_pending_ticks(rc);
-        this->load_hsa(rc);
+    bool chunk::load_from_raw_chunk(const bl::raw_chunk &rc, chunk_load_policy policy) {
+        if (has_flag(policy, chunk_load_policy::Terrain)) {
+            this->load_subchunks(rc);
+            if (this->sub_chunks_.empty()) return false;
+            this->load_biomes(rc);
+        }
+        if (has_flag(policy, chunk_load_policy::Actor)) {
+            this->load_entities(rc);
+        }
+        if (has_flag(policy, chunk_load_policy::BlockActor)) {
+            this->load_block_entities(rc);
+        }
+        if (has_flag(policy, chunk_load_policy::PendingTick)) {
+            this->load_pending_ticks(rc);
+        }
+        if (has_flag(policy, chunk_load_policy::Others)) {
+            this->load_hsa(rc);
+        }
+        this->fast_load_mode_ = (policy != chunk_load_policy::All);
         this->loaded_ = true;
         return this->loaded_;
     }
