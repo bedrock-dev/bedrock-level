@@ -6,6 +6,8 @@
 #include <gtest/gtest.h>
 
 #include "bedrock_key.h"
+#include "bedrock_level.h"
+#include "chunk.h"
 
 TEST(ChunkPos, ValidCheck) {
     using namespace bl;
@@ -211,4 +213,34 @@ TEST(HardcodedSpawnAreaList, EditOps) {
     EXPECT_FALSE(list.remove(5));  // out of range
     list.clear();
     EXPECT_TRUE(list.empty());
+}
+
+// raw_chunk::set_pos must offset HardCodedSpawnAreas coordinates with the chunk
+// displacement, like it does for block entities / pending ticks / entities.
+TEST(HardcodedSpawnAreaList, SetPosOffsets) {
+    using namespace bl;
+    bl::bedrock_level level;
+
+    bl::raw_chunk rc(chunk_pos{0, 0, 0});
+    hardcoded_spawn_area_list list;
+    list.add({HSAType::NetherFortress, block_pos{0, 4, 0}, block_pos{15, 127, 15}});
+    list.add({HSAType::OceanMonument, block_pos{-5, 40, -3}, block_pos{20, 80, 12}});
+    rc.set_normal(chunk_key::HardCodedSpawnAreas, list.to_raw());
+
+    // move chunk by (+2, +3) chunks -> +32/+48 blocks
+    rc.set_pos(chunk_pos{2, 3, 0}, &level);
+
+    hardcoded_spawn_area_list parsed;
+    ASSERT_TRUE(parsed.from_raw(rc.get_normal_key(chunk_key::HardCodedSpawnAreas)));
+    ASSERT_EQ(parsed.size(), 2u);
+    EXPECT_EQ(parsed.areas()[0].min_pos.x, 32);
+    EXPECT_EQ(parsed.areas()[0].min_pos.z, 48);
+    EXPECT_EQ(parsed.areas()[0].max_pos.x, 47);
+    EXPECT_EQ(parsed.areas()[0].max_pos.z, 63);
+    EXPECT_EQ(parsed.areas()[0].min_pos.y, 4);  // y is untouched
+    EXPECT_EQ(parsed.areas()[0].max_pos.y, 127);
+    EXPECT_EQ(parsed.areas()[1].min_pos.x, 27);
+    EXPECT_EQ(parsed.areas()[1].min_pos.z, 45);
+    EXPECT_EQ(parsed.areas()[1].max_pos.x, 52);
+    EXPECT_EQ(parsed.areas()[1].max_pos.z, 60);
 }

@@ -322,6 +322,21 @@ namespace bl {
             for (auto *p : palette) delete p;
         }
 
+        // hardcoded spawn areas
+        if (auto it = data_.find(chunk_key::HardCodedSpawnAreas); it != data_.end()) {
+            auto &data = it->second;
+            bl::hardcoded_spawn_area_list list;
+            if (list.from_raw(data)) {
+                for (auto &area : list.areas()) {
+                    area.min_pos.x += dx;
+                    area.min_pos.z += dz;
+                    area.max_pos.x += dx;
+                    area.max_pos.z += dz;
+                }
+                data = list.to_raw();
+            }
+        }
+
         // entities (old version: concatenated in Entity key)
         if (auto it = data_.find(chunk_key::Entity); it != data_.end()) {
             auto &data = it->second;
