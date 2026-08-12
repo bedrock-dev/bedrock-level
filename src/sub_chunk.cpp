@@ -15,7 +15,7 @@
 #include <sstream>
 
 #include "color.h"
-#include "palette.h"
+#include "nbt.h"
 
 namespace bl {
 
@@ -52,14 +52,14 @@ namespace bl {
             read = 0;
             for (auto i = 0u; i < number; i++) {
                 int r = 0;
-                auto *tag = bl::palette::read_one_palette(stream + read, len - read, r);
+                auto *tag = bl::nbt::read_one_palette(stream + read, len - read, r);
                 if (tag) {
                     tag->remove("version");  // remove version tag(compatibility for color table)
                     layer->palettes.push_back(tag);
                     // pre-resolve block name so per-block lookups become O(1) indexing
                     std::string name{"minecraft:unknown"};
                     if (auto *name_tag = tag->get("name"); name_tag) {
-                        if (auto *st = name_tag->as<bl::palette::string_tag *>(); st) {
+                        if (auto *st = name_tag->as<bl::nbt::string_tag *>(); st) {
                             name = st->value;
                         }
                     }
@@ -141,7 +141,7 @@ namespace bl {
             BL_ERROR("sub_chunk has no layers");
             return {};
         }
-        using bl::palette::string_tag, bl::palette::compound_tag;
+        using bl::nbt::string_tag, bl::nbt::compound_tag;
 
         auto idx = ry + rz * 16 + rx * 256;
         auto block = this->layers_[0]->blocks[idx];
@@ -206,7 +206,7 @@ namespace bl {
         return {names[block], bl::color{}};
     }
 
-    palette::compound_tag *sub_chunk::get_block_raw(int rx, int ry, int rz) {
+    nbt::compound_tag *sub_chunk::get_block_raw(int rx, int ry, int rz) {
         if (rx < 0 || rx > 15 || ry < 0 || ry > 15 || rz < 0 || rz > 15) {
             BL_ERROR("Invalid in chunk position %d %d %d", rx, ry, rz);
             return nullptr;

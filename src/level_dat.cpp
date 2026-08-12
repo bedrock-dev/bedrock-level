@@ -6,28 +6,28 @@
 
 #include <filesystem>
 
-#include "include/palette.h"
+#include "nbt.h"
 #include "utils.h"
 
 namespace bl {
 
-    void ClientVersion::read(palette::list_tag *tag) {
+    void ClientVersion::read(nbt::list_tag *tag) {
         if (!tag) return;
         const auto &value = tag->value;
         const size_t count = std::min(value.size(), this->version.size());
         for (size_t i = 0; i < count; i++) {
-            if (value[i] && value[i]->type() == palette::tag_type::Int) {
-                this->version[i] = dynamic_cast<palette::int_tag *>(value[i])->value;
+            if (value[i] && value[i]->type() == nbt::tag_type::Int) {
+                this->version[i] = dynamic_cast<nbt::int_tag *>(value[i])->value;
             }
         }
     }
 
-    void ClientVersion::write(palette::list_tag *tag) const {
+    void ClientVersion::write(nbt::list_tag *tag) const {
         if (!tag) return;
         for (auto *item : tag->value) delete item;
         tag->value.clear();
         for (int v : this->version) {
-            tag->value.push_back(new palette::int_tag("", v));
+            tag->value.push_back(new nbt::int_tag("", v));
         }
     }
 
@@ -37,7 +37,7 @@ namespace bl {
     }
 
     bool level_dat::load_from_file(const std::string &path) {
-        using namespace bl::palette;
+        using namespace bl::nbt;
         namespace fs = std::filesystem;
         if (!fs::exists(path)) {
             return false;
@@ -48,7 +48,7 @@ namespace bl {
     }
 
     bool level_dat::preload_data() {
-        using namespace bl::palette;
+        using namespace bl::nbt;
         auto name_tag = root_->get("LevelName");
         if (name_tag && name_tag->type() == tag_type::String) {
             this->level_name_ = dynamic_cast<string_tag *>(name_tag)->value;
@@ -81,7 +81,7 @@ namespace bl {
     }
 
     bool level_dat::load_from_raw_data(const std::vector<byte_t> &data) {
-        using namespace bl::palette;
+        using namespace bl::nbt;
         if (data.size() <= 8) return false;
         int read = 0;
         this->header_ = std::string(data.data(), 8);
@@ -92,7 +92,7 @@ namespace bl {
         }
         return this->preload_data();
     }
-    void level_dat::set_nbt(bl::palette::compound_tag *root) {
+    void level_dat::set_nbt(bl::nbt::compound_tag *root) {
         if (!root) return;
         delete this->root_;
         this->root_ = root;

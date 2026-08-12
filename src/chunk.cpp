@@ -16,7 +16,7 @@
 #include "color.h"
 #include "include/utils.h"
 #include "leveldb/write_batch.h"
-#include "palette.h"
+#include "nbt.h"
 #include "utils.h"
 
 namespace bl {
@@ -306,11 +306,11 @@ namespace bl {
         // block entities
         if (auto it = data_.find(chunk_key::BlockEntity); it != data_.end()) {
             auto &data = it->second;
-            auto palette = palette::read_palette_to_end(data.data(), data.size());
+            auto palette = nbt::read_palette_to_end(data.data(), data.size());
             for (auto *p : palette) {
                 if (!p) continue;
-                auto xtag = dynamic_cast<palette::int_tag *>(p->get("x"));
-                auto ztag = dynamic_cast<palette::int_tag *>(p->get("z"));
+                auto xtag = dynamic_cast<nbt::int_tag *>(p->get("x"));
+                auto ztag = dynamic_cast<nbt::int_tag *>(p->get("z"));
                 if (xtag) xtag->value += dx;
                 if (ztag) ztag->value += dz;
             }
@@ -322,16 +322,16 @@ namespace bl {
         // pending ticks
         if (auto it = data_.find(chunk_key::PendingTicks); it != data_.end()) {
             auto &data = it->second;
-            auto palette = palette::read_palette_to_end(data.data(), data.size());
+            auto palette = nbt::read_palette_to_end(data.data(), data.size());
             for (auto *p : palette) {
                 if (!p) continue;
-                auto *tickList = dynamic_cast<bl::palette::list_tag *>(p->get("tickList"));
+                auto *tickList = dynamic_cast<nbt::list_tag *>(p->get("tickList"));
                 if (!tickList) continue;
                 for (auto *item : tickList->value) {
-                    auto *pt = dynamic_cast<palette::compound_tag *>(item);
+                    auto *pt = dynamic_cast<nbt::compound_tag *>(item);
                     if (!pt) continue;
-                    auto *xtag = dynamic_cast<palette::int_tag *>(pt->get("x"));
-                    auto *ztag = dynamic_cast<palette::int_tag *>(pt->get("z"));
+                    auto *xtag = dynamic_cast<nbt::int_tag *>(pt->get("x"));
+                    auto *ztag = dynamic_cast<nbt::int_tag *>(pt->get("z"));
                     if (xtag) xtag->value += dx;
                     if (ztag) ztag->value += dz;
                 }
@@ -359,7 +359,7 @@ namespace bl {
         // entities (old version: concatenated in Entity key)
         if (auto it = data_.find(chunk_key::Entity); it != data_.end()) {
             auto &data = it->second;
-            auto palette = palette::read_palette_to_end(data.data(), data.size());
+            auto palette = nbt::read_palette_to_end(data.data(), data.size());
             data.clear();
             for (auto *p : palette) {
                 if (!p) continue;
@@ -485,7 +485,7 @@ namespace bl {
         return it->second->get_block_name(cx, offset, cz);
     }
 
-    palette::compound_tag *chunk::get_block_raw(int cx, int y, int cz) {
+    nbt::compound_tag *chunk::get_block_raw(int cx, int y, int cz) {
         int index;
         int offset;
         map_y_to_subchunk(y, index, offset);
@@ -533,7 +533,7 @@ namespace bl {
     bool chunk::load_pending_ticks(const bl::raw_chunk &rc) {
         auto raw = rc.get_normal_key(chunk_key::PendingTicks);
         if (!raw.empty()) {
-            this->pending_ticks_ = palette::read_palette_to_end(raw.data(), raw.size());
+            this->pending_ticks_ = nbt::read_palette_to_end(raw.data(), raw.size());
         }
         return true;
     }
@@ -541,7 +541,7 @@ namespace bl {
         // try read old version actors
         auto raw = rc.get_normal_key(chunk_key::Entity);
         if (!raw.empty()) {
-            auto actors = palette::read_palette_to_end(raw.data(), raw.size());
+            auto actors = nbt::read_palette_to_end(raw.data(), raw.size());
             for (auto &a : actors) {
                 auto *ac = new actor;
                 // takes ownership of a on success, avoiding a deep copy per actor
@@ -584,7 +584,7 @@ namespace bl {
     bool chunk::load_block_entities(const bl::raw_chunk &rc) {
         auto raw = rc.get_normal_key(chunk_key::BlockEntity);
         if (!raw.empty()) {
-            this->block_entities_ = palette::read_palette_to_end(raw.data(), raw.size());
+            this->block_entities_ = nbt::read_palette_to_end(raw.data(), raw.size());
         }
         return true;
     }

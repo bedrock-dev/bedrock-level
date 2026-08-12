@@ -16,7 +16,7 @@
 
 #include "utils.h"
 
-namespace bl::palette {
+namespace bl::nbt {
 
     enum tag_type : int8_t {
         End = 0,
@@ -239,7 +239,7 @@ namespace bl::palette {
             for (auto &kv : this->value) {
                 kv.second->write_raw(out);
             }
-            out.push_back(static_cast<char>(bl::palette::tag_type::End));
+            out.push_back(static_cast<char>(bl::nbt::tag_type::End));
         }
 
         tag_map value;
@@ -453,6 +453,6 @@ namespace bl::palette {
     compound_tag *read_one_palette(const byte_t *data, size_t data_len, int &read);
 
     std::vector<compound_tag *> read_palette_to_end(const byte_t *data, size_t len);
-}  // namespace bl::palette
+}  // namespace bl::nbt
 
 #endif  // BEDROCK_LEVEL_PALETTE_H

@@ -12,7 +12,7 @@ namespace bl {
     }
     void village_data::append_village(const village_key& key, const std::string& value) {
         int read = 0;
-        auto* nbt = bl::palette::read_one_palette(value.data(), read);
+        auto* nbt = bl::nbt::read_one_palette(value.data(), read);
         if (static_cast<size_t>(read) == value.size() && nbt && key.dim >= 0 && key.dim <= 2) {
             this->data_[key.dim][key.uuid][static_cast<size_t>(key.type)] = nbt;
         }
@@ -29,14 +29,13 @@ namespace bl {
         }
     }
 
-    void general_kv_nbts::reset(
-        const std::unordered_map<std::string, bl::palette::compound_tag*>& data) {
+    void general_kv_nbts::reset(const std::unordered_map<std::string, bl::nbt::compound_tag*>& data) {
         this->clear_data();
         this->data_ = data;
     }
     void general_kv_nbts::append_nbt(const std::string& key, const std::string& value) {
         int read = 0;
-        auto* nbt = bl::palette::read_one_palette(value.data(), read);
+        auto* nbt = bl::nbt::read_one_palette(value.data(), read);
         if (static_cast<size_t>(read) == value.size() && nbt) {
             this->data_[key] = nbt;
         }

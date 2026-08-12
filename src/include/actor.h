@@ -7,7 +7,7 @@
 #include <cstdint>
 
 #include "bedrock_key.h"
-#include "palette.h"
+#include "nbt.h"
 #include "utils.h"
 
 namespace bl {
@@ -16,10 +16,10 @@ namespace bl {
        public:
         bool load(const byte_t* data, size_t len);
 
-        bool load_from_nbt(bl::palette::compound_tag* nbt);
+        bool load_from_nbt(bl::nbt::compound_tag* nbt);
 
         /// Take ownership of nbt (no deep copy); on failure the caller keeps ownership
-        bool load_from_nbt_owned(bl::palette::compound_tag* nbt);
+        bool load_from_nbt_owned(bl::nbt::compound_tag* nbt);
 
         /// Offset the entity's Pos x/z by (dx, dz), modify nbt in place
         void offset_pos(float dx, float dz);
@@ -48,15 +48,15 @@ namespace bl {
         void dump();
         [[nodiscard]] vec3 pos() const { return this->pos_; };
         [[nodiscard]] std::string identifier() const { return this->identifier_; };
-        [[nodiscard]] bl::palette::compound_tag* root() const { return this->root_; }
+        [[nodiscard]] bl::nbt::compound_tag* root() const { return this->root_; }
         actor() = default;
 
        private:
-        bool preload(bl::palette::compound_tag* root);
+        bool preload(bl::nbt::compound_tag* root);
 
         bool loaded_ = false;
         int64_t uid_{-1};
-        bl::palette::compound_tag* root_{nullptr};
+        bl::nbt::compound_tag* root_{nullptr};
         std::string identifier_{"minecraft:unknown"};
         vec3 pos_{0, 0, 0};
 

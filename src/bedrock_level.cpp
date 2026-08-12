@@ -22,7 +22,7 @@
 #include "leveldb/options.h"
 #include "leveldb/write_batch.h"
 #include "leveldb/zlib_compressor.h"
-#include "palette.h"
+#include "nbt.h"
 
 class SlowEnv : public leveldb::Env {};
 
@@ -174,16 +174,16 @@ namespace bl {
         auto r = this->db_->Get(read_option_, CUSTOM_DIM_TABLE_KEY, &value);
         if (!r.ok()) return;
         int read;
-        auto *nbt = bl::palette::read_one_palette(value.c_str(), read);
+        auto *nbt = bl::nbt::read_one_palette(value.c_str(), read);
         if (!nbt) return;
 
         auto *entries = nbt->get("entries");
         if (entries) {
-            auto *entries_compound = dynamic_cast<bl::palette::compound_tag *>(entries);
+            auto *entries_compound = dynamic_cast<bl::nbt::compound_tag *>(entries);
             if (entries_compound) {
                 custom_dimension_table_.clear();
                 for (auto &[dim_name, tag] : entries_compound->value) {
-                    auto *int_tag = dynamic_cast<bl::palette::int_tag *>(tag);
+                    auto *int_tag = dynamic_cast<bl::nbt::int_tag *>(tag);
                     if (int_tag) {
                         custom_dimension_table_[dim_name] = int_tag->value;
                     }

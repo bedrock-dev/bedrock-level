@@ -11,7 +11,7 @@
 #include <string>
 #include <vector>
 
-#include "palette.h"
+#include "nbt.h"
 #include "utils.h"
 
 namespace fs = std::filesystem;
@@ -33,42 +33,42 @@ namespace {
         size_t est_bytes = 0;      // estimated object bytes
     };
 
-    void accumulateTree(const bl::palette::abstract_tag *t, TreeStats &s) {
+    void accumulateTree(const bl::nbt::abstract_tag *t, TreeStats &s) {
         s.tags++;
         switch (t->type()) {
-            case bl::palette::String: {
-                const auto *st = static_cast<const bl::palette::string_tag *>(t);
+            case bl::nbt::String: {
+                const auto *st = static_cast<const bl::nbt::string_tag *>(t);
                 s.payload_bytes += st->value.size();
                 s.est_bytes += 72 + (st->value.size() > 15 ? st->value.size() : 0);
                 break;
             }
-            case bl::palette::ByteArray: {
-                const auto *a = static_cast<const bl::palette::byte_array_tag *>(t);
+            case bl::nbt::ByteArray: {
+                const auto *a = static_cast<const bl::nbt::byte_array_tag *>(t);
                 s.payload_bytes += a->value.size();
                 s.est_bytes += 64 + a->value.size();
                 break;
             }
-            case bl::palette::IntArray: {
-                const auto *a = static_cast<const bl::palette::int_array_tag *>(t);
+            case bl::nbt::IntArray: {
+                const auto *a = static_cast<const bl::nbt::int_array_tag *>(t);
                 s.payload_bytes += a->value.size() * 4;
                 s.est_bytes += 64 + a->value.size() * 4;
                 break;
             }
-            case bl::palette::LongArray: {
-                const auto *a = static_cast<const bl::palette::long_array_tag *>(t);
+            case bl::nbt::LongArray: {
+                const auto *a = static_cast<const bl::nbt::long_array_tag *>(t);
                 s.payload_bytes += a->value.size() * 8;
                 s.est_bytes += 64 + a->value.size() * 8;
                 break;
             }
-            case bl::palette::List: {
-                const auto *l = static_cast<const bl::palette::list_tag *>(t);
+            case bl::nbt::List: {
+                const auto *l = static_cast<const bl::nbt::list_tag *>(t);
                 s.payload_bytes += l->value.size() * 8;
                 s.est_bytes += 64 + l->value.size() * 8;
                 for (const auto *c : l->value) accumulateTree(c, s);
                 break;
             }
-            case bl::palette::Compound: {
-                const auto *c = static_cast<const bl::palette::compound_tag *>(t);
+            case bl::nbt::Compound: {
+                const auto *c = static_cast<const bl::nbt::compound_tag *>(t);
                 s.payload_bytes += c->value.size() * 40;
                 s.est_bytes += 64 + c->value.size() * 40;
                 for (const auto &kv : c->value) {
@@ -93,7 +93,7 @@ TEST(LargeNbt, DeserializeTime) {
     size_t tags = 0;
     auto start = steady_clock_t::now();
     for (int r = 0; r < kRounds; r++) {
-        auto palettes = bl::palette::read_palette_to_end(data.data(), data.size());
+        auto palettes = bl::nbt::read_palette_to_end(data.data(), data.size());
         tags = palettes.size();
         for (auto *p : palettes) delete p;
     }
@@ -103,7 +103,7 @@ TEST(LargeNbt, DeserializeTime) {
     EXPECT_GT(tags, 0u);
 
     // one extra parse to estimate the in-memory footprint of the tag tree
-    auto palettes = bl::palette::read_palette_to_end(data.data(), data.size());
+    auto palettes = bl::nbt::read_palette_to_end(data.data(), data.size());
     TreeStats st;
     for (auto *p : palettes) accumulateTree(p, st);
     for (auto *p : palettes) delete p;
@@ -118,7 +118,7 @@ TEST(LargeNbt, SerializeTime) {
     auto data = bl::utils::read_file(kLargeNbt.string());
     ASSERT_FALSE(data.empty());
 
-    auto palettes = bl::palette::read_palette_to_end(data.data(), data.size());
+    auto palettes = bl::nbt::read_palette_to_end(data.data(), data.size());
     ASSERT_FALSE(palettes.empty());
 
     size_t total_bytes = 0;

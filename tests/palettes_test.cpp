@@ -14,7 +14,7 @@
 
 #include "bedrock_key.h"
 #include "chunk.h"
-#include "palette.h"
+#include "nbt.h"
 #include "utils.h"
 
 namespace fs = std::filesystem;
@@ -103,7 +103,7 @@ TEST_F(PaletteBenchmark, ParseAllPalettes) {
     for (int round = 0; round < kRounds; round++) {
         tags = 0;
         for (auto &raw : raw_palettes_) {
-            auto palettes = bl::palette::read_palette_to_end(reinterpret_cast<const byte_t *>(raw.data()), raw.size());
+            auto palettes = bl::nbt::read_palette_to_end(reinterpret_cast<const byte_t *>(raw.data()), raw.size());
             tags += palettes.size();
             for (auto *p : palettes) delete p;
         }
@@ -123,7 +123,7 @@ TEST_F(PaletteBenchmark, SerializeAllPalettes) {
     for (int round = 0; round < kRounds; round++) {
         total_bytes = 0;
         for (auto &raw : raw_palettes_) {
-            auto palettes = bl::palette::read_palette_to_end(reinterpret_cast<const byte_t *>(raw.data()), raw.size());
+            auto palettes = bl::nbt::read_palette_to_end(reinterpret_cast<const byte_t *>(raw.data()), raw.size());
             for (auto *p : palettes) {
                 total_bytes += p->to_raw().size();
             }
@@ -140,7 +140,7 @@ TEST_F(PaletteBenchmark, SerializeAllPalettes) {
 TEST_F(PaletteBenchmark, RoundTrip) {
     size_t ok = 0;
     for (auto &raw : raw_palettes_) {
-        auto palettes = bl::palette::read_palette_to_end(reinterpret_cast<const byte_t *>(raw.data()), raw.size());
+        auto palettes = bl::nbt::read_palette_to_end(reinterpret_cast<const byte_t *>(raw.data()), raw.size());
         std::string reencoded;
         for (auto *p : palettes) reencoded += p->to_raw();
         if (reencoded == raw) ok++;
@@ -153,12 +153,12 @@ TEST_F(PaletteBenchmark, RoundTrip) {
 // serialize -> parse -> serialize must be stable (idempotent, byte-identical on 2nd round)
 TEST_F(PaletteBenchmark, ReSerializeStable) {
     for (auto &raw : raw_palettes_) {
-        auto first = bl::palette::read_palette_to_end(reinterpret_cast<const byte_t *>(raw.data()), raw.size());
+        auto first = bl::nbt::read_palette_to_end(reinterpret_cast<const byte_t *>(raw.data()), raw.size());
         std::string first_raw;
         for (auto *p : first) first_raw += p->to_raw();
         for (auto *p : first) delete p;
 
-        auto second = bl::palette::read_palette_to_end(reinterpret_cast<const byte_t *>(first_raw.data()), first_raw.size());
+        auto second = bl::nbt::read_palette_to_end(reinterpret_cast<const byte_t *>(first_raw.data()), first_raw.size());
         std::string second_raw;
         for (auto *p : second) second_raw += p->to_raw();
         for (auto *p : second) delete p;
@@ -171,12 +171,12 @@ TEST_F(PaletteBenchmark, ReSerializeStable) {
 TEST(PaletteLeak, AssignmentReleasesOld) {
     auto base = g_alloc_net.load(std::memory_order_relaxed);
     {
-        bl::palette::compound_tag c1("a");
-        c1.put(new bl::palette::int_tag("x", 1));
-        c1.put(new bl::palette::string_tag("y", "hello"));
-        bl::palette::compound_tag c2("b");
-        c2.put(new bl::palette::int_tag("x", 2));
-        c2.put(new bl::palette::float_tag("z", 1.5f));
+        bl::nbt::compound_tag c1("a");
+        c1.put(new bl::nbt::int_tag("x", 1));
+        c1.put(new bl::nbt::string_tag("y", "hello"));
+        bl::nbt::compound_tag c2("b");
+        c2.put(new bl::nbt::int_tag("x", 2));
+        c2.put(new bl::nbt::float_tag("z", 1.5f));
         c2 = c1;  // must free c2's old children
         EXPECT_EQ(c2.value.size(), 2u);
     }
@@ -209,7 +209,7 @@ TEST(PaletteLeak, DuplicateKeyParse) {
         raw.push_back(0);  // End
 
         int read = 0;
-        auto *nbt = bl::palette::read_one_palette(raw.data(), raw.size(), read);
+        auto *nbt = bl::nbt::read_one_palette(raw.data(), raw.size(), read);
         ASSERT_NE(nbt, nullptr);
         EXPECT_EQ(nbt->value.size(), 1u);  // older Int "k" dropped
         EXPECT_NE(nbt->get("k"), nullptr);

@@ -8,15 +8,14 @@
 
 #include "bedrock_key.h"
 #include "memory"
-#include "palette.h"
+#include "nbt.h"
 
 namespace bl {
 
     class village_data {
        public:
-        using village_data_type = std::array<bl::palette::compound_tag*, 4>;
-        using village_table_type =
-            std::array<std::unordered_map<std::string, village_data_type>, 4>;
+        using village_data_type = std::array<bl::nbt::compound_tag*, 4>;
+        using village_table_type = std::array<std::unordered_map<std::string, village_data_type>, 4>;
 
         void reset(const village_table_type& data);
         void append_village(const bl::village_key& key, const std::string& value);
@@ -31,21 +30,17 @@ namespace bl {
 
     class general_kv_nbts {
        public:
-        void reset(const std::unordered_map<std::string, bl::palette::compound_tag*>& data);
+        void reset(const std::unordered_map<std::string, bl::nbt::compound_tag*>& data);
 
         void append_nbt(const std::string& key, const std::string& value);
-        inline std::unordered_map<std::string, bl::palette::compound_tag*>& data() {
-            return this->data_;
-        };
-        inline const std::unordered_map<std::string, bl::palette::compound_tag*>& data() const {
-            return this->data_;
-        };
+        inline std::unordered_map<std::string, bl::nbt::compound_tag*>& data() { return this->data_; };
+        inline const std::unordered_map<std::string, bl::nbt::compound_tag*>& data() const { return this->data_; };
         ~general_kv_nbts();
 
         void clear_data();
 
        private:
-        std::unordered_map<std::string, bl::palette::compound_tag*> data_;
+        std::unordered_map<std::string, bl::nbt::compound_tag*> data_;
     };
 
 }  // namespace bl

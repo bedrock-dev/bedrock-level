@@ -2,7 +2,7 @@
 // Created by xhy on 2023/3/29.
 //
 
-#include "palette.h"
+#include "nbt.h"
 
 #include <cstdlib>
 #include <cstring>
@@ -10,7 +10,7 @@
 #include "magic-enum/magic_enum.hpp"
 #include "utils.h"
 
-namespace bl::palette {
+namespace bl::nbt {
 
     std::tuple<abstract_tag *, size_t> read_nbt(const byte_t *data, size_t data_len);
     std::tuple<compound_tag *, size_t> read_compound_value(const byte_t *data, size_t data_len, const std::string &key);
@@ -206,4 +206,4 @@ namespace bl::palette {
             delete tag;
         }
     }
-}  // namespace bl::palette
+}  // namespace bl::nbt

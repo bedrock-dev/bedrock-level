@@ -16,7 +16,7 @@
 #include <vector>
 
 #include "json/json.hpp"
-#include "palette.h"
+#include "nbt.h"
 #include "stb/stb_image_write.h"
 #include "utils.h"
 

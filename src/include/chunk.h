@@ -114,7 +114,7 @@ namespace bl {
         /// Block name without copying (lives as long as the chunk); "minecraft:unknown" on miss
         [[nodiscard]] const std::string &get_block_name(int cx, int y, int cz);
 
-        palette::compound_tag *get_block_raw(int cx, int y, int cz);
+        nbt::compound_tag *get_block_raw(int cx, int y, int cz);
 
         biome get_biome(int cx, int y, int cz);
 
@@ -133,8 +133,8 @@ namespace bl {
         chunk() = delete;
 
         [[nodiscard]] inline bool loaded() const { return this->loaded_; }
-        std::vector<bl::palette::compound_tag *> &block_entities() { return this->block_entities_; }
-        std::vector<bl::palette::compound_tag *> &pending_ticks() { return this->pending_ticks_; }
+        std::vector<bl::nbt::compound_tag *> &block_entities() { return this->block_entities_; }
+        std::vector<bl::nbt::compound_tag *> &pending_ticks() { return this->pending_ticks_; }
 
         std::vector<bl::actor *> entities() & { return this->entities_; }
 
@@ -173,8 +173,8 @@ namespace bl {
         //        bl::actor_digest_list actor_digest_list_;
         // block entities
         std::vector<bl::actor *> entities_;
-        std::vector<bl::palette::compound_tag *> block_entities_;
-        std::vector<bl::palette::compound_tag *> pending_ticks_;
+        std::vector<bl::nbt::compound_tag *> block_entities_;
+        std::vector<bl::nbt::compound_tag *> pending_ticks_;
 
         bl::hardcoded_spawn_area_list HSAs_;
         ChunkVersion version{New};

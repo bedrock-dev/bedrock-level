@@ -10,7 +10,7 @@
 #include <vector>
 
 #include "color.h"
-#include "palette.h"
+#include "nbt.h"
 namespace bl {
     struct block_info {
         std::string name{"minecraft:unknown"};
@@ -25,7 +25,7 @@ namespace bl {
             uint8_t type{};
             uint32_t palette_len{};
             std::vector<uint16_t> blocks{};
-            std::vector<bl::palette::compound_tag *> palettes;
+            std::vector<bl::nbt::compound_tag *> palettes;
             // pre-resolved block names, index-aligned with palettes; avoids a lookup per block
             std::vector<std::string> names;
 
@@ -39,7 +39,7 @@ namespace bl {
         /// Block name without copying (lives as long as the sub_chunk); "minecraft:unknown" on miss
         [[nodiscard]] const std::string &get_block_name(int rx, int ry, int rz);
 
-        palette::compound_tag *get_block_raw(int rx, int ry, int rz);
+        nbt::compound_tag *get_block_raw(int rx, int ry, int rz);
 
         sub_chunk() = default;
 

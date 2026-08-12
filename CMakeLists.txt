@@ -18,7 +18,7 @@ add_library(bedrock-level
         STATIC
         src/sub_chunk.cpp
         src/utils.cpp
-        src/palette.cpp
+        src/nbt.cpp
         src/bedrock_level.cpp
         src/bedrock_key.cpp
         src/data_3d.cpp

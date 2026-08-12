@@ -264,7 +264,7 @@ class actor {
     int64_t uid_;                    // 唯一标识符 (UniqueID)
     std::string identifier_;         // 类型标识 (如 "minecraft:creeper")
     vec3 pos_;                       // 位置 (浮点数坐标)
-    bl::palette::compound_tag* root_; // 完整 NBT 根标签
+    bl::nbt::compound_tag* root_; // 完整 NBT 根标签
 };
 ```
 
