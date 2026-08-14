@@ -17,6 +17,7 @@ enable_testing()
 add_library(bedrock-level
         STATIC
         src/sub_chunk.cpp
+        src/palette.cpp
         src/utils.cpp
         src/nbt.cpp
         src/bedrock_level.cpp
@@ -85,6 +86,8 @@ endfunction(create_test)
 create_test(utils_test tests/utils_test.cpp)
 create_test(data3d_test tests/data3d_test.cpp)
 create_test(palette_test tests/palettes_test.cpp)
+create_test(nbt_test tests/nbt_test.cpp)
+create_test(mcstructure_test tests/mcstructure_test.cpp)
 create_test(key_test tests/key_test.cpp)
 create_test(chunk_test tests/chunk_test.cpp)
 create_test(stb_image_test tests/stb_image_test.cpp)

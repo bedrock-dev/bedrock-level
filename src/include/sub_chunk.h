@@ -11,6 +11,7 @@
 
 #include "color.h"
 #include "nbt.h"
+#include "palette.h"
 namespace bl {
     struct block_info {
         std::string name{"minecraft:unknown"};
@@ -25,9 +26,7 @@ namespace bl {
             uint8_t type{};
             uint32_t palette_len{};
             std::vector<uint16_t> blocks{};
-            std::vector<bl::nbt::compound_tag *> palettes;
-            // pre-resolved block names, index-aligned with palettes; avoids a lookup per block
-            std::vector<std::string> names;
+            std::vector<palette_entry> palette;
 
             ~layer();
         };

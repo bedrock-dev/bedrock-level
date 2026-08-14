@@ -2,8 +2,8 @@
 // Created by xhy on 2023/3/29.
 //
 
-#ifndef BEDROCK_LEVEL_PALETTE_H
-#define BEDROCK_LEVEL_PALETTE_H
+#ifndef BEDROCK_LEVEL_NBT_H
+#define BEDROCK_LEVEL_NBT_H
 
 #include <algorithm>
 #include <cstdlib>
@@ -77,6 +77,9 @@ namespace bl::nbt {
         T as() {
             return dynamic_cast<T>(this);
         }
+
+        // traverse compound/list children by path, e.g. "A.B[1].C"; nullptr on any miss
+        abstract_tag *getByPath(const std::string &path);
 
        public:
         virtual void write(std::ostream &o, int indent) const {
@@ -455,4 +458,4 @@ namespace bl::nbt {
     std::vector<compound_tag *> read_palette_to_end(const byte_t *data, size_t len);
 }  // namespace bl::nbt
 
-#endif  // BEDROCK_LEVEL_PALETTE_H
+#endif  // BEDROCK_LEVEL_NBT_H

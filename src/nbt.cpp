@@ -206,4 +206,43 @@ namespace bl::nbt {
             delete tag;
         }
     }
+
+    abstract_tag *abstract_tag::getByPath(const std::string &path) {
+        abstract_tag *cur = this;
+        size_t i = 0;
+        while (cur && i < path.size()) {
+            if (path[i] == '.') {
+                i++;
+                continue;
+            }
+            // optional name segment: descend into a compound
+            if (path[i] != '[') {
+                auto end = path.find_first_of(".[", i);
+                auto name = path.substr(i, end == std::string::npos ? std::string::npos : end - i);
+                i = (end == std::string::npos) ? path.size() : end;
+                auto *comp = cur->as<compound_tag *>();
+                if (!comp) return nullptr;
+                cur = comp->get(name);
+            }
+            // optional list index segments: [n] (0-based)
+            while (cur && i < path.size() && path[i] == '[') {
+                auto close = path.find(']', i);
+                if (close == std::string::npos) return nullptr;
+                int idx = 0;
+                bool valid = close > i + 1;
+                for (auto k = i + 1; k < close && valid; k++) {
+                    if (path[k] < '0' || path[k] > '9') {
+                        valid = false;
+                    } else {
+                        idx = idx * 10 + (path[k] - '0');
+                    }
+                }
+                auto *list = cur->as<list_tag *>();
+                if (!valid || !list || idx >= static_cast<int>(list->value.size())) return nullptr;
+                cur = list->value[idx];
+                i = close + 1;
+            }
+        }
+        return cur;
+    }
 }  // namespace bl::nbt

@@ -16,6 +16,7 @@
 
 #include "color.h"
 #include "nbt.h"
+#include "palette.h"
 
 namespace bl {
 
@@ -47,71 +48,6 @@ namespace bl {
             }
             return true;
         }
-
-        bool read_palettes(bl::sub_chunk::layer *layer, const byte_t *stream, size_t number, size_t len, int &read) {
-            read = 0;
-            for (auto i = 0u; i < number; i++) {
-                int r = 0;
-                auto *tag = bl::nbt::read_one_palette(stream + read, len - read, r);
-                if (tag) {
-                    tag->remove("version");  // remove version tag(compatibility for color table)
-                    layer->palettes.push_back(tag);
-                    // pre-resolve block name so per-block lookups become O(1) indexing
-                    std::string name{"minecraft:unknown"};
-                    if (auto *name_tag = tag->get("name"); name_tag) {
-                        if (auto *st = name_tag->as<bl::nbt::string_tag *>(); st) {
-                            name = st->value;
-                        }
-                    }
-                    layer->names.push_back(std::move(name));
-                } else {
-                    BL_ERROR("Can not read block palette");
-                    return false;
-                }
-                read += r;
-            }
-            return true;
-        }
-
-        bool read_one_layer(bl::sub_chunk::layer *layer, const byte_t *stream, size_t len, int &read) {
-            read = 0;
-            constexpr auto BLOCK_NUM = 16 * 16 * 16;
-            if (!layer || !stream) return false;
-            auto layer_header = stream[0];
-            read++;
-            layer->type = layer_header & 0x1;
-            layer->bits = layer_header >> 1u;
-            if (layer->bits != 0) {
-                int block_per_word = 32 / layer->bits;
-                auto wordCount = BLOCK_NUM / block_per_word;
-                if (BLOCK_NUM % block_per_word != 0) wordCount++;
-                layer->blocks.resize(BLOCK_NUM);
-                int position = 0;
-                for (int wordi = 0; wordi < wordCount; wordi++) {
-                    auto word = *reinterpret_cast<const int *>(stream + read + wordi * 4);
-                    for (int block = 0; block < block_per_word; block++) {
-                        int state = (word >> ((position % block_per_word) * layer->bits)) & ((1 << layer->bits) - 1);
-                        if (position < static_cast<int>(layer->blocks.size())) {
-                            layer->blocks[position] = state;
-                        }
-                        position++;
-                    }
-                }
-
-                read += wordCount << 2;
-                int palette_len = *reinterpret_cast<const int *>(stream + read);
-                layer->palette_len = palette_len;
-                read += 4;
-            } else {  // uniform
-                layer->blocks = std::vector<uint16_t>(4096, 0);
-                layer->palette_len = 1;
-            }
-            // palette header
-            int palette_read = 0;
-            read_palettes(layer, stream + read, layer->palette_len, len - read, palette_read);
-            read += palette_read;
-            return true;
-        }
     }  // namespace
 
     bool sub_chunk::load(const byte_t *data, size_t len) {
@@ -120,11 +56,11 @@ namespace bl {
         if (!read_header(this, data, read)) return false;
         idx += read;
         for (auto i = 0; i < (int)this->layers_num_; i++) {
-            this->layers_.push_back(new layer());
-            if (!read_one_layer(this->layers_.back(), data + idx, len - idx, read)) {
-                BL_ERROR("can not read layer %d", i);
-                return false;
-            }
+            auto *layer = new bl::sub_chunk::layer();
+            this->layers_.push_back(layer);
+            layer->blocks = bl::read_block_indices(data + idx, read, layer->bits, layer->palette_len);
+            idx += read;
+            layer->palette = bl::read_palettes(data + idx, layer->palette_len, len - idx, read);
             idx += read;
         }
         return true;
@@ -146,15 +82,15 @@ namespace bl {
         auto idx = ry + rz * 16 + rx * 256;
         auto block = this->layers_[0]->blocks[idx];
 
-        auto &names = this->layers_[0]->names;
-        if (block < 0 || block >= names.size()) {
+        auto &palette = this->layers_[0]->palette;
+        if (block < 0 || block >= palette.size()) {
             BL_ERROR("Invalid block index with value %d", block);
             return {};
         }
-        auto &b = this->layers_[0]->palettes[block];
+        auto &b = palette[block].tag;
 
         std::string extra_tag;
-        std::string name = names[block];
+        std::string name = palette[block].name;
 
         // states/color may be absent on simple blocks, guard each level
         if (auto *stat_tag = b->get("states"); stat_tag) {
@@ -177,11 +113,11 @@ namespace bl {
 
         auto idx = ry + rz * 16 + rx * 256;
         auto block = this->layers_[0]->blocks[idx];
-        auto &names = this->layers_[0]->names;
-        if (block < 0 || block >= static_cast<int>(names.size())) {
+        auto &palette = this->layers_[0]->palette;
+        if (block < 0 || block >= static_cast<int>(palette.size())) {
             return unknown;
         }
-        return names[block];
+        return palette[block].name;
     }
 
     block_info sub_chunk::get_block_fast(int rx, int ry, int rz) {
@@ -197,13 +133,13 @@ namespace bl {
         auto idx = ry + rz * 16 + rx * 256;
         auto block = this->layers_[0]->blocks[idx];
 
-        auto &names = this->layers_[0]->names;
-        if (block >= names.size() || block < 0) {
+        auto &palette = this->layers_[0]->palette;
+        if (block >= palette.size() || block < 0) {
             BL_ERROR("Invalid block index with value %d", block);
             return {};
         }
 
-        return {names[block], bl::color{}};
+        return {palette[block].name, bl::color{}};
     }
 
     nbt::compound_tag *sub_chunk::get_block_raw(int rx, int ry, int rz) {
@@ -219,12 +155,12 @@ namespace bl {
         auto idx = ry + rz * 16 + rx * 256;
         auto block = this->layers_[0]->blocks[idx];
 
-        if (block >= this->layers_[0]->palettes.size() || block < 0) {
+        if (block >= this->layers_[0]->palette.size() || block < 0) {
             BL_ERROR("Invalid block index with value %d", block);
             return nullptr;
         }
 
-        return this->layers_[0]->palettes[block];
+        return this->layers_[0]->palette[block].tag;
     }
     sub_chunk::~sub_chunk() {
         for (auto &layer : this->layers_) {
@@ -233,6 +169,6 @@ namespace bl {
     }
 
     sub_chunk::layer::~layer() {
-        for (auto &p : this->palettes) delete p;
+        for (auto &entry : this->palette) delete entry.tag;
     }
 }  // namespace bl
