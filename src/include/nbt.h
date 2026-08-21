@@ -78,6 +78,11 @@ namespace bl::nbt {
             return dynamic_cast<T>(this);
         }
 
+        template <typename T>
+        T as() const {
+            return dynamic_cast<T>(const_cast<abstract_tag *>(this));
+        }
+
         // traverse compound/list children by path, e.g. "A.B[1].C"; nullptr on any miss
         abstract_tag *getByPath(const std::string &path);
 
