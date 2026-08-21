@@ -161,6 +161,36 @@ TEST(BlockPos, Conversions) {
     EXPECT_EQ(b2.in_chunk_offset(), (chunk_pos{15, 15, -1}));
 }
 
+TEST(BlockBox, HalfOpenRegion) {
+    using namespace bl;
+    const block_box box{{1, 2, 3}, {4, 6, 8}};
+
+    EXPECT_TRUE(box.is_valid());
+    EXPECT_EQ(box.size_x(), 3);
+    EXPECT_EQ(box.size_y(), 4);
+    EXPECT_EQ(box.size_z(), 5);
+    EXPECT_TRUE(box.contains({1, 2, 3}));
+    EXPECT_TRUE(box.contains({3, 5, 7}));
+    EXPECT_FALSE(box.contains({4, 5, 7}));
+    EXPECT_FALSE(box.contains({3, 6, 7}));
+    EXPECT_FALSE(box.contains({3, 5, 8}));
+}
+
+TEST(BlockBox, NormalizeIntersectAndTranslate) {
+    using namespace bl;
+    const auto normalized = block_box{{5, 6, 7}, {1, 2, 3}}.normalized();
+    EXPECT_EQ(normalized.min_pos, (block_pos{1, 2, 3}));
+    EXPECT_EQ(normalized.max_pos, (block_pos{5, 6, 7}));
+
+    const auto intersection = normalized.intersected({{3, 0, 4}, {8, 4, 9}});
+    EXPECT_EQ(intersection.min_pos, (block_pos{3, 2, 4}));
+    EXPECT_EQ(intersection.max_pos, (block_pos{5, 4, 7}));
+
+    const auto moved = intersection.translated(-1, 10, 2);
+    EXPECT_EQ(moved.min_pos, (block_pos{2, 12, 6}));
+    EXPECT_EQ(moved.max_pos, (block_pos{4, 14, 9}));
+}
+
 // hardcoded_spawn_area_list serialize -> parse must reproduce every field
 TEST(HardcodedSpawnAreaList, RoundTrip) {
     using namespace bl;

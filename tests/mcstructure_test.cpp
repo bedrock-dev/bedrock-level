@@ -41,6 +41,57 @@ namespace {
         return static_cast<size_t>(size_z) * static_cast<size_t>(size_y) * static_cast<size_t>(x) +
                static_cast<size_t>(size_z) * static_cast<size_t>(y) + static_cast<size_t>(z);
     }
+
+    bl::nbt::list_tag *make_int_list_tag(const std::string &key, int a, int b, int c) {
+        auto *list = new bl::nbt::list_tag(key);
+        list->append(new bl::nbt::int_tag("", a));
+        list->append(new bl::nbt::int_tag("", b));
+        list->append(new bl::nbt::int_tag("", c));
+        return list;
+    }
+
+    std::vector<byte_t> make_mcstructure_with_block_entity_position_key() {
+        auto root = std::make_unique<bl::nbt::compound_tag>("");
+        root->put(new bl::nbt::int_tag("format_version", 1));
+        root->put(make_int_list_tag("size", 3, 3, 3));
+
+        auto *structure = new bl::nbt::compound_tag("structure");
+        auto *block_indices = new bl::nbt::list_tag("block_indices");
+        for (int layer = 0; layer < 2; ++layer) {
+            auto *layer_list = new bl::nbt::list_tag("");
+            for (int i = 0; i < 27; ++i) {
+                layer_list->append(new bl::nbt::int_tag("", layer == 0 ? 0 : -1));
+            }
+            block_indices->append(layer_list);
+        }
+        structure->put(block_indices);
+        structure->put(new bl::nbt::list_tag("entities"));
+
+        auto *palette = new bl::nbt::compound_tag("palette");
+        auto *def = new bl::nbt::compound_tag("default");
+        auto *block_palette = new bl::nbt::list_tag("block_palette");
+        block_palette->append(make_block_state_tag("minecraft:stone").release());
+        def->put(block_palette);
+
+        auto *block_position_data = new bl::nbt::compound_tag("block_position_data");
+        auto *position_entry = new bl::nbt::compound_tag(std::to_string(flat_index(1, 1, 1, 3, 3)));
+        auto block_entity = make_block_entity_tag("minecraft:chest");
+        block_entity->set_key("block_entity_data");
+        block_entity->put(new bl::nbt::int_tag("x", 99));
+        block_entity->put(new bl::nbt::int_tag("y", 88));
+        block_entity->put(new bl::nbt::int_tag("z", 77));
+        position_entry->put(block_entity.release());
+        block_position_data->put(position_entry);
+        def->put(block_position_data);
+        palette->put(def);
+        structure->put(palette);
+
+        root->put(structure);
+        root->put(make_int_list_tag("structure_world_origin", 10, 20, 30));
+
+        const auto raw = root->to_raw();
+        return {raw.begin(), raw.end()};
+    }
 }  // namespace
 
 TEST(McStructure, ParseTestFile) {
@@ -52,12 +103,9 @@ TEST(McStructure, ParseTestFile) {
     EXPECT_GT(s.size_x(), 0);
     EXPECT_GT(s.size_y(), 0);
     EXPECT_GT(s.size_z(), 0);
-    EXPECT_EQ(s.size()[0], s.size_x());
-    EXPECT_EQ(s.size()[1], s.size_y());
-    EXPECT_EQ(s.size()[2], s.size_z());
-    EXPECT_EQ(s.origin()[0], s.origin_x());
-    EXPECT_EQ(s.origin()[1], s.origin_y());
-    EXPECT_EQ(s.origin()[2], s.origin_z());
+    EXPECT_EQ(s.size().x, s.size_x());
+    EXPECT_EQ(s.size().y, s.size_y());
+    EXPECT_EQ(s.size().z, s.size_z());
 
     const auto expected = static_cast<size_t>(s.size_x()) * static_cast<size_t>(s.size_y()) * static_cast<size_t>(s.size_z());
     EXPECT_EQ(expected, s.layer_size(0));
@@ -141,11 +189,10 @@ TEST(McStructureBuilder, BuildAndDeduplicate) {
     auto stone = make_block_state_tag("minecraft:stone");
     auto chest = make_block_entity_tag("minecraft:chest");
 
-    auto structure = bl::mcstructure_builder()
-                         .set_size(3, 2, 2)
-                         .set_block(0, 0, 0, stone.get())
-                         .fill_blocks(1, 0, 0, 3, 2, 2, stone.get())
-                         .set_block_entity(1, 1, 1, chest.get())
+    auto structure = bl::mcstructure_builder({3, 2, 2}, {0, 0, 0})
+                         .set_block({0, 0, 0}, stone.get())
+                         .fill_blocks(1, bl::block_box{{0, 0, 0}, {3, 2, 2}}, stone.get())
+                         .set_block_entity({1, 1, 1}, chest.get())
                          .build();
 
     EXPECT_EQ(structure.size_x(), 3);
@@ -168,6 +215,119 @@ TEST(McStructureBuilder, BuildAndDeduplicate) {
     EXPECT_EQ(x->as<bl::nbt::int_tag *>()->value, 1);
     EXPECT_EQ(y->as<bl::nbt::int_tag *>()->value, 1);
     EXPECT_EQ(z->as<bl::nbt::int_tag *>()->value, 1);
+}
+
+TEST(McStructureBuilder, SerializeBlockEntities) {
+    auto stone = make_block_state_tag("minecraft:stone");
+    auto chest = make_block_entity_tag("minecraft:chest");
+
+    auto structure = bl::mcstructure_builder({2, 2, 2}, {0, 0, 0})
+                         .set_block({0, 0, 0}, stone.get())
+                         .set_block_entity({1, 1, 1}, chest.get())
+                         .build();
+
+    auto dumped = structure.to_raw();
+    EXPECT_NE(dumped.find("block_position_data"), std::string::npos);
+    EXPECT_NE(dumped.find("block_entity_data"), std::string::npos);
+
+    auto roundtrip = bl::parse_mcstructure(reinterpret_cast<const byte_t *>(dumped.data()), dumped.size());
+    ASSERT_EQ(roundtrip.block_entity_count(), 1u);
+    ASSERT_EQ(roundtrip.block_entities().size(), 1u);
+
+    const auto *entity = roundtrip.block_entities().front();
+    ASSERT_NE(entity, nullptr);
+    auto *x = entity->get("x");
+    auto *y = entity->get("y");
+    auto *z = entity->get("z");
+    ASSERT_NE(x, nullptr);
+    ASSERT_NE(y, nullptr);
+    ASSERT_NE(z, nullptr);
+    EXPECT_EQ(x->as<bl::nbt::int_tag *>()->value, 1);
+    EXPECT_EQ(y->as<bl::nbt::int_tag *>()->value, 1);
+    EXPECT_EQ(z->as<bl::nbt::int_tag *>()->value, 1);
+}
+
+TEST(McStructureBuilder, WritesBlockEntityWorldPositionFromOrigin) {
+    auto chest = make_block_entity_tag("minecraft:chest");
+
+    auto structure = bl::mcstructure_builder({4, 4, 4}, {10, 20, 30})
+                         .set_block_entity({1, 2, 3}, chest.get())
+                         .build();
+
+    ASSERT_EQ(structure.block_entity_count(), 1u);
+    EXPECT_EQ(structure.block_entity_position(0), (bl::block_pos{1, 2, 3}));
+
+    const auto *entity = structure.block_entities().front();
+    ASSERT_NE(entity, nullptr);
+    EXPECT_EQ(entity->get("x")->as<bl::nbt::int_tag *>()->value, 11);
+    EXPECT_EQ(entity->get("y")->as<bl::nbt::int_tag *>()->value, 22);
+    EXPECT_EQ(entity->get("z")->as<bl::nbt::int_tag *>()->value, 33);
+
+    const auto dumped = structure.to_raw();
+    auto roundtrip = bl::parse_mcstructure(reinterpret_cast<const byte_t *>(dumped.data()), dumped.size());
+    ASSERT_EQ(roundtrip.block_entity_count(), 1u);
+    EXPECT_EQ(roundtrip.block_entity_position(0), (bl::block_pos{1, 2, 3}));
+
+    const auto *roundtrip_entity = roundtrip.block_entities().front();
+    ASSERT_NE(roundtrip_entity, nullptr);
+    EXPECT_EQ(roundtrip_entity->get("x")->as<bl::nbt::int_tag *>()->value, 11);
+    EXPECT_EQ(roundtrip_entity->get("y")->as<bl::nbt::int_tag *>()->value, 22);
+    EXPECT_EQ(roundtrip_entity->get("z")->as<bl::nbt::int_tag *>()->value, 33);
+}
+
+TEST(McStructureBuilder, KeepsDuplicateBlockEntitiesAtDifferentPositions) {
+    auto chest = make_block_entity_tag("minecraft:chest");
+
+    auto structure = bl::mcstructure_builder({3, 3, 3}, {0, 0, 0})
+                         .set_block_entity({0, 0, 0}, chest.get())
+                         .set_block_entity({2, 1, 1}, chest.get())
+                         .build();
+
+    EXPECT_EQ(structure.block_entity_count(), 2u);
+    ASSERT_EQ(structure.block_entities().size(), 2u);
+
+    const auto *first = structure.block_entities()[0];
+    const auto *second = structure.block_entities()[1];
+    ASSERT_NE(first, nullptr);
+    ASSERT_NE(second, nullptr);
+
+    EXPECT_EQ(first->get("x")->as<bl::nbt::int_tag *>()->value, 0);
+    EXPECT_EQ(first->get("y")->as<bl::nbt::int_tag *>()->value, 0);
+    EXPECT_EQ(first->get("z")->as<bl::nbt::int_tag *>()->value, 0);
+    EXPECT_EQ(second->get("x")->as<bl::nbt::int_tag *>()->value, 2);
+    EXPECT_EQ(second->get("y")->as<bl::nbt::int_tag *>()->value, 1);
+    EXPECT_EQ(second->get("z")->as<bl::nbt::int_tag *>()->value, 1);
+
+    auto dumped = structure.to_raw();
+    EXPECT_NE(dumped.find("block_position_data"), std::string::npos);
+    EXPECT_NE(dumped.find("block_entity_data"), std::string::npos);
+    auto roundtrip = bl::parse_mcstructure(reinterpret_cast<const byte_t *>(dumped.data()), dumped.size());
+    EXPECT_EQ(roundtrip.block_entity_count(), 2u);
+}
+
+TEST(McStructure, UsesBlockPositionDataKeyAsBlockEntityPosition) {
+    auto raw = make_mcstructure_with_block_entity_position_key();
+    auto structure = bl::parse_mcstructure(raw.data(), raw.size());
+
+    ASSERT_EQ(structure.block_entity_count(), 1u);
+    const auto pos = structure.block_entity_position(0);
+    EXPECT_EQ(pos.x, 1);
+    EXPECT_EQ(pos.y, 1);
+    EXPECT_EQ(pos.z, 1);
+
+    const auto *entity = structure.block_entities().front();
+    ASSERT_NE(entity, nullptr);
+    EXPECT_EQ(entity->get("x")->as<bl::nbt::int_tag *>()->value, 99);
+    EXPECT_EQ(entity->get("y")->as<bl::nbt::int_tag *>()->value, 88);
+    EXPECT_EQ(entity->get("z")->as<bl::nbt::int_tag *>()->value, 77);
+
+    auto dumped = structure.to_raw();
+    auto roundtrip = bl::parse_mcstructure(reinterpret_cast<const byte_t *>(dumped.data()), dumped.size());
+    ASSERT_EQ(roundtrip.block_entity_count(), 1u);
+    const auto roundtrip_pos = roundtrip.block_entity_position(0);
+    EXPECT_EQ(roundtrip_pos.x, 1);
+    EXPECT_EQ(roundtrip_pos.y, 1);
+    EXPECT_EQ(roundtrip_pos.z, 1);
 }
 
 TEST(McStructure, SerializeRoundTrip) {

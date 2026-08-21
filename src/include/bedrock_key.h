@@ -5,6 +5,7 @@
 #ifndef BEDROCK_LEVEL_BEDROCK_KEY_H
 #define BEDROCK_LEVEL_BEDROCK_KEY_H
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -50,12 +51,76 @@ namespace bl {
         int y{};
         int z{};
 
+        block_pos() = default;
         block_pos(int xx, int yy, int zz) : x(xx), y(yy), z(zz) {}
 
         [[nodiscard]] chunk_pos to_chunk_pos() const;
 
         [[nodiscard]] chunk_pos in_chunk_offset() const;
+
+        [[nodiscard]] bool operator==(const block_pos &rhs) const noexcept { return x == rhs.x && y == rhs.y && z == rhs.z; }
+        [[nodiscard]] bool operator!=(const block_pos &rhs) const noexcept { return !(*this == rhs); }
+        [[nodiscard]] block_pos operator+(const block_pos &rhs) const noexcept { return {x + rhs.x, y + rhs.y, z + rhs.z}; }
+        [[nodiscard]] block_pos operator-(const block_pos &rhs) const noexcept { return {x - rhs.x, y - rhs.y, z - rhs.z}; }
+        block_pos &operator+=(const block_pos &rhs) noexcept {
+            x += rhs.x;
+            y += rhs.y;
+            z += rhs.z;
+            return *this;
+        }
+        block_pos &operator-=(const block_pos &rhs) noexcept {
+            x -= rhs.x;
+            y -= rhs.y;
+            z -= rhs.z;
+            return *this;
+        }
     };
+
+    // Axis-aligned integer block region. The minimum corner is inclusive and
+    // the maximum corner is exclusive: [min_pos, max_pos).
+    struct block_box {
+        block_pos min_pos{0, 0, 0};
+        block_pos max_pos{0, 0, 0};
+
+        block_box() = default;
+        block_box(const block_pos &minimum, const block_pos &maximum) : min_pos(minimum), max_pos(maximum) {}
+
+        [[nodiscard]] static block_box from_min_and_size(const block_pos &minimum, int size_x, int size_y, int size_z) noexcept {
+            return {{minimum.x, minimum.y, minimum.z}, {minimum.x + size_x, minimum.y + size_y, minimum.z + size_z}};
+        }
+
+        [[nodiscard]] bool is_valid() const noexcept {
+            return min_pos.x < max_pos.x && min_pos.y < max_pos.y && min_pos.z < max_pos.z;
+        }
+
+        [[nodiscard]] int size_x() const noexcept { return max_pos.x - min_pos.x; }
+        [[nodiscard]] int size_y() const noexcept { return max_pos.y - min_pos.y; }
+        [[nodiscard]] int size_z() const noexcept { return max_pos.z - min_pos.z; }
+
+        [[nodiscard]] bool contains(const block_pos &pos) const noexcept {
+            return pos.x >= min_pos.x && pos.x < max_pos.x && pos.y >= min_pos.y && pos.y < max_pos.y && pos.z >= min_pos.z &&
+                   pos.z < max_pos.z;
+        }
+
+        [[nodiscard]] block_box normalized() const noexcept {
+            return {{std::min(min_pos.x, max_pos.x), std::min(min_pos.y, max_pos.y), std::min(min_pos.z, max_pos.z)},
+                    {std::max(min_pos.x, max_pos.x), std::max(min_pos.y, max_pos.y), std::max(min_pos.z, max_pos.z)}};
+        }
+
+        [[nodiscard]] block_box intersected(const block_box &rhs) const noexcept {
+            return {{std::max(min_pos.x, rhs.min_pos.x), std::max(min_pos.y, rhs.min_pos.y), std::max(min_pos.z, rhs.min_pos.z)},
+                    {std::min(max_pos.x, rhs.max_pos.x), std::min(max_pos.y, rhs.max_pos.y), std::min(max_pos.z, rhs.max_pos.z)}};
+        }
+
+        [[nodiscard]] block_box translated(int dx, int dy, int dz) const noexcept {
+            return translated(block_pos{dx, dy, dz});
+        }
+
+        [[nodiscard]] block_box translated(const block_pos &offset) const noexcept {
+            return {min_pos + offset, max_pos + offset};
+        }
+    };
+
     struct vec3 {
         float x{};
         float y{};

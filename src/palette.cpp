@@ -4,6 +4,8 @@
 
 #include "palette.h"
 
+#include <filesystem>
+#include <fstream>
 #include <iterator>
 #include <limits>
 #include <sstream>
@@ -20,6 +22,16 @@ namespace bl {
                    static_cast<size_t>(size_z) * static_cast<size_t>(y) + static_cast<size_t>(z);
         }
 
+        [[nodiscard]] block_pos block_pos_from_flat_index(size_t flat, int size_y, int size_z) {
+            const auto yz = static_cast<size_t>(size_y) * static_cast<size_t>(size_z);
+            if (yz == 0) return {0, 0, 0};
+            const int x = static_cast<int>(flat / yz);
+            const size_t rem = flat % yz;
+            const int y = static_cast<int>(rem / static_cast<size_t>(size_z));
+            const int z = static_cast<int>(rem % static_cast<size_t>(size_z));
+            return {x, y, z};
+        }
+
         [[nodiscard]] bool is_visible_block_name(const std::string &name) {
             return name != "minecraft:air" && name != "minecraft:cave_air" && name != "minecraft:void_air" && name != "minecraft:unknown";
         }
@@ -30,6 +42,20 @@ namespace bl {
             list->append(new bl::nbt::int_tag("", b));
             list->append(new bl::nbt::int_tag("", c));
             return list;
+        }
+
+        void set_block_entity_world_pos(bl::nbt::compound_tag *tag, const block_pos &world_pos) {
+            if (!tag) return;
+            tag->remove("x");
+            tag->remove("y");
+            tag->remove("z");
+            tag->put(new bl::nbt::int_tag("x", world_pos.x));
+            tag->put(new bl::nbt::int_tag("y", world_pos.y));
+            tag->put(new bl::nbt::int_tag("z", world_pos.z));
+        }
+
+        [[nodiscard]] block_pos to_world_pos(const block_pos &origin, const block_pos &local_pos) {
+            return origin + local_pos;
         }
     }  // namespace
 
@@ -110,6 +136,10 @@ namespace bl {
         return index < palette_.size() ? &palette_[index] : nullptr;
     }
 
+    block_pos mcstructure::block_entity_position(size_t index) const noexcept {
+        return index < block_entity_positions_.size() ? block_entity_positions_[index] : block_pos{0, 0, 0};
+    }
+
     int32_t mcstructure::block_index(int layer, int x, int y, int z) const noexcept {
         if (layer < 0 || layer >= static_cast<int>(layer_count())) return -1;
         if (x < 0 || y < 0 || z < 0) return -1;
@@ -179,19 +209,20 @@ namespace bl {
         def->put(block_palette);
 
         auto *block_position_data = new bl::nbt::compound_tag("block_position_data");
-        for (auto *block_entity : block_entities_) {
+        for (size_t i = 0; i < block_entities_.size(); ++i) {
+            auto *block_entity = block_entities_[i];
             if (!block_entity) continue;
-            auto *x_tag = block_entity->get("x");
-            auto *y_tag = block_entity->get("y");
-            auto *z_tag = block_entity->get("z");
-            auto *x = x_tag ? x_tag->as<bl::nbt::int_tag *>() : nullptr;
-            auto *y = y_tag ? y_tag->as<bl::nbt::int_tag *>() : nullptr;
-            auto *z = z_tag ? z_tag->as<bl::nbt::int_tag *>() : nullptr;
-            if (!x || !y || !z) continue;
+            const auto pos = i < block_entity_positions_.size() ? block_entity_positions_[i] : block_pos{0, 0, 0};
+            const int x = pos.x;
+            const int y = pos.y;
+            const int z = pos.z;
 
-            const auto flat = flat_index_from_xyz(x->value, y->value, z->value, size_y_, size_z_);
+            const auto flat = flat_index_from_xyz(x, y, z, size_y_, size_z_);
             auto *entry = new bl::nbt::compound_tag(std::to_string(flat));
-            entry->put(block_entity->copy());
+            auto *block_entity_data = static_cast<bl::nbt::compound_tag *>(block_entity->copy());
+            block_entity_data->set_key("block_entity_data");
+            set_block_entity_world_pos(block_entity_data, to_world_pos(origin(), pos));
+            entry->put(block_entity_data);
             block_position_data->put(entry);
         }
         def->put(block_position_data);
@@ -199,14 +230,19 @@ namespace bl {
         structure->put(palette);
 
         root->put(structure);
-        root->put(make_int_list("structure_world_origin", origin_x_, origin_y_, origin_z_));
+        root->put(make_int_list("structure_world_origin", origin_.x, origin_.y, origin_.z));
         return root->to_raw();
     }
 
     bool mcstructure::save_to_file(const std::string &file_name) const {
         const auto raw = to_raw();
-        bl::utils::write_file(file_name, raw.data(), raw.size());
-        return true;
+        std::ofstream output(std::filesystem::u8path(file_name), std::ios::binary);
+        if (!output.is_open()) {
+            BL_ERROR("Can not open file %s", file_name.c_str());
+            return false;
+        }
+        output.write(raw.data(), static_cast<std::streamsize>(raw.size()));
+        return output.good();
     }
 
     void mcstructure_builder::reset_layers() {
@@ -218,6 +254,7 @@ namespace bl {
         palette_.clear();
         palette_index_by_raw_.clear();
         block_entities_.clear();
+        block_entity_positions_.clear();
         interned_tags_.clear();
         owned_tags_.clear();
     }
@@ -250,25 +287,6 @@ namespace bl {
         return stored;
     }
 
-    bl::nbt::compound_tag *mcstructure_builder::intern_block_entity(const bl::nbt::compound_tag *tag, int x, int y, int z) {
-        if (!tag) return nullptr;
-        auto clone = std::unique_ptr<bl::nbt::compound_tag>(static_cast<bl::nbt::compound_tag *>(tag->copy()));
-        clone->remove("x");
-        clone->remove("y");
-        clone->remove("z");
-        clone->put(new bl::nbt::int_tag("x", x));
-        clone->put(new bl::nbt::int_tag("y", y));
-        clone->put(new bl::nbt::int_tag("z", z));
-        const std::string raw = clone->to_raw();
-        if (auto it = interned_tags_.find(raw); it != interned_tags_.end()) {
-            return it->second;
-        }
-        auto *stored = clone.get();
-        interned_tags_.emplace(raw, stored);
-        owned_tags_.push_back(std::move(clone));
-        return stored;
-    }
-
     size_t mcstructure_builder::ensure_palette_index(bl::nbt::compound_tag *tag) {
         if (!tag) return std::numeric_limits<size_t>::max();
         const std::string raw = tag->to_raw();
@@ -281,27 +299,23 @@ namespace bl {
         return index;
     }
 
-    mcstructure_builder &mcstructure_builder::set_size(int x, int y, int z) {
-        size_x_ = std::max(0, x);
-        size_y_ = std::max(0, y);
-        size_z_ = std::max(0, z);
+    mcstructure_builder::mcstructure_builder(const block_pos &size, const block_pos &origin) {
+        size_x_ = std::max(0, size.x);
+        size_y_ = std::max(0, size.y);
+        size_z_ = std::max(0, size.z);
+        origin_ = origin;
         reset_layers();
-        return *this;
     }
 
-    mcstructure_builder &mcstructure_builder::set_origin(int x, int y, int z) {
-        origin_x_ = x;
-        origin_y_ = y;
-        origin_z_ = z;
-        return *this;
+    mcstructure_builder &mcstructure_builder::set_block(const block_pos &pos, const bl::nbt::compound_tag *tag) {
+        return set_block(0, pos, tag);
     }
 
-    mcstructure_builder &mcstructure_builder::set_block(int x, int y, int z, const bl::nbt::compound_tag *tag) {
-        return set_block(0, x, y, z, tag);
-    }
-
-    mcstructure_builder &mcstructure_builder::set_block(int layer, int x, int y, int z, const bl::nbt::compound_tag *tag) {
+    mcstructure_builder &mcstructure_builder::set_block(int layer, const block_pos &pos, const bl::nbt::compound_tag *tag) {
         if (!has_size() || layer < 0 || layer >= static_cast<int>(std::size(layers_))) return *this;
+        const int x = pos.x;
+        const int y = pos.y;
+        const int z = pos.z;
         if (x < 0 || y < 0 || z < 0 || x >= size_x_ || y >= size_y_ || z >= size_z_) return *this;
         const auto index = flat_index(x, y, z, size_y_, size_z_);
         auto &values = layer_at(layer);
@@ -315,24 +329,14 @@ namespace bl {
         return *this;
     }
 
-    mcstructure_builder &mcstructure_builder::fill_blocks(int x0, int y0, int z0, int x1, int y1, int z1,
-                                                          const bl::nbt::compound_tag *tag) {
-        return fill_blocks(0, x0, y0, z0, x1, y1, z1, tag);
+    mcstructure_builder &mcstructure_builder::fill_blocks(const block_box &box, const bl::nbt::compound_tag *tag) {
+        return fill_blocks(0, box, tag);
     }
 
-    mcstructure_builder &mcstructure_builder::fill_blocks(int layer, int x0, int y0, int z0, int x1, int y1, int z1,
-                                                          const bl::nbt::compound_tag *tag) {
+    mcstructure_builder &mcstructure_builder::fill_blocks(int layer, const block_box &box, const bl::nbt::compound_tag *tag) {
         if (!has_size() || layer < 0 || layer >= static_cast<int>(std::size(layers_))) return *this;
-        if (x0 > x1) std::swap(x0, x1);
-        if (y0 > y1) std::swap(y0, y1);
-        if (z0 > z1) std::swap(z0, z1);
-        x0 = std::clamp(x0, 0, size_x_);
-        y0 = std::clamp(y0, 0, size_y_);
-        z0 = std::clamp(z0, 0, size_z_);
-        x1 = std::clamp(x1, 0, size_x_);
-        y1 = std::clamp(y1, 0, size_y_);
-        z1 = std::clamp(z1, 0, size_z_);
-        if (x0 >= x1 || y0 >= y1 || z0 >= z1) return *this;
+        const auto fillBox = box.normalized().intersected(block_box::from_min_and_size({0, 0, 0}, size_x_, size_y_, size_z_));
+        if (!fillBox.is_valid()) return *this;
 
         auto &values = layer_at(layer);
         if (values.empty()) return *this;
@@ -342,9 +346,9 @@ namespace bl {
             auto *stored = intern_tag(tag, true);
             palette_index = static_cast<int32_t>(ensure_palette_index(stored));
         }
-        for (int x = x0; x < x1; ++x) {
-            for (int y = y0; y < y1; ++y) {
-                for (int z = z0; z < z1; ++z) {
+        for (int x = fillBox.min_pos.x; x < fillBox.max_pos.x; ++x) {
+            for (int y = fillBox.min_pos.y; y < fillBox.max_pos.y; ++y) {
+                for (int z = fillBox.min_pos.z; z < fillBox.max_pos.z; ++z) {
                     values[flat_index(x, y, z, size_y_, size_z_)] = palette_index;
                 }
             }
@@ -352,10 +356,20 @@ namespace bl {
         return *this;
     }
 
-    mcstructure_builder &mcstructure_builder::set_block_entity(int x, int y, int z, const bl::nbt::compound_tag *tag) {
+    mcstructure_builder &mcstructure_builder::set_block_entity(const block_pos &pos, const bl::nbt::compound_tag *tag) {
+        const int x = pos.x;
+        const int y = pos.y;
+        const int z = pos.z;
         if (!has_size() || x < 0 || y < 0 || z < 0 || x >= size_x_ || y >= size_y_ || z >= size_z_) return *this;
-        auto *stored = intern_block_entity(tag, x, y, z);
-        if (stored) block_entities_.push_back(stored);
+        if (!tag) return *this;
+
+        auto clone = std::unique_ptr<bl::nbt::compound_tag>(static_cast<bl::nbt::compound_tag *>(tag->copy()));
+        set_block_entity_world_pos(clone.get(), to_world_pos(origin_, pos));
+
+        auto *stored = clone.get();
+        owned_tags_.push_back(std::move(clone));
+        block_entities_.push_back(stored);
+        block_entity_positions_.push_back(pos);
         return *this;
     }
 
@@ -372,13 +386,18 @@ namespace bl {
         result.size_x_ = size_x_;
         result.size_y_ = size_y_;
         result.size_z_ = size_z_;
-        result.origin_x_ = origin_x_;
-        result.origin_y_ = origin_y_;
-        result.origin_z_ = origin_z_;
+        result.origin_ = origin_;
+        for (size_t i = 0; i < block_entities_.size(); ++i) {
+            auto *block_entity = block_entities_[i];
+            if (!block_entity) continue;
+            const auto local_pos = i < block_entity_positions_.size() ? block_entity_positions_[i] : block_pos{0, 0, 0};
+            set_block_entity_world_pos(block_entity, to_world_pos(result.origin(), local_pos));
+        }
         result.palette_ = std::move(palette_);
         result.layers_[0] = std::move(layers_[0]);
         result.layers_[1] = std::move(layers_[1]);
         result.block_entities_ = std::move(block_entities_);
+        result.block_entity_positions_ = std::move(block_entity_positions_);
         release_ownership();
         return result;
     }
@@ -389,11 +408,13 @@ namespace bl {
         auto *root = bl::nbt::read_one_palette(data, len, read);
         if (!root) return result;
 
-        auto read_vec3 = [](bl::nbt::list_tag *list, int &x, int &y, int &z) {
-            if (!list || list->value.size() < 3) return;
-            if (auto *a = list->value[0]->as<bl::nbt::int_tag *>(); a) x = a->value;
-            if (auto *b = list->value[1]->as<bl::nbt::int_tag *>(); b) y = b->value;
-            if (auto *c = list->value[2]->as<bl::nbt::int_tag *>(); c) z = c->value;
+        auto read_vec3 = [](bl::nbt::list_tag *list) {
+            block_pos pos;
+            if (!list || list->value.size() < 3) return pos;
+            if (auto *x = list->value[0]->as<bl::nbt::int_tag *>(); x) pos.x = x->value;
+            if (auto *y = list->value[1]->as<bl::nbt::int_tag *>(); y) pos.y = y->value;
+            if (auto *z = list->value[2]->as<bl::nbt::int_tag *>(); z) pos.z = z->value;
+            return pos;
         };
         auto get_list = [&](const char *path) -> bl::nbt::list_tag * {
             auto *tag = root->getByPath(path);
@@ -404,8 +425,11 @@ namespace bl {
             return tag ? tag->as<bl::nbt::compound_tag *>() : nullptr;
         };
 
-        read_vec3(get_list("size"), result.size_x_, result.size_y_, result.size_z_);
-        read_vec3(get_list("structure_world_origin"), result.origin_x_, result.origin_y_, result.origin_z_);
+        const auto size = read_vec3(get_list("size"));
+        result.size_x_ = size.x;
+        result.size_y_ = size.y;
+        result.size_z_ = size.z;
+        result.origin_ = read_vec3(get_list("structure_world_origin"));
 
         // block_indices: two int lists, each an index into the palette (ZYX order, -1 = void)
         if (auto *bi = get_list("structure.block_indices")) {
@@ -443,11 +467,18 @@ namespace bl {
         // block_position_data: key = flat index, value -> block_entity_data
         if (auto *bpd = get_compound("structure.palette.default.block_position_data")) {
             for (auto &kv : bpd->value) {
+                size_t flat = 0;
+                try {
+                    flat = static_cast<size_t>(std::stoull(kv.first));
+                } catch (...) {
+                    continue;
+                }
                 auto *entry = kv.second->as<bl::nbt::compound_tag *>();
                 if (!entry) continue;
                 if (auto *be = entry->get("block_entity_data"); be) {
                     if (auto *comp = be->as<bl::nbt::compound_tag *>(); comp) {
                         result.block_entities_.push_back(static_cast<bl::nbt::compound_tag *>(comp->copy()));
+                        result.block_entity_positions_.push_back(block_pos_from_flat_index(flat, result.size_y_, result.size_z_));
                     }
                 }
             }
@@ -474,7 +505,7 @@ namespace bl {
     std::string mcstructure::dump() const {
         std::ostringstream oss;
         oss << "mcstructure size=(" << size_x_ << ", " << size_y_ << ", " << size_z_ << ")"
-            << " origin=(" << origin_x_ << ", " << origin_y_ << ", " << origin_z_ << ")\n";
+            << " origin=(" << origin_.x << ", " << origin_.y << ", " << origin_.z << ")\n";
         oss << "palette (" << palette_.size() << "):\n";
         for (size_t i = 0; i < palette_.size(); i++) {
             oss << "  [" << i << "] " << palette_[i].name << "\n";
