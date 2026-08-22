@@ -37,6 +37,17 @@ namespace {
         return tag;
     }
 
+    std::unique_ptr<bl::nbt::compound_tag> make_entity_tag(const std::string &id, float x, float y, float z) {
+        auto tag = std::make_unique<bl::nbt::compound_tag>("entity");
+        tag->put(new bl::nbt::string_tag("identifier", id));
+        auto *position = new bl::nbt::list_tag("Pos");
+        position->append(new bl::nbt::float_tag("", x));
+        position->append(new bl::nbt::float_tag("", y));
+        position->append(new bl::nbt::float_tag("", z));
+        tag->put(position);
+        return tag;
+    }
+
     size_t flat_index(int x, int y, int z, int size_y, int size_z) {
         return static_cast<size_t>(size_z) * static_cast<size_t>(size_y) * static_cast<size_t>(x) +
                static_cast<size_t>(size_z) * static_cast<size_t>(y) + static_cast<size_t>(z);
@@ -103,6 +114,7 @@ TEST(McStructure, ParseTestFile) {
     EXPECT_GT(s.size_x(), 0);
     EXPECT_GT(s.size_y(), 0);
     EXPECT_GT(s.size_z(), 0);
+    EXPECT_EQ(s.version(), 1);
     EXPECT_EQ(s.size().x, s.size_x());
     EXPECT_EQ(s.size().y, s.size_y());
     EXPECT_EQ(s.size().z, s.size_z());
@@ -173,6 +185,16 @@ TEST(McStructure, HandlesInvalidData) {
     EXPECT_EQ(s.block_at(0, 0, 0, 0), nullptr);
 }
 
+TEST(McStructure, RejectsUnsupportedFormatVersion) {
+    auto root = std::make_unique<bl::nbt::compound_tag>("");
+    root->put(new bl::nbt::int_tag("format_version", 3));
+    const auto raw = root->to_raw();
+
+    auto structure = bl::parse_mcstructure(reinterpret_cast<const byte_t *>(raw.data()), raw.size());
+    EXPECT_EQ(structure.version(), 0);
+    EXPECT_EQ(structure.size(), (bl::block_pos{0, 0, 0}));
+}
+
 TEST(McStructure, DumpSummary) {
     auto raw = load_mcstructure();
     ASSERT_FALSE(raw.empty());
@@ -198,6 +220,7 @@ TEST(McStructureBuilder, BuildAndDeduplicate) {
     EXPECT_EQ(structure.size_x(), 3);
     EXPECT_EQ(structure.size_y(), 2);
     EXPECT_EQ(structure.size_z(), 2);
+    EXPECT_EQ(structure.version(), 1);
     EXPECT_EQ(structure.palette_size(), 1u);
     EXPECT_NE(structure.block_at(0, 0, 0), nullptr);
     EXPECT_NE(structure.block_at(2, 1, 1), nullptr);
@@ -215,6 +238,30 @@ TEST(McStructureBuilder, BuildAndDeduplicate) {
     EXPECT_EQ(x->as<bl::nbt::int_tag *>()->value, 1);
     EXPECT_EQ(y->as<bl::nbt::int_tag *>()->value, 1);
     EXPECT_EQ(z->as<bl::nbt::int_tag *>()->value, 1);
+}
+
+TEST(McStructureBuilder, WritesVersion2IntArraysAndOmitsEmptyLayer) {
+    auto stone = make_block_state_tag("minecraft:stone");
+    auto structure = bl::mcstructure_builder({2, 2, 2}, {10, 20, 30}, 2).set_block({1, 1, 1}, stone.get()).build();
+
+    EXPECT_EQ(structure.version(), 2);
+    const auto raw = structure.to_raw();
+    int read = 0;
+    auto *root = bl::nbt::read_one_palette(reinterpret_cast<const byte_t *>(raw.data()), raw.size(), read);
+    ASSERT_NE(root, nullptr);
+
+    auto *block_indices_tag = root->getByPath("structure.block_indices");
+    auto *block_indices = block_indices_tag ? block_indices_tag->as<bl::nbt::list_tag *>() : nullptr;
+    ASSERT_NE(block_indices, nullptr);
+    ASSERT_EQ(block_indices->value.size(), 1u);
+    auto *layer = block_indices->value.front()->as<bl::nbt::int_array_tag *>();
+    ASSERT_NE(layer, nullptr);
+    ASSERT_EQ(layer->value.size(), 8u);
+
+    auto roundtrip = bl::parse_mcstructure(reinterpret_cast<const byte_t *>(raw.data()), raw.size());
+    EXPECT_EQ(roundtrip.version(), 2);
+    EXPECT_EQ(roundtrip.block_at(1, 1, 1)->name, "minecraft:stone");
+    delete root;
 }
 
 TEST(McStructureBuilder, SerializeBlockEntities) {
@@ -273,6 +320,30 @@ TEST(McStructureBuilder, WritesBlockEntityWorldPositionFromOrigin) {
     EXPECT_EQ(roundtrip_entity->get("x")->as<bl::nbt::int_tag *>()->value, 11);
     EXPECT_EQ(roundtrip_entity->get("y")->as<bl::nbt::int_tag *>()->value, 22);
     EXPECT_EQ(roundtrip_entity->get("z")->as<bl::nbt::int_tag *>()->value, 33);
+}
+
+TEST(McStructureBuilder, PreservesAbsoluteEntityPosition) {
+    auto entity = make_entity_tag("minecraft:item", 101.5f, 22.0f, -4.25f);
+    auto structure = bl::mcstructure_builder({4, 4, 4}, {100, 20, -5})
+                         .add_entity(entity.get())
+                         .build();
+
+    ASSERT_EQ(structure.entity_count(), 1u);
+    const auto *stored = structure.entities().front();
+    ASSERT_NE(stored, nullptr);
+    const auto *position = stored->get("Pos")->as<const bl::nbt::list_tag *>();
+    ASSERT_NE(position, nullptr);
+    ASSERT_EQ(position->value.size(), 3u);
+    EXPECT_FLOAT_EQ(position->value[0]->as<const bl::nbt::float_tag *>()->value, 101.5f);
+    EXPECT_FLOAT_EQ(position->value[1]->as<const bl::nbt::float_tag *>()->value, 22.0f);
+    EXPECT_FLOAT_EQ(position->value[2]->as<const bl::nbt::float_tag *>()->value, -4.25f);
+
+    const auto raw = structure.to_raw();
+    const auto roundtrip = bl::parse_mcstructure(reinterpret_cast<const byte_t *>(raw.data()), raw.size());
+    ASSERT_EQ(roundtrip.entity_count(), 1u);
+    const auto *roundtripPosition = roundtrip.entities().front()->get("Pos")->as<const bl::nbt::list_tag *>();
+    ASSERT_NE(roundtripPosition, nullptr);
+    EXPECT_FLOAT_EQ(roundtripPosition->value[0]->as<const bl::nbt::float_tag *>()->value, 101.5f);
 }
 
 TEST(McStructureBuilder, KeepsDuplicateBlockEntitiesAtDifferentPositions) {

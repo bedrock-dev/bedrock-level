@@ -4,6 +4,7 @@
 
 #include "palette.h"
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
@@ -54,9 +55,7 @@ namespace bl {
             tag->put(new bl::nbt::int_tag("z", world_pos.z));
         }
 
-        [[nodiscard]] block_pos to_world_pos(const block_pos &origin, const block_pos &local_pos) {
-            return origin + local_pos;
-        }
+        [[nodiscard]] block_pos to_world_pos(const block_pos &origin, const block_pos &local_pos) { return origin + local_pos; }
     }  // namespace
 
     std::vector<uint16_t> read_block_indices(const byte_t *stream, int &read, uint8_t &bits, uint32_t &palette_len) {
@@ -175,19 +174,31 @@ namespace bl {
 
     std::string mcstructure::to_raw() const {
         auto root = std::make_unique<bl::nbt::compound_tag>("");
-        root->put(new bl::nbt::int_tag("format_version", 1));
+        root->put(new bl::nbt::int_tag("format_version", version_));
         root->put(make_int_list("size", size_x_, size_y_, size_z_));
 
         auto *structure = new bl::nbt::compound_tag("structure");
 
         auto *block_indices = new bl::nbt::list_tag("block_indices");
         for (int layer = 0; layer < 2; ++layer) {
-            auto *layer_list = new bl::nbt::list_tag("");
-            layer_list->value.reserve(layers_[layer].size());
-            for (int32_t index : layers_[layer]) {
-                layer_list->append(new bl::nbt::int_tag("", index));
+            // Version 2 stores each layer as an IntArrayTag and omits an empty extra layer.
+            const bool zero_is_empty = palette_.empty() || !is_visible_block_name(palette_.front().name);
+            const bool extra_layer_empty = std::all_of(layers_[layer].begin(), layers_[layer].end(), [zero_is_empty](int32_t index) {
+                return index < 0 || (zero_is_empty && index == 0);
+            });
+            if (version_ == 2 && layer == 1 && extra_layer_empty) {
+                continue;
             }
-            block_indices->append(layer_list);
+            if (version_ == 2) {
+                block_indices->append(new bl::nbt::int_array_tag("", layers_[layer]));
+            } else {
+                auto *layer_list = new bl::nbt::list_tag("");
+                layer_list->value.reserve(layers_[layer].size());
+                for (int32_t index : layers_[layer]) {
+                    layer_list->append(new bl::nbt::int_tag("", index));
+                }
+                block_indices->append(layer_list);
+            }
         }
         structure->put(block_indices);
 
@@ -255,6 +266,7 @@ namespace bl {
         palette_index_by_raw_.clear();
         block_entities_.clear();
         block_entity_positions_.clear();
+        entities_.clear();
         interned_tags_.clear();
         owned_tags_.clear();
     }
@@ -299,11 +311,12 @@ namespace bl {
         return index;
     }
 
-    mcstructure_builder::mcstructure_builder(const block_pos &size, const block_pos &origin) {
+    mcstructure_builder::mcstructure_builder(const block_pos &size, const block_pos &origin, int32_t version) {
         size_x_ = std::max(0, size.x);
         size_y_ = std::max(0, size.y);
         size_z_ = std::max(0, size.z);
         origin_ = origin;
+        version_ = version == 2 ? 2 : 1;
         reset_layers();
     }
 
@@ -373,6 +386,16 @@ namespace bl {
         return *this;
     }
 
+    mcstructure_builder &mcstructure_builder::add_entity(const bl::nbt::compound_tag *tag) {
+        if (!tag) return *this;
+
+        auto clone = std::unique_ptr<bl::nbt::compound_tag>(static_cast<bl::nbt::compound_tag *>(tag->copy()));
+        auto *stored = clone.get();
+        owned_tags_.push_back(std::move(clone));
+        entities_.push_back(stored);
+        return *this;
+    }
+
     void mcstructure_builder::release_ownership() {
         for (auto &tag : owned_tags_) {
             tag.release();
@@ -383,6 +406,7 @@ namespace bl {
 
     mcstructure mcstructure_builder::build() {
         mcstructure result;
+        result.version_ = version_;
         result.size_x_ = size_x_;
         result.size_y_ = size_y_;
         result.size_z_ = size_z_;
@@ -398,6 +422,7 @@ namespace bl {
         result.layers_[1] = std::move(layers_[1]);
         result.block_entities_ = std::move(block_entities_);
         result.block_entity_positions_ = std::move(block_entity_positions_);
+        result.entities_ = std::move(entities_);
         release_ownership();
         return result;
     }
@@ -407,6 +432,21 @@ namespace bl {
         int read = 0;
         auto *root = bl::nbt::read_one_palette(data, len, read);
         if (!root) return result;
+
+        auto *format_version_tag = root->get("format_version");
+        auto *format_version = format_version_tag ? format_version_tag->as<bl::nbt::int_tag *>() : nullptr;
+        if (!format_version) {
+            BL_ERROR("Invalid mcstructure: missing format_version");
+            delete root;
+            return result;
+        }
+        result.version_ = format_version->value;
+        if (result.version_ != 1 && result.version_ != 2) {
+            BL_ERROR("Unsupported mcstructure format_version: %d (supported versions are 1 and 2)", result.version_);
+            result.version_ = 0;
+            delete root;
+            return result;
+        }
 
         auto read_vec3 = [](bl::nbt::list_tag *list) {
             block_pos pos;
@@ -431,15 +471,26 @@ namespace bl {
         result.size_z_ = size.z;
         result.origin_ = read_vec3(get_list("structure_world_origin"));
 
-        // block_indices: two int lists, each an index into the palette (ZYX order, -1 = void)
+        const auto volume = static_cast<size_t>(std::max(0, result.size_x_)) * static_cast<size_t>(std::max(0, result.size_y_)) *
+                            static_cast<size_t>(std::max(0, result.size_z_));
+        result.layers_[0].assign(volume, -1);
+        result.layers_[1].assign(volume, -1);
+
+        // Version 1 uses ListTag<IntTag> layers; version 2 uses ListTag<IntArrayTag> layers.
         if (auto *bi = get_list("structure.block_indices")) {
             for (int layer = 0; layer < 2 && layer < static_cast<int>(bi->value.size()); layer++) {
-                auto *layer_list = bi->value[layer]->as<bl::nbt::list_tag *>();
-                if (!layer_list) continue;
-                result.layers_[layer].reserve(layer_list->value.size());
-                for (auto *item : layer_list->value) {
-                    auto *it = item->as<bl::nbt::int_tag *>();
-                    result.layers_[layer].push_back(it ? it->value : 0);
+                if (auto *layer_array = bi->value[layer]->as<bl::nbt::int_array_tag *>(); layer_array) {
+                    result.layers_[layer] = layer_array->value;
+                    continue;
+                }
+                if (auto *layer_list = bi->value[layer]->as<bl::nbt::list_tag *>(); layer_list) {
+                    auto &indices = result.layers_[layer];
+                    indices.clear();
+                    indices.reserve(layer_list->value.size());
+                    for (auto *item : layer_list->value) {
+                        auto *it = item->as<bl::nbt::int_tag *>();
+                        indices.push_back(it ? it->value : -1);
+                    }
                 }
             }
         }
@@ -504,7 +555,7 @@ namespace bl {
 
     std::string mcstructure::dump() const {
         std::ostringstream oss;
-        oss << "mcstructure size=(" << size_x_ << ", " << size_y_ << ", " << size_z_ << ")"
+        oss << "mcstructure version=" << version_ << " size=(" << size_x_ << ", " << size_y_ << ", " << size_z_ << ")"
             << " origin=(" << origin_.x << ", " << origin_.y << ", " << origin_.z << ")\n";
         oss << "palette (" << palette_.size() << "):\n";
         for (size_t i = 0; i < palette_.size(); i++) {

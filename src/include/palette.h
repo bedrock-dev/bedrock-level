@@ -47,6 +47,7 @@ namespace bl {
         [[nodiscard]] int size_y() const noexcept { return size_y_; }
         [[nodiscard]] int size_z() const noexcept { return size_z_; }
         [[nodiscard]] block_pos size() const noexcept { return {size_x_, size_y_, size_z_}; }
+        [[nodiscard]] int32_t version() const noexcept { return version_; }
 
         [[nodiscard]] block_pos origin() const noexcept { return origin_; }
 
@@ -80,6 +81,7 @@ namespace bl {
         friend class mcstructure_builder;
 
         int size_x_{0}, size_y_{0}, size_z_{0};
+        int32_t version_{0};
         std::vector<palette_entry> palette_;  // block states from the "default" palette; owns tags
         layer_type layers_[2];                // block index per layer (ZYX order); -1 = void
         block_pos origin_;
@@ -94,7 +96,7 @@ namespace bl {
     class mcstructure_builder {
        public:
         // origin is the structure_world_origin metadata used when the structure is loaded back into a world.
-        mcstructure_builder(const block_pos &size, const block_pos &origin);
+        mcstructure_builder(const block_pos &size, const block_pos &origin, int32_t version = 1);
 
         mcstructure_builder &set_block(const block_pos &pos, const bl::nbt::compound_tag *tag);
         mcstructure_builder &set_block(int layer, const block_pos &pos, const bl::nbt::compound_tag *tag);
@@ -103,6 +105,9 @@ namespace bl {
         mcstructure_builder &fill_blocks(int layer, const block_box &box, const bl::nbt::compound_tag *tag);
 
         mcstructure_builder &set_block_entity(const block_pos &pos, const bl::nbt::compound_tag *tag);
+
+        /// Add an entity whose NBT coordinates are absolute world coordinates.
+        mcstructure_builder &add_entity(const bl::nbt::compound_tag *tag);
 
         [[nodiscard]] mcstructure build();
 
@@ -121,12 +126,14 @@ namespace bl {
 
         int size_x_{0}, size_y_{0}, size_z_{0};
         block_pos origin_;
+        int32_t version_{1};
         layer_type layers_[2];
 
         std::vector<palette_entry> palette_;
         std::unordered_map<std::string, size_t> palette_index_by_raw_;
         std::vector<bl::nbt::compound_tag *> block_entities_;
         std::vector<block_pos> block_entity_positions_;
+        std::vector<bl::nbt::compound_tag *> entities_;
 
         std::unordered_map<std::string, bl::nbt::compound_tag *> interned_tags_;
         std::vector<std::unique_ptr<bl::nbt::compound_tag>> owned_tags_;
