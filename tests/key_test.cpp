@@ -5,9 +5,12 @@
 
 #include <gtest/gtest.h>
 
+#include <memory>
+
 #include "bedrock_key.h"
 #include "bedrock_level.h"
 #include "chunk.h"
+#include "chunk_data_position.h"
 
 TEST(ChunkPos, ValidCheck) {
     using namespace bl;
@@ -243,6 +246,86 @@ TEST(HardcodedSpawnAreaList, EditOps) {
     EXPECT_FALSE(list.remove(5));  // out of range
     list.clear();
     EXPECT_TRUE(list.empty());
+}
+
+TEST(BlockEntity, OffsetPos) {
+    using namespace bl;
+
+    auto block_entity_owner = std::make_unique<nbt::compound_tag>("block_entity");
+    auto *block_entity = block_entity_owner.get();
+    block_entity->put(new nbt::string_tag("id", "Chest"));
+    block_entity->put(new nbt::int_tag("x", 12));
+    block_entity->put(new nbt::int_tag("y", 64));
+    block_entity->put(new nbt::int_tag("z", -9));
+    block_entity->put(new nbt::int_tag("pairx", 20));
+    block_entity->put(new nbt::int_tag("pairz", 3));
+
+    offset_block_entity_pos(block_entity, 32, -16);
+
+    EXPECT_EQ(block_entity->get("x")->as<nbt::int_tag *>()->value, 44);
+    EXPECT_EQ(block_entity->get("y")->as<nbt::int_tag *>()->value, 64);
+    EXPECT_EQ(block_entity->get("z")->as<nbt::int_tag *>()->value, -25);
+    EXPECT_EQ(block_entity->get("pairx")->as<nbt::int_tag *>()->value, 52);
+    EXPECT_EQ(block_entity->get("pairz")->as<nbt::int_tag *>()->value, -13);
+}
+
+TEST(BlockEntity, DoesNotOffsetPairPosForOtherTypes) {
+    using namespace bl;
+
+    auto block_entity_owner = std::make_unique<nbt::compound_tag>("block_entity");
+    auto *block_entity = block_entity_owner.get();
+    block_entity->put(new nbt::string_tag("id", "Barrel"));
+    block_entity->put(new nbt::int_tag("x", 12));
+    block_entity->put(new nbt::int_tag("z", -9));
+    block_entity->put(new nbt::int_tag("pairx", 20));
+    block_entity->put(new nbt::int_tag("pairz", 3));
+
+    offset_block_entity_pos(block_entity, 32, -16);
+
+    EXPECT_EQ(block_entity->get("x")->as<nbt::int_tag *>()->value, 44);
+    EXPECT_EQ(block_entity->get("z")->as<nbt::int_tag *>()->value, -25);
+    EXPECT_EQ(block_entity->get("pairx")->as<nbt::int_tag *>()->value, 20);
+    EXPECT_EQ(block_entity->get("pairz")->as<nbt::int_tag *>()->value, 3);
+}
+
+TEST(BlockEntity, SetPosUpdatesChestPairPos) {
+    using namespace bl;
+
+    auto block_entity = std::make_unique<nbt::compound_tag>("block_entity");
+    block_entity->put(new nbt::string_tag("id", "Chest"));
+    block_entity->put(new nbt::int_tag("x", 12));
+    block_entity->put(new nbt::int_tag("y", 64));
+    block_entity->put(new nbt::int_tag("z", -9));
+    block_entity->put(new nbt::int_tag("pairx", 20));
+    block_entity->put(new nbt::int_tag("pairz", 3));
+
+    set_block_entity_pos(block_entity.get(), {44, 80, -25});
+
+    EXPECT_EQ(block_entity->get("x")->as<nbt::int_tag *>()->value, 44);
+    EXPECT_EQ(block_entity->get("y")->as<nbt::int_tag *>()->value, 80);
+    EXPECT_EQ(block_entity->get("z")->as<nbt::int_tag *>()->value, -25);
+    EXPECT_EQ(block_entity->get("pairx")->as<nbt::int_tag *>()->value, 52);
+    EXPECT_EQ(block_entity->get("pairz")->as<nbt::int_tag *>()->value, -13);
+}
+
+TEST(PendingTicks, OffsetPos) {
+    using namespace bl;
+
+    auto pending_ticks_owner = std::make_unique<nbt::compound_tag>("pending_ticks");
+    auto *pending_ticks = pending_ticks_owner.get();
+    auto *tick_list = new nbt::list_tag("tickList");
+    auto *tick = new nbt::compound_tag("");
+    tick->put(new nbt::int_tag("x", 7));
+    tick->put(new nbt::int_tag("y", 80));
+    tick->put(new nbt::int_tag("z", -4));
+    tick_list->append(tick);
+    pending_ticks->put(tick_list);
+
+    offset_pending_ticks_pos(pending_ticks, 32, -16);
+
+    EXPECT_EQ(tick->get("x")->as<nbt::int_tag *>()->value, 39);
+    EXPECT_EQ(tick->get("y")->as<nbt::int_tag *>()->value, 80);
+    EXPECT_EQ(tick->get("z")->as<nbt::int_tag *>()->value, -20);
 }
 
 // raw_chunk::set_pos must offset HardCodedSpawnAreas coordinates with the chunk

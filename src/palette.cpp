@@ -12,6 +12,7 @@
 #include <sstream>
 #include <unordered_set>
 
+#include "chunk_data_position.h"
 #include "utils.h"
 
 namespace bl {
@@ -43,16 +44,6 @@ namespace bl {
             list->append(new bl::nbt::int_tag("", b));
             list->append(new bl::nbt::int_tag("", c));
             return list;
-        }
-
-        void set_block_entity_world_pos(bl::nbt::compound_tag *tag, const block_pos &world_pos) {
-            if (!tag) return;
-            tag->remove("x");
-            tag->remove("y");
-            tag->remove("z");
-            tag->put(new bl::nbt::int_tag("x", world_pos.x));
-            tag->put(new bl::nbt::int_tag("y", world_pos.y));
-            tag->put(new bl::nbt::int_tag("z", world_pos.z));
         }
 
         [[nodiscard]] block_pos to_world_pos(const block_pos &origin, const block_pos &local_pos) { return origin + local_pos; }
@@ -232,7 +223,7 @@ namespace bl {
             auto *entry = new bl::nbt::compound_tag(std::to_string(flat));
             auto *block_entity_data = static_cast<bl::nbt::compound_tag *>(block_entity->copy());
             block_entity_data->set_key("block_entity_data");
-            set_block_entity_world_pos(block_entity_data, to_world_pos(origin(), pos));
+            set_block_entity_pos(block_entity_data, to_world_pos(origin(), pos));
             entry->put(block_entity_data);
             block_position_data->put(entry);
         }
@@ -377,7 +368,7 @@ namespace bl {
         if (!tag) return *this;
 
         auto clone = std::unique_ptr<bl::nbt::compound_tag>(static_cast<bl::nbt::compound_tag *>(tag->copy()));
-        set_block_entity_world_pos(clone.get(), to_world_pos(origin_, pos));
+        set_block_entity_pos(clone.get(), to_world_pos(origin_, pos));
 
         auto *stored = clone.get();
         owned_tags_.push_back(std::move(clone));
@@ -415,7 +406,7 @@ namespace bl {
             auto *block_entity = block_entities_[i];
             if (!block_entity) continue;
             const auto local_pos = i < block_entity_positions_.size() ? block_entity_positions_[i] : block_pos{0, 0, 0};
-            set_block_entity_world_pos(block_entity, to_world_pos(result.origin(), local_pos));
+            set_block_entity_pos(block_entity, to_world_pos(result.origin(), local_pos));
         }
         result.palette_ = std::move(palette_);
         result.layers_[0] = std::move(layers_[0]);

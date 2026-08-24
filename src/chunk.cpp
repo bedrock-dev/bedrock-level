@@ -13,6 +13,7 @@
 #include "actor.h"
 #include "bedrock_key.h"
 #include "bedrock_level.h"
+#include "chunk_data_position.h"
 #include "color.h"
 #include "include/utils.h"
 #include "leveldb/write_batch.h"
@@ -307,13 +308,7 @@ namespace bl {
         if (auto it = data_.find(chunk_key::BlockEntity); it != data_.end()) {
             auto &data = it->second;
             auto palette = nbt::read_palette_to_end(data.data(), data.size());
-            for (auto *p : palette) {
-                if (!p) continue;
-                auto xtag = dynamic_cast<nbt::int_tag *>(p->get("x"));
-                auto ztag = dynamic_cast<nbt::int_tag *>(p->get("z"));
-                if (xtag) xtag->value += dx;
-                if (ztag) ztag->value += dz;
-            }
+            for (auto *&p : palette) offset_block_entity_pos(p, dx, dz);
             data.clear();
             for (auto *p : palette) data += p->to_raw();
             for (auto *p : palette) delete p;
@@ -323,19 +318,7 @@ namespace bl {
         if (auto it = data_.find(chunk_key::PendingTicks); it != data_.end()) {
             auto &data = it->second;
             auto palette = nbt::read_palette_to_end(data.data(), data.size());
-            for (auto *p : palette) {
-                if (!p) continue;
-                auto *tickList = dynamic_cast<nbt::list_tag *>(p->get("tickList"));
-                if (!tickList) continue;
-                for (auto *item : tickList->value) {
-                    auto *pt = dynamic_cast<nbt::compound_tag *>(item);
-                    if (!pt) continue;
-                    auto *xtag = dynamic_cast<nbt::int_tag *>(pt->get("x"));
-                    auto *ztag = dynamic_cast<nbt::int_tag *>(pt->get("z"));
-                    if (xtag) xtag->value += dx;
-                    if (ztag) ztag->value += dz;
-                }
-            }
+            for (auto *&p : palette) offset_pending_ticks_pos(p, dx, dz);
             data.clear();
             for (auto *p : palette) data += p->to_raw();
             for (auto *p : palette) delete p;
@@ -346,12 +329,7 @@ namespace bl {
             auto &data = it->second;
             bl::hardcoded_spawn_area_list list;
             if (list.from_raw(data)) {
-                for (auto &area : list.areas()) {
-                    area.min_pos.x += dx;
-                    area.min_pos.z += dz;
-                    area.max_pos.x += dx;
-                    area.max_pos.z += dz;
-                }
+                offset_hardcoded_spawn_areas_pos(list, dx, dz);
                 data = list.to_raw();
             }
         }
