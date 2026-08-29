@@ -26,6 +26,15 @@ namespace bl {
     bool init_biome_color_palette_from_file(const std::string& filename);
     bool init_block_color_from_file(const std::string& filename);
 
+    // Block name <-> runtime id. Ids are assigned when the block color table is initialized and
+    // are stable afterwards; -1 means unknown (e.g. a mod block). Names are stored WITHOUT the
+    // "minecraft:" prefix; lookups strip the prefix from the given name. The tables are built
+    // once at startup and are read-only afterwards, so concurrent reads from worker threads are
+    // safe without locking.
+    int block_name_to_runtime_id(const std::string& name);
+    const std::string& block_runtime_id_to_name(int id);
+    std::string block_runtime_id_to_full_name(int id);
+
     // color calculation
     color get_biome_color(biome b);
     color get_block_by_name_tag(const std::string& name, const std::string& tag = {});

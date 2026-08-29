@@ -65,6 +65,18 @@ namespace bl {
         std::unordered_map<std::string, bl::color> single_block_color_map;
         std::unordered_map<std::string, std::unordered_map<std::string, bl::color>> multi_block_color_map;
 
+        // block id -> name (without "minecraft:" prefix), built from the block color table
+        std::vector<std::string> block_id_to_names;
+        std::unordered_map<std::string, int> block_name_to_ids;
+
+        std::string_view strip_minecraft_prefix(std::string_view name) {
+            constexpr std::string_view prefix = "minecraft:";
+            if (name.size() >= prefix.size() && name.substr(0, prefix.size()) == prefix) {
+                return name.substr(prefix.size());
+            }
+            return name;
+        }
+
         bl::color blend_with_biome(const std::unordered_map<bl::biome, bl::color>& map, bl::color gray, bl::color default_color,
                                    bl::biome b) {
             auto it = map.find(b);
@@ -190,11 +202,37 @@ namespace bl {
                     }
                 }
             }
+
+            // build a stable block id -> name table (names stored without the "minecraft:" prefix)
+            block_id_to_names.clear();
+            block_name_to_ids.clear();
+            for (const auto& [blockname, value] : j.items()) {
+                std::string key(strip_minecraft_prefix(blockname));
+                if (block_name_to_ids.count(key)) continue;
+                block_name_to_ids.emplace(key, static_cast<int>(block_id_to_names.size()));
+                block_id_to_names.push_back(std::move(key));
+            }
         } catch (std::exception& e) {
             LOG_F(ERROR, "Can not parse block color file %s: %s", filename.c_str(), e.what());
             return false;
         }
         return true;
+    }
+
+    int block_name_to_runtime_id(const std::string& name) {
+        std::string key(strip_minecraft_prefix(name));
+        auto it = block_name_to_ids.find(key);
+        return it == block_name_to_ids.end() ? -1 : it->second;
+    }
+
+    const std::string& block_runtime_id_to_name(int id) {
+        static const std::string empty;
+        return (id < 0 || id >= static_cast<int>(block_id_to_names.size())) ? empty : block_id_to_names[id];
+    }
+
+    std::string block_runtime_id_to_full_name(int id) {
+        const auto& name = block_runtime_id_to_name(id);
+        return name.empty() ? std::string() : "minecraft:" + name;
     }
 
     void export_image(const std::vector<std::vector<color>>& b, int ppi, const std::string& name) {
