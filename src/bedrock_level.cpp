@@ -81,20 +81,6 @@ namespace bl {
         auto r = this->db_->Get(read_option_, key, &value);
         return r.ok();
     }
-
-    actor *bedrock_level::load_actor(const std::string &raw_uid) {
-        const auto key = "actorprefix" + raw_uid;
-        std::string raw_data;
-        if (!load_raw(key, raw_data)) return nullptr;
-        auto ac = new actor;
-        if (!ac->load(raw_data.data(), raw_data.size())) {
-            delete ac;
-            return nullptr;
-        } else {
-            return ac;
-        }
-    }
-
     void bedrock_level::load_global_data() {
         this->foreach_global_keys([this](const std::string &key, const std::string &value) {
             if (key.find("player") != std::string::npos) {
@@ -161,7 +147,7 @@ namespace bl {
         path /= bl::bedrock_level::LEVEL_DB;
         leveldb::Status status = leveldb::DB::Open(this->options_, bl::utils::UTF8ToGBEx(path.string().c_str()), &this->db_);
         if (!status.ok()) {
-            BL_ERROR("Can not open level database: [%s].", status.ToString().c_str());
+            LOG_F(ERROR, "Can not open level database: [%s].", status.ToString().c_str());
         } else {
             load_dimension_name_id_table();
         }

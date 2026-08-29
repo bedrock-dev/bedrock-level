@@ -31,7 +31,6 @@ namespace bl {
     color get_block_by_name_tag(const std::string& name, const std::string& tag = {});
     bl::color blend_color_with_biome(const std::string& name, bl::color color, bl::biome b);
     // if true, the block missing color will be print to console
-    void setUseColorDebugMode(bool enable);
 
     void export_image(const std::vector<std::vector<color>>& c, int ppi, const std::string& name);
 

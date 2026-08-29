@@ -44,11 +44,9 @@ namespace bl {
 
         // read(load)
         bool load_raw(const std::string &key, std::string &value);
-        actor *load_actor(const std::string &raw_uid);
         void load_global_data();
 
         void foreach_global_keys(const std::function<void(const std::string &, const std::string &)> &f);
-
         void foreach_key_with_prefix(const std::string &prefix, const std::function<void(const std::string &, const std::string &)> &f,
                                      std::atomic_bool &stop, int max = -1);
 

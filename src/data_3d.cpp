@@ -62,7 +62,7 @@ namespace bl {
     bool biome3d::load_from_d3d(const byte_t *data, size_t len) {
         int index = 0;
         if (len < 512) {
-            BL_ERROR("Invalid Data3d format");
+            LOG_F(ERROR, "Invalid Data3d format");
             return false;
         }
         memcpy(this->height_map_.data(), data, 512);
@@ -134,7 +134,7 @@ namespace bl {
     }
     bool biome3d::load_from_d2d(const byte_t *data, size_t len) {
         if (len != 768) {  // height map: 512bytes biome: 256 bytes
-            BL_ERROR("Invalid Data2d format (%zu)", len);
+            LOG_F(ERROR, "Invalid Data2d format (%zu)", len);
             return false;
         }
         memcpy(this->height_map_.data(), data, 512);

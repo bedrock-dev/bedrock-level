@@ -12,6 +12,8 @@
 #include <string>
 #include <vector>
 
+#include "loguru/loguru.hpp"
+
 typedef std::chrono::high_resolution_clock timer_clock;
 typedef int64_t microsecond_t;
 
@@ -22,19 +24,6 @@ typedef int64_t microsecond_t;
     auto time_##label = std::chrono::duration_cast<std::chrono::microseconds>(e_##label).count();
 
 #define DEBUG
-
-// #ifdef WIN32
-// #define FN (__builtin_strrchr(__FILE__, '\\') ? __builtin_strrchr(__FILE__, '\\') + 1 : __FILE__)
-// #else
-// #define FN (__builtin_strrchr(__FILE__, '/') ? __builtin_strrchr(__FILE__, '/') + 1 : __FILE__)
-#define FN ""
-// #endif
-#define BL_LOGGER(...) log(FN, __FUNCTION__, __LINE__, __VA_ARGS__)
-#define BL_ERROR(...) error_msg(FN, __FUNCTION__, __LINE__, __VA_ARGS__)
-
-void log(const char *file_name, const char *function_name, size_t line, const char *fmt, ...);
-
-void error_msg(const char *file_name, const char *function_name, size_t line, const char *fmt, ...);
 
 #ifdef DEBUG
 #define Assert(Expr, ...) M_Assert(#Expr, Expr, __FILE__, __LINE__, __VA_ARGS__)
@@ -75,7 +64,7 @@ namespace bl::utils {
         return res;
     }
 
-    // 使用单个字符作为分隔符
+    // Split a string using a single character delimiter
     std::vector<std::string> splitStr(const std::string &str, char delimiter);
 
     void printReadableBytes(const std::string &bytes);

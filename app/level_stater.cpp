@@ -54,7 +54,7 @@ void PrintDatabaseStats(leveldb::DB *db) {
     if (db->GetProperty("leveldb.stats", &stats)) {
         printf("stats:\n %s\n", stats.c_str());
     } else {
-        BL_ERROR("Can not get leveldb.stats properties");
+        LOG_F(ERROR, "Can not get leveldb.stats properties");
     }
     uint64_t approximate_size;
     leveldb::Range range(leveldb::Slice(""), leveldb::Slice("\xff\xff\xff\xff"));
@@ -274,7 +274,7 @@ int main(int argc, const char *argv[]) {
 
     bl::bedrock_level level;
     if (!level.open(opt.path.string())) {
-        BL_ERROR("Can not open level %s", opt.path.string().c_str());
+        LOG_F(ERROR, "Can not open level %s", opt.path.string().c_str());
         return 1;
     }
 

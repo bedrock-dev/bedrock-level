@@ -178,7 +178,7 @@ namespace bl::nbt {
         auto [r, x] = read_nbt(data, data_len);
         read = static_cast<int>(x);
         if (!r || r->type() != tag_type::Compound) {
-            BL_ERROR("Invalid palette format");
+            LOG_F(ERROR, "Invalid palette format");
             delete r;
             return nullptr;
         } else {
@@ -197,7 +197,7 @@ namespace bl::nbt {
             if (tag) res.push_back(tag);
         }
         if (ptr != len) {
-            BL_ERROR("Remain bytes found (%d).", (int)len - (int)ptr);
+            LOG_F(ERROR, "Remain bytes found (%d).", (int)len - (int)ptr);
         }
         return res;
     }

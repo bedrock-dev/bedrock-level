@@ -5,27 +5,22 @@
 #include "color.h"
 
 #include <cstdint>
-#include <cstdio>
 #include <fstream>
-#include <iostream>
 #include <string>
 #include <string_view>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
+#include "config.h"
 #include "json/json.hpp"
-#include "nbt.h"
 #include "stb/stb_image_write.h"
 #include "utils.h"
 
 namespace bl {
     namespace {
 
-        bool debugColor = false;
         // biome id -> water
-        // 和群系有关的颜色白名单
         const std::vector<std::string> water_block_names{"water"};
         const std::vector<std::string> leaves_block_names{"leave"};
         const std::vector<std::string> grass_block_names{"grass"};
@@ -91,8 +86,6 @@ namespace bl {
 
     }  // namespace
 
-    void setUseColorDebugMode(bool enable) { debugColor = enable; }
-
     color get_biome_color(bl::biome b) {
         auto it = biome_color_map.find(b);
         return it == biome_color_map.end() ? bl::color() : it->second;
@@ -114,10 +107,9 @@ namespace bl {
             }
             return map.begin()->second;
         }
-        if (debugColor) {
-            // exclude edu ver blocks
+        if (config::log_missing_block_color()) {
             if (name.find("element") == std::string::npos) {
-                BL_ERROR("Can not found color for block %s-%s", name.c_str(), tag.c_str());
+                LOG_F(ERROR, "Can not found color for block %s-%s", name.c_str(), tag.c_str());
             }
         }
         return {};
@@ -132,7 +124,7 @@ namespace bl {
         try {
             std::ifstream f(filename);
             if (!f.is_open()) {
-                BL_ERROR("Can not open biome color file %s", filename.c_str());
+                LOG_F(ERROR, "Can not open biome color file %s", filename.c_str());
                 return false;
             }
             nlohmann::json j;
@@ -163,13 +155,9 @@ namespace bl {
                     if (key == "default") default_leave_color = c;
                 }
             }
-
         } catch (std::exception&) {
             return false;
         }
-        BL_LOGGER("Water color Map: %zu", biome_water_map.size());
-        BL_LOGGER("Leaves color Map: %zu", biome_leave_map.size());
-        BL_LOGGER("Grass color Map: %zu", biome_grass_map.size());
         return true;
     }
 
@@ -177,7 +165,7 @@ namespace bl {
         try {
             std::ifstream f(filename);
             if (!f.is_open()) {
-                BL_ERROR("Can not open file %s", filename.c_str());
+                LOG_F(ERROR, "Can not open block color file %s", filename.c_str());
                 return false;
             }
             nlohmann::json j;
@@ -202,9 +190,8 @@ namespace bl {
                     }
                 }
             }
-            BL_LOGGER("Load json success: %s", filename.c_str());
         } catch (std::exception& e) {
-            std::cout << "Err: " << e.what() << std::endl;
+            LOG_F(ERROR, "Can not parse block color file %s: %s", filename.c_str(), e.what());
             return false;
         }
         return true;
@@ -212,7 +199,7 @@ namespace bl {
 
     void export_image(const std::vector<std::vector<color>>& b, int ppi, const std::string& name) {
         if (b.empty() || b[0].empty()) {
-            BL_ERROR("export_image: empty image data");
+            LOG_F(ERROR, "export_image: empty image data");
             return;
         }
         const int c = 3;

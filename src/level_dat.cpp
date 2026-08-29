@@ -40,11 +40,17 @@ namespace bl {
         using namespace bl::nbt;
         namespace fs = std::filesystem;
         if (!fs::exists(path)) {
+            LOG_F(ERROR, "No such level.dat file: %s", path.c_str());
             return false;
         }
 
         auto data = utils::read_file(path);
-        return this->load_from_raw_data(data);
+        if (this->load_from_raw_data(data)) {
+            return true;
+        } else {
+            LOG_F(ERROR, "Invalid level.dat file format: %s", path.c_str());
+            return false;
+        }
     }
 
     bool level_dat::preload_data() {
@@ -87,7 +93,6 @@ namespace bl {
         this->header_ = std::string(data.data(), 8);
         this->root_ = read_one_palette(data.data() + 8, read);
         if (!root_ || read != static_cast<int>(data.size()) - 8) {
-            BL_ERROR("can not read level.dat");
             return false;
         }
         return this->preload_data();

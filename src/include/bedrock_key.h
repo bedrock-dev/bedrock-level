@@ -89,9 +89,7 @@ namespace bl {
             return {{minimum.x, minimum.y, minimum.z}, {minimum.x + size_x, minimum.y + size_y, minimum.z + size_z}};
         }
 
-        [[nodiscard]] bool is_valid() const noexcept {
-            return min_pos.x < max_pos.x && min_pos.y < max_pos.y && min_pos.z < max_pos.z;
-        }
+        [[nodiscard]] bool is_valid() const noexcept { return min_pos.x < max_pos.x && min_pos.y < max_pos.y && min_pos.z < max_pos.z; }
 
         [[nodiscard]] int size_x() const noexcept { return max_pos.x - min_pos.x; }
         [[nodiscard]] int size_y() const noexcept { return max_pos.y - min_pos.y; }
@@ -112,13 +110,9 @@ namespace bl {
                     {std::min(max_pos.x, rhs.max_pos.x), std::min(max_pos.y, rhs.max_pos.y), std::min(max_pos.z, rhs.max_pos.z)}};
         }
 
-        [[nodiscard]] block_box translated(int dx, int dy, int dz) const noexcept {
-            return translated(block_pos{dx, dy, dz});
-        }
+        [[nodiscard]] block_box translated(int dx, int dy, int dz) const noexcept { return translated(block_pos{dx, dy, dz}); }
 
-        [[nodiscard]] block_box translated(const block_pos &offset) const noexcept {
-            return {min_pos + offset, max_pos + offset};
-        }
+        [[nodiscard]] block_box translated(const block_pos &offset) const noexcept { return {min_pos + offset, max_pos + offset}; }
     };
 
     struct vec3 {

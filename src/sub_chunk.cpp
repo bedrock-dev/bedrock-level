@@ -31,7 +31,7 @@ namespace bl {
             auto version = stream[0];
             if (version != 8        // 1.2~1.17
                 && version != 9) {  // 1.18+
-                BL_LOGGER("Unsupported sub chunk version: %u", stream[0]);
+                LOG_F(INFO, "Unsupported sub chunk version: %u", stream[0]);
                 return false;
             }
             sub_chunk->set_version(version);
@@ -41,7 +41,7 @@ namespace bl {
             if (version == 9) {
                 int8_t y_index = stream[2];
                 if (y_index != sub_chunk->y_index()) {
-                    BL_ERROR("Invalid Y index value(new(%d)  != default(%d))", y_index, sub_chunk->y_index());
+                    LOG_F(ERROR, "Invalid Y index value(new(%d)  != default(%d))", y_index, sub_chunk->y_index());
                 }
                 sub_chunk->set_y_index(y_index);
                 read++;
@@ -51,7 +51,7 @@ namespace bl {
     }  // namespace
 
     bool sub_chunk::load(const byte_t *data, size_t len) {
-        size_t idx = 0;  // 全局索引
+        size_t idx = 0;
         int read{0};
         if (!read_header(this, data, read)) return false;
         idx += read;
@@ -70,11 +70,11 @@ namespace bl {
 
     block_info sub_chunk::get_block(int rx, int ry, int rz) {
         if (rx < 0 || rx > 15 || ry < 0 || ry > 15 || rz < 0 || rz > 15) {
-            BL_ERROR("Invalid in chunk position %d %d %d", rx, ry, rz);
+            LOG_F(ERROR, "Invalid in chunk position %d %d %d", rx, ry, rz);
             return {};
         }
         if (this->layers_.empty()) {
-            BL_ERROR("sub_chunk has no layers");
+            LOG_F(ERROR, "sub_chunk has no layers");
             return {};
         }
         using bl::nbt::string_tag, bl::nbt::compound_tag;
@@ -84,7 +84,7 @@ namespace bl {
 
         auto &palette = this->layers_[0]->palette;
         if (block < 0 || block >= palette.size()) {
-            BL_ERROR("Invalid block index with value %d", block);
+            LOG_F(ERROR, "Invalid block index with value %d", block);
             return {};
         }
         auto &b = palette[block].tag;
@@ -122,11 +122,11 @@ namespace bl {
 
     block_info sub_chunk::get_block_fast(int rx, int ry, int rz) {
         if (rx < 0 || rx > 15 || ry < 0 || ry > 15 || rz < 0 || rz > 15) {
-            BL_ERROR("Invalid in chunk position %d %d %d", rx, ry, rz);
+            LOG_F(ERROR, "Invalid in chunk position %d %d %d", rx, ry, rz);
             return {};
         }
         if (this->layers_.empty()) {
-            BL_ERROR("sub_chunk has no layers");
+            LOG_F(ERROR, "sub_chunk has no layers");
             return {};
         }
 
@@ -135,7 +135,7 @@ namespace bl {
 
         auto &palette = this->layers_[0]->palette;
         if (block >= palette.size() || block < 0) {
-            BL_ERROR("Invalid block index with value %d", block);
+            LOG_F(ERROR, "Invalid block index with value %d", block);
             return {};
         }
 
@@ -144,11 +144,11 @@ namespace bl {
 
     nbt::compound_tag *sub_chunk::get_block_raw(int rx, int ry, int rz) {
         if (rx < 0 || rx > 15 || ry < 0 || ry > 15 || rz < 0 || rz > 15) {
-            BL_ERROR("Invalid in chunk position %d %d %d", rx, ry, rz);
+            LOG_F(ERROR, "Invalid in chunk position %d %d %d", rx, ry, rz);
             return nullptr;
         }
         if (this->layers_.empty()) {
-            BL_ERROR("sub_chunk has no layers");
+            LOG_F(ERROR, "sub_chunk has no layers");
             return nullptr;
         }
 
@@ -156,7 +156,7 @@ namespace bl {
         auto block = this->layers_[0]->blocks[idx];
 
         if (block >= this->layers_[0]->palette.size() || block < 0) {
-            BL_ERROR("Invalid block index with value %d", block);
+            LOG_F(ERROR, "Invalid block index with value %d", block);
             return nullptr;
         }
 

@@ -92,7 +92,7 @@ namespace bl {
             if (tag) {
                 result.push_back(make_palette_entry(tag));
             } else {
-                BL_ERROR("Can not read block palette");
+                LOG_F(ERROR, "Can not read block palette");
                 return result;
             }
             read += r;
@@ -240,7 +240,7 @@ namespace bl {
         const auto raw = to_raw();
         std::ofstream output(std::filesystem::u8path(file_name), std::ios::binary);
         if (!output.is_open()) {
-            BL_ERROR("Can not open file %s", file_name.c_str());
+            LOG_F(ERROR, "Can not open file %s", file_name.c_str());
             return false;
         }
         output.write(raw.data(), static_cast<std::streamsize>(raw.size()));
@@ -427,13 +427,13 @@ namespace bl {
         auto *format_version_tag = root->get("format_version");
         auto *format_version = format_version_tag ? format_version_tag->as<bl::nbt::int_tag *>() : nullptr;
         if (!format_version) {
-            BL_ERROR("Invalid mcstructure: missing format_version");
+            LOG_F(ERROR, "Invalid mcstructure: missing format_version");
             delete root;
             return result;
         }
         result.version_ = format_version->value;
         if (result.version_ != 1 && result.version_ != 2) {
-            BL_ERROR("Unsupported mcstructure format_version: %d (supported versions are 1 and 2)", result.version_);
+            LOG_F(ERROR, "Unsupported mcstructure format_version: %d (supported versions are 1 and 2)", result.version_);
             result.version_ = 0;
             delete root;
             return result;

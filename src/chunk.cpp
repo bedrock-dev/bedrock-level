@@ -149,7 +149,7 @@ namespace bl {
                     if (level.load_raw(actor_key, raw_actor) && !raw_actor.empty()) {
                         this->entities_[key] = std::move(raw_actor);
                     } else {
-                        if (bl::config::log_mismatched_actor()) BL_ERROR("actor data of key '%s' is empty", actor_key.c_str());
+                        if (bl::config::log_mismatched_actor()) LOG_F(ERROR, "actor data of key '%s' is empty", actor_key.c_str());
                     }
                 }
             }
@@ -363,7 +363,7 @@ namespace bl {
                 ac.offset_pos(static_cast<float>(dx), static_cast<float>(dz));
                 new_entities.emplace(ac.storage_key_raw(), ac.root()->to_raw());
             } else {
-                BL_ERROR("load actor (uid len=%zu) failed when reset raw chunk position", uid.size());
+                LOG_F(ERROR, "load actor (uid len=%zu) failed when reset raw chunk position", uid.size());
             }
         }
         // rebuild actor digest and nbts from updated entities_
@@ -481,14 +481,15 @@ namespace bl {
             auto *sb = new bl::sub_chunk();
             sb->set_y_index(sub_index);
             if (!sb->load(raw.data(), raw.size())) {
-                BL_ERROR("Can not load sub chunk (pos = %s, idx = %d, data size = %zu)", pos_.to_string().c_str(), sub_index, raw.size());
+                LOG_F(ERROR, "Can not load sub chunk (pos = %s, idx = %d, data size = %zu)", pos_.to_string().c_str(), sub_index,
+                      raw.size());
                 delete sb;
                 continue;
             }
             this->sub_chunks_[sub_index] = sb;
         }
         if (sub_chunks_.empty()) {
-            // BL_ERROR("Can not load terrain data of chunk %s", pos_.to_string().c_str());
+            // LOG_F(ERROR, "Can not load terrain data of chunk %s", pos_.to_string().c_str());
         } else {
             this->version = this->sub_chunks_.begin()->second->version() == 9 ? New : Old;
         }
@@ -547,7 +548,7 @@ namespace bl {
                     }
                 } else {
                     if (bl::config::log_mismatched_actor()) {
-                        BL_ERROR("[%s] mismatch found between actor digest and chunk data", pos_.to_string().c_str());
+                        LOG_F(ERROR, "[%s] mismatch found between actor digest and chunk data", pos_.to_string().c_str());
                     }
                 }
             }

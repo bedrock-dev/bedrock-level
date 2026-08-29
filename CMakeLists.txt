@@ -30,6 +30,7 @@ add_library(bedrock-level
         src/level_dat.cpp
         src/config.cpp
         #third
+        third/loguru/loguru.cpp
         third/stb/stb_image_write.cpp
         )
 
@@ -58,7 +59,6 @@ function(create_app name files)
 endfunction(create_app)
 
 create_app(biome_png app/biome_png.cpp)
-create_app(missing_color_finder app/missing_color_finder.cpp)
 create_app(dump_chunks app/dump_chunks.cpp)
 create_app(level_stater app/level_stater.cpp)
 
