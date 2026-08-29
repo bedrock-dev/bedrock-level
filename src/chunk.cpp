@@ -14,8 +14,7 @@
 #include "bedrock_key.h"
 #include "bedrock_level.h"
 #include "chunk_data_position.h"
-#include "color.h"
-#include "include/utils.h"
+#include "config.h"
 #include "leveldb/write_batch.h"
 #include "nbt.h"
 #include "utils.h"
@@ -150,7 +149,7 @@ namespace bl {
                     if (level.load_raw(actor_key, raw_actor) && !raw_actor.empty()) {
                         this->entities_[key] = std::move(raw_actor);
                     } else {
-                        BL_ERROR("actor key '%s' is empty", actor_key.c_str());
+                        if (bl::config::log_mismatched_actor()) BL_ERROR("actor data of key '%s' is empty", actor_key.c_str());
                     }
                 }
             }
@@ -543,12 +542,13 @@ namespace bl {
                     auto ac = new actor;
                     if (!ac->load(it->second.data(), it->second.size())) {
                         delete ac;
-                        BL_ERROR("invalid entitiy found");
                     } else {
                         this->entities_.push_back(ac);
                     }
                 } else {
-                    BL_ERROR("mismatch found between digest and actor palette ");
+                    if (bl::config::log_mismatched_actor()) {
+                        BL_ERROR("[%s] mismatch found between actor digest and chunk data", pos_.to_string().c_str());
+                    }
                 }
             }
         }

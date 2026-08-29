@@ -28,6 +28,7 @@ add_library(bedrock-level
         src/global.cpp
         src/color.cpp
         src/level_dat.cpp
+        src/config.cpp
         #third
         third/stb/stb_image_write.cpp
         )
