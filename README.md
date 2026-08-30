@@ -54,3 +54,12 @@ int main() {
 ### Complie guide
 
 You just need to clone this repo and run `build.ps1` in powershell
+
+### Credits
+
+- [NBT format](https://minecraft.wiki/w/NBT_format)
+- [Bedrock Edition level format](https://minecraft.wiki/w/Bedrock_Edition_level_format)
+- [blockstate protocol](https://gist.github.com/Tomcc/a96af509e275b1af483b25c543cfbf37)
+- [Minecraft Actor Storage](https://learn.microsoft.com/en-us/minecraft/creator/documents/actorstorage?view=minecraft-bedrock-stable)
+- [基岩版存档数据研究：DB数据\_生物实体](https://www.bilibili.com/opus/1083463817531228182?plat_id=5&share_from=article&share_medium=android&share_plat=android&share_session_id=6945817f-e41e-45b4-9840-cf726ed214ec&share_source=QQ&share_tag=s_i&timestamp=1781409692&unique_k=lUcEWqK)
+- [Bedrock .mcstructure files](https://gist.github.com/tryashtar/87ad9654305e5df686acab05cc4b6205)
