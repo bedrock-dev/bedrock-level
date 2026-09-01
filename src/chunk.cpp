@@ -73,9 +73,21 @@ namespace bl {
     }
 
     bool raw_chunk::read(bedrock_level &level, chunk_load_policy policy) {
+        // Version/terrain marker keys are always read regardless of policy.
+        // The chunk is valid if any of them exists.
+        bool valid = false;
+        for (auto kt : MARKER_KEYS) {
+            bl::chunk_key key{kt, this->pos_};
+            std::string raw;
+            const bool present = level.load_raw(key.to_raw(), raw);
+            if (present && (!bl::config::strict_chunk_existence() || !raw.empty())) {
+                valid = true;
+                this->data_[kt] = std::move(raw);
+                if (kt == chunk_key::VersionNew) this->version_ = ChunkVersion::New;
+            }
+        }
+        if (!valid) return false;
         static const chunk_key::key_type keys[] = {chunk_key::Data3D,
-                                                   chunk_key::VersionNew,
-                                                   chunk_key::VersionOld,
                                                    chunk_key::Data2D,
                                                    chunk_key::Data2DLegacy,
                                                    chunk_key::BlockEntity,
@@ -94,9 +106,7 @@ namespace bl {
                                                    chunk_key::BlendingBiomeHeight,
                                                    chunk_key::MetaDataHash,
                                                    chunk_key::BlendingData,
-                                                   chunk_key::ActorDigestVersion,
-                                                   chunk_key::VersionOld};
-        size_t read = 0;
+                                                   chunk_key::ActorDigestVersion};
         auto flagFor = [](chunk_key::key_type kt) -> chunk_load_policy {
             switch (kt) {
                 case chunk_key::Data3D:
@@ -118,11 +128,9 @@ namespace bl {
             bl::chunk_key key{kt, this->pos_};
             std::string raw;
             if (level.load_raw(key.to_raw(), raw) && !raw.empty()) {
-                read += raw.size();
                 this->data_[kt] = std::move(raw);
             }
         }
-        if (read == 0) return false;
 
         // read sub chunks
         if (has_flag(policy, chunk_load_policy::Terrain)) {
@@ -158,7 +166,15 @@ namespace bl {
     }
 
     bool raw_chunk::write(leveldb::WriteBatch &batch, bool clear) {
-        if (!loaded()) return false;
+        // nothing to write unless some normal key holds data
+        bool has_data = false;
+        for (const auto &[kt, raw] : this->data_) {
+            if (!raw.empty()) {
+                has_data = true;
+                break;
+            }
+        }
+        if (!has_data) return false;
 
         for (auto &[kt, raw] : this->data_) {
             bl::chunk_key key{kt, this->pos_};
@@ -267,6 +283,7 @@ namespace bl {
             auto kt = static_cast<chunk_key::key_type>(read_i32(p));
             data_[kt] = read_bytes(p);
         }
+        version_ = data_.find(chunk_key::VersionNew) != data_.end() ? ChunkVersion::New : ChunkVersion::Old;
 
         // sub chunks
         int32_t sub_count = read_i32(p);
@@ -578,7 +595,6 @@ namespace bl {
     bool chunk::load_from_raw_chunk(const bl::raw_chunk &rc, chunk_load_policy policy) {
         if (has_flag(policy, chunk_load_policy::Terrain)) {
             this->load_subchunks(rc);
-            if (this->sub_chunks_.empty()) return false;
             this->load_biomes(rc);
         }
         if (has_flag(policy, chunk_load_policy::Actor)) {

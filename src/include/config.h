@@ -7,6 +7,10 @@ namespace bl::config {
 
     void set_log_missing_block_color(bool);
     bool log_missing_block_color();
+
+    // strict chunk existence check: require non-empty marker key value
+    void set_strict_chunk_existence(bool);
+    bool strict_chunk_existence();
 }  // namespace bl::config
 
 #endif

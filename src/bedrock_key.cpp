@@ -153,6 +153,7 @@ namespace bl {
         auto [y, _] = this->get_y_range(v);
         return {this->x * 16, y, this->z * 16};
     }
+
     block_pos chunk_pos::get_max_pos(ChunkVersion v) const {
         auto [_, y] = this->get_y_range(v);
         return {this->x * 16 + 15, y, this->z * 16 + 15};

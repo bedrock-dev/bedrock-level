@@ -7,7 +7,6 @@
 
 // cached chunks
 
-#include <algorithm>
 #include <map>
 #include <string>
 #include <tuple>
@@ -46,21 +45,17 @@ namespace bl {
     // all keys-values from level, without parse
     class raw_chunk {
        public:
+        // version/terrain marker keys that always gate chunk validity
+        inline static const chunk_key::key_type MARKER_KEYS[] = {chunk_key::VersionOld, chunk_key::VersionNew, chunk_key::LegacyTerrain};
+
         explicit raw_chunk(const chunk_pos &pos) : pos_(pos) {}
 
         raw_chunk() = default;
         raw_chunk(const raw_chunk &other) = default;
 
-        [[nodiscard]] bool loaded() const {
-            return std::any_of(data_.begin(), data_.end(), [](const auto &p) { return p.second.size() > 0; });
-        }
-
-        [[nodiscard]] ChunkVersion version() const {
-            return get_normal_key(chunk_key::VersionNew).empty() ? ChunkVersion::Old : ChunkVersion::New;
-        }
+        [[nodiscard]] ChunkVersion version() const { return this->version_; }
 
         void clear_terrain();
-
         void clear_entities();
 
         // read raw chunk from leveldb
@@ -95,6 +90,7 @@ namespace bl {
         std::map<int8_t, std::string> sub_chunk_data_;
         std::string actor_digest_;
         std::map<std::string, std::string> entities_;
+        ChunkVersion version_{Old};
     };
 
     class chunk {
