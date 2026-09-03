@@ -44,7 +44,7 @@ int main(int argc, const char *argv[]) {
         for (int x = -RANGE; x <= RANGE; x++) {
             for (int z = -RANGE; z <= RANGE; z++) {
                 bl::raw_chunk rc(bl::chunk_pos{x, z, dim});
-                bool exists = rc.read(level) && (rc.loaded() || !rc.get_sub_chunks().empty() || !rc.get_entities().empty());
+                bool exists = rc.read(level) && (!rc.get_sub_chunks().empty() || !rc.get_entities().empty());
                 auto raw = rc.to_raw();
                 char filename[128];
                 snprintf(filename, sizeof(filename), "dim%d_cx%d_cz%d.chunk", dim, x, z);

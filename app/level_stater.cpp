@@ -197,7 +197,7 @@ std::string chunkDirName(const bl::chunk_pos &cp) {
     return "chunk_" + std::to_string(cp.x) + "_" + std::to_string(cp.z) + "_" + std::to_string(cp.dim);
 }
 
-bool chunkPresent(const bl::raw_chunk &rc) { return rc.loaded() || !rc.get_sub_chunks().empty() || !rc.get_entities().empty(); }
+bool chunkPresent(const bl::raw_chunk &rc) { return !rc.get_sub_chunks().empty() || !rc.get_entities().empty(); }
 
 bool exportChunk(bl::bedrock_level &level, const bl::chunk_pos &cp, const fs::path &outDir, bool unpack) {
     bl::raw_chunk rc(cp);
