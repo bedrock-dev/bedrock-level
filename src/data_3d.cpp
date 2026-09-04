@@ -29,7 +29,9 @@ namespace bl {
 
                 for (int wordi = 0; wordi < word_count; wordi++) {
                     auto word = *reinterpret_cast<const int *>(data + read + wordi * 4);
-                    for (int block = 0; block < bpw; block++) {
+                    // word_count * bpw can exceed 4096 when bits does not divide 32
+                    // (e.g. bits 3/5/6); stop decoding once all entries are filled.
+                    for (int block = 0; block < bpw && position < BLOCK_NUM; block++) {
                         int state = (word >> ((position % bpw) * bits)) & ((1 << bits) - 1);
                         index[position] = state;
                         position++;
