@@ -46,3 +46,4 @@ build
 worlds
 *.png
 tests/data
+build_msvc/

@@ -4,5 +4,5 @@ $build_dir = "./build"
 # }
 # New-Item -Path "." -Name $build_dir -ItemType Directory 
 # complie
-cmake -G "MinGW Makefiles" -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DBEDROCK_LEVEL_BUILD_APPS=ON -DBEDROCK_LEVEL_BUILD_TESTS=ON -B $build_dir . 
-cmake --build $build_dir --config Release -j 18 -- 
+cmake -G "MinGW Makefiles" -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=Release -DBEDROCK_LEVEL_BUILD_APPS=ON -DBEDROCK_LEVEL_BUILD_TESTS=ON -B $build_dir .
+cmake --build $build_dir -j 18 --

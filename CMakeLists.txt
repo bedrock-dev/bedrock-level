@@ -5,9 +5,6 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.14)
 project(bedrock_level)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    MESSAGE(FATAL_ERROR "Unsupported tool-chain, please use mingw64 instead")
-endif ()
 
 # Pure C++ library: never inherit a parent project's Qt AUTOGEN settings.
 set(CMAKE_AUTOMOC OFF)
@@ -44,9 +41,15 @@ add_library(bedrock-level
 
 
 if (WIN32)
-    MESSAGE(STATUS "Current compiler is Mingw")
-    set(EXTRA_LIBS ${PROJECT_SOURCE_DIR}/libs/libleveldb.a ${PROJECT_SOURCE_DIR}/libs/libzs.a)
-    add_compile_options(-std=c++17 -O2 -Wall -g)
+    if (MSVC)
+        MESSAGE(STATUS "Current compiler is MSVC")
+        set(EXTRA_LIBS ${PROJECT_SOURCE_DIR}/libs/leveldb.lib ${PROJECT_SOURCE_DIR}/libs/zs.lib)
+        add_compile_options(/O2)
+    elseif (MINGW)
+        MESSAGE(STATUS "Current compiler is MinGW")
+        set(EXTRA_LIBS ${PROJECT_SOURCE_DIR}/libs/libleveldb.a ${PROJECT_SOURCE_DIR}/libs/libzs.a)
+        add_compile_options(-std=c++17 -O2 -Wall -g)
+    endif ()
     target_link_libraries(bedrock-level ${EXTRA_LIBS})
 endif (WIN32)
 
