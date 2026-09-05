@@ -3,16 +3,15 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.14)
 
 
 project(bedrock_level)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Pure C++ library: never inherit a parent project's Qt AUTOGEN settings.
 set(CMAKE_AUTOMOC OFF)
 set(CMAKE_AUTOUIC OFF)
 set(CMAKE_AUTORCC OFF)
-
-include_directories(src/include)
-include_directories(third/)
 
 enable_testing()
 
@@ -39,18 +38,23 @@ add_library(bedrock-level
         third/stb/stb_image_write.cpp
         )
 
+target_include_directories(bedrock-level PUBLIC
+        ${PROJECT_SOURCE_DIR}/src/include
+        ${PROJECT_SOURCE_DIR}/third
+        )
+
 
 if (WIN32)
     if (MSVC)
         MESSAGE(STATUS "Current compiler is MSVC")
         set(EXTRA_LIBS ${PROJECT_SOURCE_DIR}/libs/leveldb.lib ${PROJECT_SOURCE_DIR}/libs/zs.lib)
-        add_compile_options(/O2)
+        target_compile_options(bedrock-level PRIVATE /O2)
     elseif (MINGW)
         MESSAGE(STATUS "Current compiler is MinGW")
         set(EXTRA_LIBS ${PROJECT_SOURCE_DIR}/libs/libleveldb.a ${PROJECT_SOURCE_DIR}/libs/libzs.a)
-        add_compile_options(-std=c++17 -O2 -Wall -g)
+        target_compile_options(bedrock-level PRIVATE -O2 -Wall)
     endif ()
-    target_link_libraries(bedrock-level ${EXTRA_LIBS})
+    target_link_libraries(bedrock-level PRIVATE ${EXTRA_LIBS})
 endif (WIN32)
 
 
@@ -86,8 +90,6 @@ if (BEDROCK_LEVEL_BUILD_TESTS)
     # For Windows: Prevent overriding the parent project's compiler/linker settings
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(googletest)
-    include(GoogleTest)
-
     function(create_test name files)
         add_executable(
                 ${name}
@@ -95,7 +97,7 @@ if (BEDROCK_LEVEL_BUILD_TESTS)
         )
         target_link_libraries(${name} PRIVATE GTest::gtest_main bedrock-level)
         target_compile_definitions(${name} PRIVATE TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/data")
-        #    add_test(NAME ${name} COMMAND ${name})
+        add_test(NAME ${name} COMMAND ${name})
     endfunction(create_test)
 
     create_test(utils_test tests/utils_test.cpp)
