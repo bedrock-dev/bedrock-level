@@ -23,10 +23,9 @@ namespace bl::nbt {
 
     // used by all key and string value
     int read_string(const byte_t *data, size_t data_len, std::string &val) {
-        if (data_len < 2) return 0;
-        uint16_t len;
-        memcpy(&len, data, 2);
-        if (data_len < 2u + len) return 0;
+        if (!data || data_len < 2) return 0;
+        const uint16_t len = detail::read_u16_le(data);
+        if (static_cast<size_t>(len) > data_len - 2) return 0;
         if (len != 0) {
             val.assign(data + 2, len);
         } else {
@@ -36,7 +35,7 @@ namespace bl::nbt {
     }
 
     int read_tag_type(const byte_t *data, size_t data_len, tag_type &type) {
-        if (data_len < 1) return 0;
+        if (!data || data_len < 1) return 0;
         type = static_cast<tag_type>(data[0]);
         return 1;
     }
@@ -45,78 +44,90 @@ namespace bl::nbt {
     std::tuple<TagType *, size_t> read_scalar_value(const byte_t *data, size_t data_len, const std::string &key) {
         using value_type = decltype(TagType::value);
         constexpr size_t value_size = sizeof(value_type);
-        if (data_len < value_size) return {nullptr, 0};
+        if (!data || data_len < value_size) return {nullptr, 0};
         auto *tag = new TagType(key);
-        memcpy(&tag->value, data, value_size);
+        tag->value = detail::read_scalar_le<value_type>(data);
         return {tag, value_size};
     }
 
     template <typename TagType>
     std::tuple<TagType *, size_t> read_array_value(const byte_t *data, size_t data_len, const std::string &key) {
         using elem_type = typename decltype(TagType::value)::value_type;
-        if (data_len < 4) return {nullptr, 0};
-        int32_t len = 0;
-        memcpy(&len, data, 4);
+        if (!data || data_len < 4) return {nullptr, 0};
+        const int32_t len = detail::read_scalar_le<int32_t>(data);
         if (len < 0) return {nullptr, 0};
         const auto element_count = static_cast<size_t>(len);
         if (element_count > (data_len - 4) / sizeof(elem_type)) return {nullptr, 0};
-        auto *tag = new TagType(key);
+        auto tag = std::make_unique<TagType>(key);
         tag->value = std::vector<elem_type>(element_count, 0);
-        memcpy(tag->value.data(), data + 4, element_count * sizeof(elem_type));
-        return {tag, element_count * sizeof(elem_type) + 4};
+        if constexpr (sizeof(elem_type) == 1) {
+            if (element_count != 0) memcpy(tag->value.data(), data + 4, element_count);
+        } else {
+            for (size_t i = 0; i < element_count; ++i) {
+                tag->value[i] = detail::read_scalar_le<elem_type>(data + 4 + i * sizeof(elem_type));
+            }
+        }
+        const auto consumed = element_count * sizeof(elem_type) + 4;
+        return {tag.release(), consumed};
     }
 
     std::tuple<string_tag *, size_t> read_string_value(const byte_t *data, size_t data_len, const std::string &key) {
-        auto *tag = new string_tag(key);
+        auto tag = std::make_unique<string_tag>(key);
         int r = read_string(data, data_len, tag->value);
         if (r == 0) {
-            delete tag;
             return {nullptr, 0};
         }
-        return {tag, static_cast<size_t>(r)};
+        return {tag.release(), static_cast<size_t>(r)};
     }
 
     std::tuple<list_tag *, size_t> read_list_tag_value(const byte_t *data, size_t data_len, const std::string &key) {
+        if (!data) return {nullptr, 0};
         size_t read = 0;
-        auto *tag = new list_tag(key);
+        auto tag = std::make_unique<list_tag>(key);
         tag_type child_type;
         {
             int r = read_tag_type(data + read, data_len - read, child_type);
-            if (r == 0) { delete tag; return {nullptr, 0}; }
+            if (r == 0) return {nullptr, 0};
             read += r;
         }
-        if (data_len - read < 4) { delete tag; return {nullptr, 0}; }
-        int32_t list_size{0};
-        memcpy(&list_size, data + read, 4);
+        if (data_len - read < 4) return {nullptr, 0};
+        const int32_t list_size = detail::read_scalar_le<int32_t>(data + read);
         read += 4;
-        if (list_size < 0) { delete tag; return {nullptr, 0}; }
+        if (list_size < 0 || (list_size != 0 && child_type == End)) return {nullptr, 0};
         const auto count = static_cast<size_t>(list_size);
-        if (count > data_len - read) { delete tag; return {nullptr, 0}; }
+        if (count > data_len - read) return {nullptr, 0};
         tag->value.reserve(count);
         for (int i = 0; i < list_size; i++) {
-            if (data_len <= read) { delete tag; return {nullptr, 0}; }
+            if (data_len <= read) return {nullptr, 0};
             auto [child, sz] = read_value_by_type(child_type, data + read, data_len - read, "");
-            if (child == nullptr || sz == 0 || sz > data_len - read) { delete child; delete tag; return {nullptr, 0}; }
+            if (child == nullptr || sz == 0 || sz > data_len - read) {
+                delete child;
+                return {nullptr, 0};
+            }
             read += sz;
             tag->value.push_back(child);
         }
-        return {tag, read};
+        return {tag.release(), read};
     }
 
     std::tuple<compound_tag *, size_t> read_compound_value(const byte_t *data, size_t data_len, const std::string &key) {
-        auto *tag = new compound_tag(key);
+        if (!data) return {nullptr, 0};
+        auto tag = std::make_unique<compound_tag>(key);
         size_t total = 0;
         while (total < data_len) {
             auto [child, read] = read_nbt(data + total, data_len - total);
-            if (read == 0) break;
+            if (read == 0) return {nullptr, 0};
             total += read;
             if (child) {
                 tag->value.assign(child);
             } else {
-                break;
+                // A compound is complete only when its explicit End marker was consumed.
+                if (read == 1 && data[total - 1] == static_cast<byte_t>(End)) return {tag.release(), total};
+                return {nullptr, 0};
             }
         }
-        return {tag, total};
+        // Running out of bytes without an End marker means truncated input.
+        return {nullptr, 0};
     }
 
     std::tuple<abstract_tag *, size_t> read_value_by_type(tag_type type, const byte_t *data, size_t data_len, const std::string &key) {
@@ -151,7 +162,7 @@ namespace bl::nbt {
     }
 
     std::tuple<abstract_tag *, size_t> read_nbt(const byte_t *data, size_t data_len) {
-        if (data_len == 0) return {nullptr, 0};
+        if (!data || data_len == 0) return {nullptr, 0};
         int read = 0;
         tag_type type;
         {

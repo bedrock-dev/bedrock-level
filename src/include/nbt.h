@@ -6,17 +6,96 @@
 #define BEDROCK_LEVEL_NBT_H
 
 #include <algorithm>
+#include <bit>
 #include <cstdlib>
 #include <cstring>
+#include <limits>
+#include <memory>
 #include <ostream>
 #include <sstream>
+#include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
 #include "utils.h"
 
 namespace bl::nbt {
+
+    // Bedrock NBT stores all multi-byte values in little-endian order.
+    namespace detail {
+        inline uint16_t read_u16_le(const byte_t *data) noexcept {
+            return static_cast<uint16_t>(static_cast<uint8_t>(data[0])) |
+                   (static_cast<uint16_t>(static_cast<uint8_t>(data[1])) << 8);
+        }
+
+        inline uint32_t read_u32_le(const byte_t *data) noexcept {
+            return static_cast<uint32_t>(static_cast<uint8_t>(data[0])) |
+                   (static_cast<uint32_t>(static_cast<uint8_t>(data[1])) << 8) |
+                   (static_cast<uint32_t>(static_cast<uint8_t>(data[2])) << 16) |
+                   (static_cast<uint32_t>(static_cast<uint8_t>(data[3])) << 24);
+        }
+
+        inline uint64_t read_u64_le(const byte_t *data) noexcept {
+            uint64_t value = 0;
+            for (unsigned i = 0; i < 8; ++i) {
+                value |= static_cast<uint64_t>(static_cast<uint8_t>(data[i])) << (i * 8);
+            }
+            return value;
+        }
+
+        template <typename T>
+        T read_scalar_le(const byte_t *data) noexcept {
+            static_assert(std::is_arithmetic_v<T>);
+            if constexpr (std::is_same_v<T, float>) {
+                return std::bit_cast<float>(read_u32_le(data));
+            } else if constexpr (std::is_same_v<T, double>) {
+                return std::bit_cast<double>(read_u64_le(data));
+            } else if constexpr (sizeof(T) == 1) {
+                return std::bit_cast<T>(static_cast<uint8_t>(data[0]));
+            } else if constexpr (sizeof(T) == 2) {
+                return std::bit_cast<T>(read_u16_le(data));
+            } else if constexpr (sizeof(T) == 4) {
+                return std::bit_cast<T>(read_u32_le(data));
+            } else {
+                static_assert(sizeof(T) == 8, "Unsupported scalar size");
+                return std::bit_cast<T>(read_u64_le(data));
+            }
+        }
+
+        inline void append_u16_le(std::string &out, uint16_t value) {
+            out.push_back(static_cast<char>(value & 0xffu));
+            out.push_back(static_cast<char>((value >> 8) & 0xffu));
+        }
+
+        inline void append_u32_le(std::string &out, uint32_t value) {
+            for (unsigned i = 0; i < 4; ++i) out.push_back(static_cast<char>((value >> (i * 8)) & 0xffu));
+        }
+
+        inline void append_u64_le(std::string &out, uint64_t value) {
+            for (unsigned i = 0; i < 8; ++i) out.push_back(static_cast<char>((value >> (i * 8)) & 0xffu));
+        }
+
+        template <typename T>
+        void append_scalar_le(std::string &out, T value) {
+            static_assert(std::is_arithmetic_v<T>);
+            if constexpr (std::is_same_v<T, float>) {
+                append_u32_le(out, std::bit_cast<uint32_t>(value));
+            } else if constexpr (std::is_same_v<T, double>) {
+                append_u64_le(out, std::bit_cast<uint64_t>(value));
+            } else if constexpr (sizeof(T) == 1) {
+                out.push_back(static_cast<char>(std::bit_cast<uint8_t>(value)));
+            } else if constexpr (sizeof(T) == 2) {
+                append_u16_le(out, std::bit_cast<uint16_t>(value));
+            } else if constexpr (sizeof(T) == 4) {
+                append_u32_le(out, std::bit_cast<uint32_t>(value));
+            } else {
+                static_assert(sizeof(T) == 8, "Unsupported scalar size");
+                append_u64_le(out, std::bit_cast<uint64_t>(value));
+            }
+        }
+    }  // namespace detail
 
     enum tag_type : int8_t {
         End = 0,
@@ -99,8 +178,11 @@ namespace bl::nbt {
 
        protected:
         void write_key(std::string &out) const {
+            if (this->key_.size() > std::numeric_limits<uint16_t>::max()) {
+                throw std::length_error("NBT key exceeds 16-bit length");
+            }
             auto size = static_cast<uint16_t>(this->key_.size());
-            out.append(reinterpret_cast<const char *>(&size), 2);
+            detail::append_u16_le(out, size);
             out += this->key_;
         }
 
@@ -338,8 +420,11 @@ namespace bl::nbt {
                 child_type = value[0]->type();
             }
             out.push_back(static_cast<char>(child_type));
+            if (value.size() > static_cast<size_t>(std::numeric_limits<int32_t>::max())) {
+                throw std::length_error("NBT list exceeds 32-bit length");
+            }
             auto sz = static_cast<int32_t>(value.size());
-            out.append(reinterpret_cast<const char *>(&sz), 4);
+            detail::append_scalar_le(out, sz);
             for (auto *child : value) {
                 child->write_payload(out);
             }
@@ -370,8 +455,11 @@ namespace bl::nbt {
 
        public:
         void write_payload(std::string &out) const override {
+            if (this->value.size() > std::numeric_limits<uint16_t>::max()) {
+                throw std::length_error("NBT string exceeds 16-bit length");
+            }
             auto len = static_cast<uint16_t>(this->value.size());
-            out.append(reinterpret_cast<const char *>(&len), 2);
+            detail::append_u16_le(out, len);
             out += this->value;
         }
     };
@@ -398,7 +486,7 @@ namespace bl::nbt {
         ValueType value{};
 
        public:
-        void write_payload(std::string &out) const override { out.append(reinterpret_cast<const char *>(&this->value), ValueSize); }
+        void write_payload(std::string &out) const override { detail::append_scalar_le(out, this->value); }
     };
 
     using short_tag = scalar_tag<int16_t, Short, 2>;
@@ -445,10 +533,15 @@ namespace bl::nbt {
 
        public:
         void write_payload(std::string &out) const override {
+            if (this->value.size() > static_cast<size_t>(std::numeric_limits<int32_t>::max())) {
+                throw std::length_error("NBT array exceeds 32-bit length");
+            }
             auto size = static_cast<int32_t>(this->value.size());
-            out.append(reinterpret_cast<const char *>(&size), 4);
-            if (!this->value.empty()) {
-                out.append(reinterpret_cast<const char *>(this->value.data()), this->value.size() * sizeof(ElemType));
+            detail::append_scalar_le(out, size);
+            if constexpr (sizeof(ElemType) == 1) {
+                if (!this->value.empty()) out.append(reinterpret_cast<const char *>(this->value.data()), this->value.size());
+            } else {
+                for (const auto value : this->value) detail::append_scalar_le(out, value);
             }
         }
     };
