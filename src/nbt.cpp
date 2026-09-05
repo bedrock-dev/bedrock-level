@@ -57,11 +57,13 @@ namespace bl::nbt {
         if (data_len < 4) return {nullptr, 0};
         int32_t len = 0;
         memcpy(&len, data, 4);
-        if (data_len < 4u + (size_t)len * sizeof(elem_type)) return {nullptr, 0};
+        if (len < 0) return {nullptr, 0};
+        const auto element_count = static_cast<size_t>(len);
+        if (element_count > (data_len - 4) / sizeof(elem_type)) return {nullptr, 0};
         auto *tag = new TagType(key);
-        tag->value = std::vector<elem_type>(len, 0);
-        memcpy(tag->value.data(), data + 4, len * sizeof(elem_type));
-        return {tag, len * sizeof(elem_type) + 4};
+        tag->value = std::vector<elem_type>(element_count, 0);
+        memcpy(tag->value.data(), data + 4, element_count * sizeof(elem_type));
+        return {tag, element_count * sizeof(elem_type) + 4};
     }
 
     std::tuple<string_tag *, size_t> read_string_value(const byte_t *data, size_t data_len, const std::string &key) {
@@ -80,18 +82,21 @@ namespace bl::nbt {
         tag_type child_type;
         {
             int r = read_tag_type(data + read, data_len - read, child_type);
-            if (r == 0) return {tag, read};
+            if (r == 0) { delete tag; return {nullptr, 0}; }
             read += r;
         }
-        if (data_len - read < 4) return {tag, read};
+        if (data_len - read < 4) { delete tag; return {nullptr, 0}; }
         int32_t list_size{0};
         memcpy(&list_size, data + read, 4);
         read += 4;
-        tag->value.reserve(std::min<size_t>(static_cast<size_t>(list_size), data_len - read));
+        if (list_size < 0) { delete tag; return {nullptr, 0}; }
+        const auto count = static_cast<size_t>(list_size);
+        if (count > data_len - read) { delete tag; return {nullptr, 0}; }
+        tag->value.reserve(count);
         for (int i = 0; i < list_size; i++) {
-            if (data_len <= read) break;
+            if (data_len <= read) { delete tag; return {nullptr, 0}; }
             auto [child, sz] = read_value_by_type(child_type, data + read, data_len - read, "");
-            if (child == nullptr) break;
+            if (child == nullptr || sz == 0 || sz > data_len - read) { delete child; delete tag; return {nullptr, 0}; }
             read += sz;
             tag->value.push_back(child);
         }
