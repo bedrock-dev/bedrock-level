@@ -36,14 +36,19 @@ namespace bl::utils {
         return bytes;
     }
 
-    void write_file(const std::string &file_name, const byte_t *data, size_t len) {
+    bool write_file(const std::string &file_name, const byte_t *data, size_t len) {
         std::ofstream output(file_name, std::ios::binary);
         if (!output.is_open()) {
             LOG_F(ERROR, "Can not open file %s", file_name.c_str());
-            return;
+            return false;
         }
         output.write(reinterpret_cast<const char *>(data), static_cast<std::streamsize>(len));
+        if (!output.good()) {
+            LOG_F(ERROR, "Can not write file %s", file_name.c_str());
+            return false;
+        }
         output.close();
+        return output.good();
     }
     //    https :  // www.jianshu.com/p/baf75216f883
 

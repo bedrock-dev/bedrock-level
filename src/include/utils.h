@@ -48,7 +48,7 @@ struct NonCopyable {
 namespace bl::utils {
     std::vector<byte_t> read_file(const std::string &file_name);
 
-    void write_file(const std::string &file_name, const byte_t *data, size_t len);
+    [[nodiscard]] bool write_file(const std::string &file_name, const byte_t *data, size_t len);
 
     std::string UTF8ToGBEx(const char *utf8);
 
