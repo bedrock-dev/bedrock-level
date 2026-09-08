@@ -103,14 +103,12 @@ namespace bl {
        public:
         [[nodiscard]] inline bool fast_load() const { return this->fast_load_mode_; }
 
-        block_info get_block(int cx, int y, int cz);
-
-        block_info get_block_fast(int cx, int y, int cz);
+        block_info get_block_with_color(int cx, int y, int cz, int layer = 0);
 
         /// Block name without copying (lives as long as the chunk); "minecraft:unknown" on miss
-        [[nodiscard]] const std::string &get_block_name(int cx, int y, int cz);
+        [[nodiscard]] const std::string &get_block_name(int cx, int y, int cz, int layer = 0);
 
-        nbt::compound_tag *get_block_raw(int cx, int y, int cz);
+        nbt::compound_tag *get_block_raw(int cx, int y, int cz, int layer = 0);
 
         biome get_biome(int cx, int y, int cz);
 

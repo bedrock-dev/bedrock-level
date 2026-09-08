@@ -68,32 +68,32 @@ namespace bl {
 
     void sub_chunk::dump_to_file(FILE *fp) const {}
 
-    block_info sub_chunk::get_block(int rx, int ry, int rz) {
+    const palette_entry *sub_chunk::palette_entry_at(int rx, int ry, int rz, int layer) const {
         if (rx < 0 || rx > 15 || ry < 0 || ry > 15 || rz < 0 || rz > 15) {
             LOG_F(ERROR, "Invalid in chunk position %d %d %d", rx, ry, rz);
-            return {};
+            return nullptr;
         }
-        if (this->layers_.empty()) {
-            LOG_F(ERROR, "sub_chunk has no layers");
-            return {};
+        if (layer < 0 || layer >= static_cast<int>(this->layers_.size())) {
+            return nullptr;  // requested layer not present
         }
-        using bl::nbt::string_tag, bl::nbt::compound_tag;
-
+        auto &ly = *this->layers_[layer];
         auto idx = ry + rz * 16 + rx * 256;
-        auto block = this->layers_[0]->blocks[idx];
-
-        auto &palette = this->layers_[0]->palette;
-        if (block < 0 || block >= palette.size()) {
+        auto block = ly.blocks[idx];
+        if (block >= ly.palette.size()) {
             LOG_F(ERROR, "Invalid block index with value %d", block);
-            return {};
+            return nullptr;
         }
-        auto &b = palette[block].tag;
+        return &ly.palette[block];
+    }
 
+    block_info sub_chunk::get_block_with_color(int rx, int ry, int rz, int layer) {
+        const auto *entry = this->palette_entry_at(rx, ry, rz, layer);
+        if (!entry) return {};
+
+        using bl::nbt::string_tag, bl::nbt::compound_tag;
         std::string extra_tag;
-        std::string name = palette[block].name;
-
         // states/color may be absent on simple blocks, guard each level
-        if (auto *stat_tag = b->get("states"); stat_tag) {
+        if (auto *stat_tag = entry->tag->get("states"); stat_tag) {
             if (auto *st = stat_tag->as<compound_tag *>(); st) {
                 if (auto *color_tag = st->get("color"); color_tag) {
                     if (auto *ct = color_tag->as<string_tag *>(); ct) {
@@ -102,66 +102,20 @@ namespace bl {
                 }
             }
         }
-        return {name, bl::get_block_by_name_tag(name, extra_tag)};
+        return {entry->name, bl::get_block_by_name_tag(entry->name, extra_tag)};
     }
 
-    const std::string &sub_chunk::get_block_name(int rx, int ry, int rz) {
+    const std::string &sub_chunk::get_block_name(int rx, int ry, int rz, int layer) {
         static const std::string unknown = "minecraft:unknown";
-        if (rx < 0 || rx > 15 || ry < 0 || ry > 15 || rz < 0 || rz > 15 || this->layers_.empty()) {
-            return unknown;
-        }
-
-        auto idx = ry + rz * 16 + rx * 256;
-        auto block = this->layers_[0]->blocks[idx];
-        auto &palette = this->layers_[0]->palette;
-        if (block < 0 || block >= static_cast<int>(palette.size())) {
-            return unknown;
-        }
-        return palette[block].name;
+        const auto *entry = this->palette_entry_at(rx, ry, rz, layer);
+        return entry ? entry->name : unknown;
     }
 
-    block_info sub_chunk::get_block_fast(int rx, int ry, int rz) {
-        if (rx < 0 || rx > 15 || ry < 0 || ry > 15 || rz < 0 || rz > 15) {
-            LOG_F(ERROR, "Invalid in chunk position %d %d %d", rx, ry, rz);
-            return {};
-        }
-        if (this->layers_.empty()) {
-            LOG_F(ERROR, "sub_chunk has no layers");
-            return {};
-        }
-
-        auto idx = ry + rz * 16 + rx * 256;
-        auto block = this->layers_[0]->blocks[idx];
-
-        auto &palette = this->layers_[0]->palette;
-        if (block >= palette.size() || block < 0) {
-            LOG_F(ERROR, "Invalid block index with value %d", block);
-            return {};
-        }
-
-        return {palette[block].name, bl::color{}};
+    nbt::compound_tag *sub_chunk::get_block_raw(int rx, int ry, int rz, int layer) {
+        const auto *entry = this->palette_entry_at(rx, ry, rz, layer);
+        return entry ? entry->tag : nullptr;
     }
 
-    nbt::compound_tag *sub_chunk::get_block_raw(int rx, int ry, int rz) {
-        if (rx < 0 || rx > 15 || ry < 0 || ry > 15 || rz < 0 || rz > 15) {
-            LOG_F(ERROR, "Invalid in chunk position %d %d %d", rx, ry, rz);
-            return nullptr;
-        }
-        if (this->layers_.empty()) {
-            LOG_F(ERROR, "sub_chunk has no layers");
-            return nullptr;
-        }
-
-        auto idx = ry + rz * 16 + rx * 256;
-        auto block = this->layers_[0]->blocks[idx];
-
-        if (block >= this->layers_[0]->palette.size() || block < 0) {
-            LOG_F(ERROR, "Invalid block index with value %d", block);
-            return nullptr;
-        }
-
-        return this->layers_[0]->palette[block].tag;
-    }
     sub_chunk::~sub_chunk() {
         for (auto &layer : this->layers_) {
             delete layer;

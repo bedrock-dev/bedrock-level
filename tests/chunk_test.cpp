@@ -144,7 +144,7 @@ TEST_F(ChunkBenchmark, LoadFromRawAll) {
     EXPECT_GT(loaded, 0u);
 }
 
-// render hot path: per-column top-down block scan (get_top_y + get_block_fast)
+// render hot path: per-column top-down block scan (get_top_y + get_block_name)
 TEST_F(ChunkBenchmark, ScanBlocksFast) {
     std::vector<bl::chunk *> loaded;
     for (auto &rc : chunks_) {
@@ -167,8 +167,8 @@ TEST_F(ChunkBenchmark, ScanBlocksFast) {
                 for (int cz = 0; cz < 16; cz++) {
                     auto [top, solid] = c->get_top_y(cx, cz, 320);
                     for (int y = top; y >= 0; y--) {
-                        auto b = c->get_block_fast(cx, y, cz);
-                        total += b.name.size();
+                        const auto &name = c->get_block_name(cx, y, cz);
+                        total += name.size();
                     }
                 }
             }
@@ -181,7 +181,7 @@ TEST_F(ChunkBenchmark, ScanBlocksFast) {
     for (auto *c : loaded) delete c;
 }
 
-// get_block_name must match get_block_fast, and miss outside the world must return "minecraft:unknown"
+// get_block_name must match get_block_with_color, and miss outside the world must return "minecraft:unknown"
 TEST_F(ChunkBenchmark, BlockNameConsistent) {
     for (auto &rc : chunks_) {
         auto *c = new bl::chunk(rc.pos());
@@ -192,7 +192,7 @@ TEST_F(ChunkBenchmark, BlockNameConsistent) {
         for (int cx = 0; cx < 16; cx++) {
             for (int cz = 0; cz < 16; cz++) {
                 for (int y = -64; y < 320; y++) {
-                    EXPECT_EQ(c->get_block_name(cx, y, cz), c->get_block_fast(cx, y, cz).name);
+                    EXPECT_EQ(c->get_block_name(cx, y, cz), c->get_block_with_color(cx, y, cz).name);
                 }
             }
         }

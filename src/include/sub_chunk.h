@@ -31,14 +31,12 @@ namespace bl {
             ~layer();
         };
 
-        block_info get_block(int rx, int ry, int rz);
-
-        block_info get_block_fast(int rx, int ry, int rz);
+        block_info get_block_with_color(int rx, int ry, int rz, int layer);
 
         /// Block name without copying (lives as long as the sub_chunk); "minecraft:unknown" on miss
-        [[nodiscard]] const std::string &get_block_name(int rx, int ry, int rz);
+        [[nodiscard]] const std::string &get_block_name(int rx, int ry, int rz, int layer);
 
-        nbt::compound_tag *get_block_raw(int rx, int ry, int rz);
+        nbt::compound_tag *get_block_raw(int rx, int ry, int rz, int layer);
 
         sub_chunk() = default;
 
@@ -59,6 +57,9 @@ namespace bl {
 
        private:
         void push_back_layer(layer *layer) { this->layers_.push_back(layer); }
+
+        // Shared palette lookup for the get_block* accessors; nullptr when coords/layer/index are invalid.
+        [[nodiscard]] const palette_entry *palette_entry_at(int rx, int ry, int rz, int layer) const;
 
         uint8_t version_{0xff};
         int8_t y_index_{0};

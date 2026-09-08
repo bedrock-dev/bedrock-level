@@ -445,7 +445,7 @@ namespace bl {
         if (offset < 0) offset += 16;
     }
 
-    block_info chunk::get_block(int cx, int y, int cz) {
+    block_info chunk::get_block_with_color(int cx, int y, int cz, int layer) {
         int index;
         int offset;
         map_y_to_subchunk(y, index, offset);
@@ -453,21 +453,10 @@ namespace bl {
         if (it == this->sub_chunks_.end()) {
             return {};
         }
-        return it->second->get_block(cx, offset, cz);
+        return it->second->get_block_with_color(cx, offset, cz, layer);
     }
 
-    block_info chunk::get_block_fast(int cx, int y, int cz) {
-        int index;
-        int offset;
-        map_y_to_subchunk(y, index, offset);
-        auto it = this->sub_chunks_.find(index);
-        if (it == this->sub_chunks_.end()) {
-            return {};
-        }
-        return it->second->get_block_fast(cx, offset, cz);
-    }
-
-    const std::string &chunk::get_block_name(int cx, int y, int cz) {
+    const std::string &chunk::get_block_name(int cx, int y, int cz, int layer) {
         static const std::string unknown = "minecraft:unknown";
         int index;
         int offset;
@@ -476,10 +465,10 @@ namespace bl {
         if (it == this->sub_chunks_.end()) {
             return unknown;
         }
-        return it->second->get_block_name(cx, offset, cz);
+        return it->second->get_block_name(cx, offset, cz, layer);
     }
 
-    nbt::compound_tag *chunk::get_block_raw(int cx, int y, int cz) {
+    nbt::compound_tag *chunk::get_block_raw(int cx, int y, int cz, int layer) {
         int index;
         int offset;
         map_y_to_subchunk(y, index, offset);
@@ -487,7 +476,7 @@ namespace bl {
         if (it == this->sub_chunks_.end()) {
             return nullptr;
         }
-        return it->second->get_block_raw(cx, offset, cz);
+        return it->second->get_block_raw(cx, offset, cz, layer);
     }
 
     biome chunk::get_biome(int cx, int y, int cz) { return this->d3d_.get_biome(cx, y, cz); }
