@@ -414,23 +414,18 @@ namespace bl {
     }
 
     void raw_chunk::set_biome(biome biome) {
-        auto v = version();
         biome3d d3d;
         d3d.set_chunk_pos(pos_);
-        d3d.set_version(v);
-
-        if (v == ChunkVersion::New) {
-            auto raw = get_normal_key(chunk_key::Data3D);
-            if (raw.empty()) return;
-            if (!d3d.load_from_d3d(reinterpret_cast<const byte_t *>(raw.data()), raw.size())) return;
-        } else {
-            auto raw = get_normal_key(chunk_key::Data2D);
-            if (raw.empty()) raw = get_normal_key(chunk_key::Data2DLegacy);
-            if (raw.empty()) return;
-            if (!d3d.load_from_d2d(reinterpret_cast<const byte_t *>(raw.data()), raw.size())) return;
-        }
+        auto raw = get_normal_key(chunk_key::Data3D);
+        const bool has3d = !raw.empty();
+        if (!has3d) raw = get_normal_key(chunk_key::Data2D);
+        if (raw.empty()) return;
+        const bool ok = has3d ? d3d.load_from_d3d(reinterpret_cast<const byte_t *>(raw.data()), raw.size())
+                              : d3d.load_from_d2d(reinterpret_cast<const byte_t *>(raw.data()), raw.size());
+        if (!ok) return;
         d3d.set_all(biome);
-        data_[v == ChunkVersion::New ? chunk_key::Data3D : chunk_key::Data2D] = d3d.to_raw();
+        // write back to the key the data came from
+        data_[has3d ? chunk_key::Data3D : chunk_key::Data2D] = d3d.to_raw();
     }
 
     // chunk
@@ -504,14 +499,10 @@ namespace bl {
 
     bool chunk::load_biomes(const bl::raw_chunk &rc) {
         this->d3d_.set_chunk_pos(this->pos_);
-        this->d3d_.set_version(this->version);
-        if (this->version == New) {
-            auto raw = rc.get_normal_key(chunk_key::Data3D);
-            return !raw.empty() && this->d3d_.load_from_d3d(raw.data(), raw.size());
-        } else {
-            auto raw = rc.get_normal_key(chunk_key::Data2D);
-            return !raw.empty() && this->d3d_.load_from_d2d(raw.data(), raw.size());
-        }
+        auto raw = rc.get_normal_key(chunk_key::Data3D);
+        if (!raw.empty()) return this->d3d_.load_from_d3d(raw.data(), raw.size());
+        raw = rc.get_normal_key(chunk_key::Data2D);
+        return !raw.empty() && this->d3d_.load_from_d2d(raw.data(), raw.size());
     }
 
     bool chunk::load_pending_ticks(const bl::raw_chunk &rc) {

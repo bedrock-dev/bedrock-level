@@ -125,6 +125,10 @@ namespace bl {
 
     class biome3d {
        public:
+        // Height map entry for a position with no height/biome record. height()
+        // shifts the raw value by the dimension's min_y, so this stays unshifted.
+        static constexpr int16_t INVALID_HEIGHT = 0xFFFF;
+
         bool load_from_d3d(const byte_t *data, size_t len);
 
         bool load_from_d2d(const byte_t *data, size_t len);
@@ -143,18 +147,25 @@ namespace bl {
         biome get_top_biome(int cx, int cz);
 
         void set_chunk_pos(const bl::chunk_pos &cp) { this->pos_ = cp; }
-        void set_version(ChunkVersion version) { this->version_ = version; }
 
         void set_all(biome b);
 
         [[nodiscard]] std::string to_raw() const;
 
        private:
-        std::array<int16_t, 256> height_map_;
+        static constexpr std::array<int16_t, 256> make_invalid_height_map() {
+            std::array<int16_t, 256> map{};
+            for (auto &h : map) h = INVALID_HEIGHT;
+            return map;
+        }
+
+        std::array<int16_t, 256> height_map_ = make_invalid_height_map();
         // one 16x16 biome layer per y slice, indexed [layer][x*16+z]
         std::vector<std::array<biome, 256>> biomes_;
         bl::chunk_pos pos_;
-        ChunkVersion version_;
+        // biome version, not the chunk version of it's owner, in some minecraft version, a new version of chunk owns a data2d(old version
+        // biome data). set by load_from_d3d / load_from_d2d.
+        ChunkVersion version_{New};
     };
 }  // namespace bl
 

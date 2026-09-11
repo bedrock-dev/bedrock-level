@@ -67,6 +67,7 @@ namespace bl {
             LOG_F(ERROR, "Invalid Data3d format");
             return false;
         }
+        this->version_ = ChunkVersion::New;
         memcpy(this->height_map_.data(), data, 512);
         index += 512;
         while (index < static_cast<int>(len)) {
@@ -140,6 +141,7 @@ namespace bl {
             return false;
         }
         memcpy(this->height_map_.data(), data, 512);
+        this->version_ = ChunkVersion::Old;
         std::array<biome, 256> layer{};
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
