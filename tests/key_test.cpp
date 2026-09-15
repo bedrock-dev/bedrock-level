@@ -11,6 +11,7 @@
 #include "bedrock_level.h"
 #include "chunk.h"
 #include "chunk_data_position.h"
+#include "config.h"
 
 TEST(ChunkPos, ValidCheck) {
     using namespace bl;
@@ -29,15 +30,35 @@ TEST(ChunkPos, Equality) {
     EXPECT_FALSE((chunk_pos{1, 2, 0} == chunk_pos{1, 3, 0}));
 }
 
-TEST(ChunkPos, YRange) {
+// The Data3D anchor is the bottom of the dimension; the payload cannot record it itself.
+// Nothing here depends on ChunkVersion, which only describes the serialized layout.
+// Dimensions without a built-in convention fall back to the configured floor.
+TEST(ChunkPos, DimensionMinY) {
     using namespace bl;
-    EXPECT_EQ((chunk_pos{0, 0, 0}.get_y_range(New)), (std::tuple<int32_t, int32_t>{-64, 319}));
-    EXPECT_EQ((chunk_pos{0, 0, 0}.get_y_range(Old)), (std::tuple<int32_t, int32_t>{0, 255}));
-    EXPECT_EQ((chunk_pos{0, 0, 1}.get_y_range(New)), (std::tuple<int32_t, int32_t>{0, 127}));
-    EXPECT_EQ((chunk_pos{0, 0, 2}.get_y_range(New)), (std::tuple<int32_t, int32_t>{0, 255}));
-    // custom dimensions fall back to the 1.18+ world range (valid min <= max)
-    EXPECT_EQ((chunk_pos{0, 0, 3}.get_y_range(New)), (std::tuple<int32_t, int32_t>{-64, 319}));
-    EXPECT_EQ((chunk_pos{0, 0, -1}.get_y_range(New)), (std::tuple<int32_t, int32_t>{-64, 319}));
+    EXPECT_EQ(dimension_min_y(0), -64);
+    EXPECT_EQ(dimension_min_y(1), 0);
+    EXPECT_EQ(dimension_min_y(2), 0);
+
+    // custom dimensions read their floor from config, so the host can match the world
+    const auto original = config::custom_dimension_min_y();
+    config::set_custom_dimension_min_y(-128);
+    EXPECT_EQ(dimension_min_y(3), -128);
+    EXPECT_EQ(dimension_min_y(-1), -128);
+    EXPECT_EQ(dimension_min_y(0), -64) << "built-in dimensions must ignore the custom floor";
+    config::set_custom_dimension_min_y(original);
+    EXPECT_EQ(dimension_min_y(3), original);
+}
+
+// The terrain read window is configurable so dimensions outside the vanilla range still load.
+TEST(ChunkPos, SubChunkIndexRangeIsConfigurable) {
+    using namespace bl;
+    const auto original = config::subchunk_index_range();
+    EXPECT_EQ(original, (std::make_pair<int8_t, int8_t>(-4, 19)));
+
+    config::set_subchunk_index_range(0, 7);
+    EXPECT_EQ(config::subchunk_index_range(), (std::make_pair<int8_t, int8_t>(0, 7)));
+    config::set_subchunk_index_range(original.first, original.second);
+    EXPECT_EQ(config::subchunk_index_range(), original);
 }
 
 // every parse(to_raw(k)) must reproduce k for all dim / type / y_index combinations
@@ -80,7 +101,7 @@ TEST(ActorKey, RoundTrip) {
     EXPECT_TRUE(k.valid());
     // raw layout: "actorprefix" (11) + 8-byte uid
     std::string raw = "actorprefix";
-    raw.append(reinterpret_cast<const char *>(&k.actor_uid), 8);
+    raw.append(reinterpret_cast<const char*>(&k.actor_uid), 8);
     auto parsed = actor_key::parse(raw);
     EXPECT_TRUE(parsed.valid());
     EXPECT_EQ(parsed.actor_uid, k.actor_uid);
@@ -128,7 +149,7 @@ TEST(VillageKey, ThreeSegment) {
 TEST(VillageKey, FourSegmentRoundTrip) {
     using namespace bl;
     // dim 1/2 keep their dimension segment on serialization
-    for (const char *dim_str : {"Nether", "TheEnd"}) {
+    for (const char* dim_str : {"Nether", "TheEnd"}) {
         std::string raw = std::string("VILLAGE_") + dim_str + "_241c7732-221a-4266-9fe9-cdd40d9bdeb0_POI";
         auto k = village_key::parse(raw);
         EXPECT_TRUE(k.valid()) << dim_str;
@@ -210,8 +231,8 @@ TEST(HardcodedSpawnAreaList, RoundTrip) {
     EXPECT_TRUE(parsed.from_raw(raw));
     EXPECT_EQ(parsed.size(), 4u);
     for (size_t i = 0; i < parsed.size(); i++) {
-        const auto &a = list.areas()[i];
-        const auto &b = parsed.areas()[i];
+        const auto& a = list.areas()[i];
+        const auto& b = parsed.areas()[i];
         EXPECT_EQ(static_cast<int>(b.type), static_cast<int>(a.type));
         EXPECT_EQ(b.min_pos.x, a.min_pos.x);
         EXPECT_EQ(b.min_pos.y, a.min_pos.y);
@@ -252,7 +273,7 @@ TEST(BlockEntity, OffsetPos) {
     using namespace bl;
 
     auto block_entity_owner = std::make_unique<nbt::compound_tag>("block_entity");
-    auto *block_entity = block_entity_owner.get();
+    auto* block_entity = block_entity_owner.get();
     block_entity->put(new nbt::string_tag("id", "Chest"));
     block_entity->put(new nbt::int_tag("x", 12));
     block_entity->put(new nbt::int_tag("y", 64));
@@ -262,18 +283,18 @@ TEST(BlockEntity, OffsetPos) {
 
     offset_block_entity_pos(block_entity, 32, -16);
 
-    EXPECT_EQ(block_entity->get("x")->as<nbt::int_tag *>()->value, 44);
-    EXPECT_EQ(block_entity->get("y")->as<nbt::int_tag *>()->value, 64);
-    EXPECT_EQ(block_entity->get("z")->as<nbt::int_tag *>()->value, -25);
-    EXPECT_EQ(block_entity->get("pairx")->as<nbt::int_tag *>()->value, 52);
-    EXPECT_EQ(block_entity->get("pairz")->as<nbt::int_tag *>()->value, -13);
+    EXPECT_EQ(block_entity->get("x")->as<nbt::int_tag*>()->value, 44);
+    EXPECT_EQ(block_entity->get("y")->as<nbt::int_tag*>()->value, 64);
+    EXPECT_EQ(block_entity->get("z")->as<nbt::int_tag*>()->value, -25);
+    EXPECT_EQ(block_entity->get("pairx")->as<nbt::int_tag*>()->value, 52);
+    EXPECT_EQ(block_entity->get("pairz")->as<nbt::int_tag*>()->value, -13);
 }
 
 TEST(BlockEntity, DoesNotOffsetPairPosForOtherTypes) {
     using namespace bl;
 
     auto block_entity_owner = std::make_unique<nbt::compound_tag>("block_entity");
-    auto *block_entity = block_entity_owner.get();
+    auto* block_entity = block_entity_owner.get();
     block_entity->put(new nbt::string_tag("id", "Barrel"));
     block_entity->put(new nbt::int_tag("x", 12));
     block_entity->put(new nbt::int_tag("z", -9));
@@ -282,10 +303,10 @@ TEST(BlockEntity, DoesNotOffsetPairPosForOtherTypes) {
 
     offset_block_entity_pos(block_entity, 32, -16);
 
-    EXPECT_EQ(block_entity->get("x")->as<nbt::int_tag *>()->value, 44);
-    EXPECT_EQ(block_entity->get("z")->as<nbt::int_tag *>()->value, -25);
-    EXPECT_EQ(block_entity->get("pairx")->as<nbt::int_tag *>()->value, 20);
-    EXPECT_EQ(block_entity->get("pairz")->as<nbt::int_tag *>()->value, 3);
+    EXPECT_EQ(block_entity->get("x")->as<nbt::int_tag*>()->value, 44);
+    EXPECT_EQ(block_entity->get("z")->as<nbt::int_tag*>()->value, -25);
+    EXPECT_EQ(block_entity->get("pairx")->as<nbt::int_tag*>()->value, 20);
+    EXPECT_EQ(block_entity->get("pairz")->as<nbt::int_tag*>()->value, 3);
 }
 
 TEST(BlockEntity, SetPosUpdatesChestPairPos) {
@@ -301,20 +322,20 @@ TEST(BlockEntity, SetPosUpdatesChestPairPos) {
 
     set_block_entity_pos(block_entity.get(), {44, 80, -25});
 
-    EXPECT_EQ(block_entity->get("x")->as<nbt::int_tag *>()->value, 44);
-    EXPECT_EQ(block_entity->get("y")->as<nbt::int_tag *>()->value, 80);
-    EXPECT_EQ(block_entity->get("z")->as<nbt::int_tag *>()->value, -25);
-    EXPECT_EQ(block_entity->get("pairx")->as<nbt::int_tag *>()->value, 52);
-    EXPECT_EQ(block_entity->get("pairz")->as<nbt::int_tag *>()->value, -13);
+    EXPECT_EQ(block_entity->get("x")->as<nbt::int_tag*>()->value, 44);
+    EXPECT_EQ(block_entity->get("y")->as<nbt::int_tag*>()->value, 80);
+    EXPECT_EQ(block_entity->get("z")->as<nbt::int_tag*>()->value, -25);
+    EXPECT_EQ(block_entity->get("pairx")->as<nbt::int_tag*>()->value, 52);
+    EXPECT_EQ(block_entity->get("pairz")->as<nbt::int_tag*>()->value, -13);
 }
 
 TEST(PendingTicks, OffsetPos) {
     using namespace bl;
 
     auto pending_ticks_owner = std::make_unique<nbt::compound_tag>("pending_ticks");
-    auto *pending_ticks = pending_ticks_owner.get();
-    auto *tick_list = new nbt::list_tag("tickList");
-    auto *tick = new nbt::compound_tag("");
+    auto* pending_ticks = pending_ticks_owner.get();
+    auto* tick_list = new nbt::list_tag("tickList");
+    auto* tick = new nbt::compound_tag("");
     tick->put(new nbt::int_tag("x", 7));
     tick->put(new nbt::int_tag("y", 80));
     tick->put(new nbt::int_tag("z", -4));
@@ -323,9 +344,9 @@ TEST(PendingTicks, OffsetPos) {
 
     offset_pending_ticks_pos(pending_ticks, 32, -16);
 
-    EXPECT_EQ(tick->get("x")->as<nbt::int_tag *>()->value, 39);
-    EXPECT_EQ(tick->get("y")->as<nbt::int_tag *>()->value, 80);
-    EXPECT_EQ(tick->get("z")->as<nbt::int_tag *>()->value, -20);
+    EXPECT_EQ(tick->get("x")->as<nbt::int_tag*>()->value, 39);
+    EXPECT_EQ(tick->get("y")->as<nbt::int_tag*>()->value, 80);
+    EXPECT_EQ(tick->get("z")->as<nbt::int_tag*>()->value, -20);
 }
 
 // raw_chunk::set_pos must offset HardCodedSpawnAreas coordinates with the chunk

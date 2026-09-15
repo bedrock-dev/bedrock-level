@@ -11,7 +11,7 @@
 
 namespace bl {
     namespace {
-        std::vector<biome> load_subchunk_biome(const byte_t *data, int &read, size_t len) {
+        std::vector<biome> load_subchunk_biome(const byte_t* data, int& read, size_t len) {
             read = 1;
 
             uint8_t head = data[0];
@@ -28,7 +28,7 @@ namespace bl {
                 int position = 0;
 
                 for (int wordi = 0; wordi < word_count; wordi++) {
-                    auto word = *reinterpret_cast<const int *>(data + read + wordi * 4);
+                    auto word = *reinterpret_cast<const int*>(data + read + wordi * 4);
                     // word_count * bpw can exceed 4096 when bits does not divide 32
                     // (e.g. bits 3/5/6); stop decoding once all entries are filled.
                     for (int block = 0; block < bpw && position < BLOCK_NUM; block++) {
@@ -39,7 +39,7 @@ namespace bl {
                 }
 
                 read += word_count << 2;
-                palette_len = *reinterpret_cast<const int *>(data + read);
+                palette_len = *reinterpret_cast<const int*>(data + read);
                 read += 4;
             }
 
@@ -47,7 +47,7 @@ namespace bl {
             std::vector<biome> biomes_palettes;
 
             for (int i = 0; i < palette_len; i++) {
-                auto biomeId = *reinterpret_cast<const int *>(data + read);
+                auto biomeId = *reinterpret_cast<const int*>(data + read);
                 read += 4;
                 biomes_palettes.push_back(static_cast<biome>(biomeId));
             }
@@ -61,7 +61,7 @@ namespace bl {
             return res;
         }
     }  // namespace
-    bool biome3d::load_from_d3d(const byte_t *data, size_t len) {
+    bool biome3d::load_from_d3d(const byte_t* data, size_t len) {
         int index = 0;
         if (len < 512) {
             LOG_F(ERROR, "Invalid Data3d format");
@@ -80,7 +80,6 @@ namespace bl {
                         layer[x * 16 + z] = sub_chunk_biome[x * 256 + z * 16 + y];
                     }
                 }
-
                 this->biomes_.push_back(layer);
             }
             index += read;
@@ -92,8 +91,7 @@ namespace bl {
         if (this->version_ == Old) {
             return this->biomes_.empty() ? bl::biome::none : this->biomes_[0][cx * 16 + cz];
         }
-        auto [my, _] = pos_.get_y_range(this->version_);
-        y -= my;
+        y -= dimension_min_y(this->pos_.dim);
 
         //        printf("y = %d\n", y);
         if (y >= static_cast<int>(this->biomes_.size()) || y < 0) {
@@ -114,8 +112,7 @@ namespace bl {
             }
             return layer;
         }
-        auto [my, _] = pos_.get_y_range(this->version_);
-        y -= my;
+        y -= dimension_min_y(this->pos_.dim);
         if (y < 0 || y >= static_cast<int>(this->biomes_.size())) {
             return {};
         }
@@ -135,7 +132,7 @@ namespace bl {
         }
         return y < 0 ? biome::none : this->biomes_[y][cx * 16 + cz];
     }
-    bool biome3d::load_from_d2d(const byte_t *data, size_t len) {
+    bool biome3d::load_from_d2d(const byte_t* data, size_t len) {
         if (len != 768) {  // height map: 512bytes biome: 256 bytes
             LOG_F(ERROR, "Invalid Data2d format (%zu)", len);
             return false;
@@ -153,7 +150,7 @@ namespace bl {
     }
 
     void biome3d::set_all(biome b) {
-        for (auto &layer : biomes_) {
+        for (auto& layer : biomes_) {
             std::fill(layer.begin(), layer.end(), b);
         }
     }
@@ -174,7 +171,7 @@ namespace bl {
 
         std::string result;
         result.reserve(512 + biomes_.size() * 5);  // header(1) + id(4) = 5 per subchunk
-        result.append(reinterpret_cast<const char *>(height_map_.data()), 512);
+        result.append(reinterpret_cast<const char*>(height_map_.data()), 512);
 
         size_t layer_count = biomes_.size();
         size_t sub_chunk_count = (layer_count + 15) / 16;
@@ -184,7 +181,7 @@ namespace bl {
             result.push_back('\0');
             biome b = biomes_[sc * 16][0];
             int32_t id = static_cast<int32_t>(b);
-            result.append(reinterpret_cast<const char *>(&id), 4);
+            result.append(reinterpret_cast<const char*>(&id), 4);
         }
         return result;
     }

@@ -7,13 +7,14 @@
 #include <cstring>
 #include <random>
 
+#include "config.h"
 #include "magic-enum/magic_enum.hpp"
 #include "utils.h"
 
 namespace bl {
     const chunk_key chunk_key::INVALID_CHUNK_KEY = chunk_key{chunk_key::Unknown, bl::chunk_pos(), 0};
 
-    chunk_key chunk_key::parse(const std::string &key) {
+    chunk_key chunk_key::parse(const std::string& key) {
         auto sz = key.size();
         if (sz == 9 || sz == 10 || sz == 13 || sz == 14) {
             int x, z;
@@ -48,14 +49,14 @@ namespace bl {
         }
     }
 
-    actor_key actor_key::parse(const std::string &key) {
+    actor_key actor_key::parse(const std::string& key) {
         actor_key res;
         if (key.size() != 19 || key.rfind("actorprefix", 0) != 0) return res;
         memcpy(&res.actor_uid, key.data() + 11, 8);
         return res;
     }
 
-    actor_digest_key actor_digest_key::parse(const std::string &key) {
+    actor_digest_key actor_digest_key::parse(const std::string& key) {
         actor_digest_key res{};
         if (key.size() != 12 && key.size() != 16) return res;
         if (key.rfind("digp", 0) != 0) return res;
@@ -82,7 +83,7 @@ namespace bl {
         }
         return res + r;
     }
-    village_key village_key::parse(const std::string &key) {
+    village_key village_key::parse(const std::string& key) {
         village_key res;
 
         auto tks = utils::splitStr(key, '_');
@@ -105,7 +106,7 @@ namespace bl {
             res.type = Unknown;
         }
         if (sz == 4) {
-            auto &dim_str = tks[1];
+            auto& dim_str = tks[1];
             if (dim_str == "Overworld") {
                 res.dim = 0;
             } else if (dim_str == "Nether") {
@@ -139,7 +140,7 @@ namespace bl {
         return std::to_string(this->x) + ", " + std::to_string(this->z) + ", " + std::to_string(this->dim);
     }
 
-    bool chunk_pos::operator<(const chunk_pos &rhs) const {
+    bool chunk_pos::operator<(const chunk_pos& rhs) const {
         if (x < rhs.x) return true;
         if (rhs.x < x) return false;
         if (z < rhs.z) return true;
@@ -147,43 +148,13 @@ namespace bl {
         return dim < rhs.dim;
     }
 
-    bool chunk_pos::operator==(const chunk_pos &p) const { return this->x == p.x && this->dim == p.dim && this->z == p.z; }
+    bool chunk_pos::operator==(const chunk_pos& p) const { return this->x == p.x && this->dim == p.dim && this->z == p.z; }
 
-    block_pos chunk_pos::get_min_pos(ChunkVersion v) const {
-        auto [y, _] = this->get_y_range(v);
-        return {this->x * 16, y, this->z * 16};
-    }
-
-    block_pos chunk_pos::get_max_pos(ChunkVersion v) const {
-        auto [_, y] = this->get_y_range(v);
-        return {this->x * 16 + 15, y, this->z * 16 + 15};
-    }
-
-    std::tuple<int32_t, int32_t> chunk_pos::get_y_range(ChunkVersion v) const {
-        if (this->dim == 1) return {0, 127};
-        if (this->dim == 2) return {0, 255};
-        if (this->dim == 0) {
-            if (v == New) {
-                return {-64, 319};
-            } else {
-                return {0, 255};
-            }
-        }
-        // custom dimensions may have any height; fall back to the 1.18+ world range
-        return {-64, 319};
-    }
-    std::tuple<int8_t, int8_t> chunk_pos::get_subchunk_index_range(ChunkVersion v) const {
-        return {-4, 19};
-        // if (this->dim == 1) return {0, 7};
-        // if (this->dim == 2) return {0, 15};
-        // if (this->dim == 0) {
-        //     if (v == New) {
-        //         return {-4, 19};
-        //     } else {
-        //         return {0, 15};
-        //     }
-        // }
-        // return {0, -1};
+    int32_t dimension_min_y(int32_t dim) noexcept {
+        if (dim == 1 || dim == 2) return 0;  // nether and the end keep their legacy 0-based floors
+        if (dim == 0) return -64;            // overworld, 1.18+
+        // Custom dimensions have no built-in convention; the host configures their floor.
+        return config::custom_dimension_min_y();
     }
 
     bool chunk_pos::is_slime() const {
@@ -243,18 +214,18 @@ namespace bl {
     // 25 bytes per area: min(x,y,z) + max(x,y,z) as int32s + 1 type byte
     static constexpr size_t HSA_AREA_SIZE = 24 + 1;
 
-    bool hardcoded_spawn_area_list::from_raw(const std::string &raw) {
+    bool hardcoded_spawn_area_list::from_raw(const std::string& raw) {
         this->areas_.clear();
         if (raw.size() < 4) return false;
         int32_t count = 0;
         memcpy(&count, raw.data(), 4);
         if (raw.size() != static_cast<size_t>(count) * HSA_AREA_SIZE + 4) return false;
 
-        const char *d = raw.data() + 4;
+        const char* d = raw.data() + 4;
         this->areas_.reserve(static_cast<size_t>(count));
         for (int32_t i = 0; i < count; i++) {
             hardcoded_spawn_area area;
-            const char *p = d + static_cast<size_t>(i) * HSA_AREA_SIZE;
+            const char* p = d + static_cast<size_t>(i) * HSA_AREA_SIZE;
             memcpy(&area.min_pos.x, p, 4);
             memcpy(&area.min_pos.y, p + 4, 4);
             memcpy(&area.min_pos.z, p + 8, 4);
@@ -274,14 +245,14 @@ namespace bl {
         std::string raw;
         raw.reserve(4 + this->areas_.size() * HSA_AREA_SIZE);
         int32_t count = static_cast<int32_t>(this->areas_.size());
-        raw.append(reinterpret_cast<const char *>(&count), 4);
-        for (const auto &area : this->areas_) {
-            raw.append(reinterpret_cast<const char *>(&area.min_pos.x), 4);
-            raw.append(reinterpret_cast<const char *>(&area.min_pos.y), 4);
-            raw.append(reinterpret_cast<const char *>(&area.min_pos.z), 4);
-            raw.append(reinterpret_cast<const char *>(&area.max_pos.x), 4);
-            raw.append(reinterpret_cast<const char *>(&area.max_pos.y), 4);
-            raw.append(reinterpret_cast<const char *>(&area.max_pos.z), 4);
+        raw.append(reinterpret_cast<const char*>(&count), 4);
+        for (const auto& area : this->areas_) {
+            raw.append(reinterpret_cast<const char*>(&area.min_pos.x), 4);
+            raw.append(reinterpret_cast<const char*>(&area.min_pos.y), 4);
+            raw.append(reinterpret_cast<const char*>(&area.min_pos.z), 4);
+            raw.append(reinterpret_cast<const char*>(&area.max_pos.x), 4);
+            raw.append(reinterpret_cast<const char*>(&area.max_pos.y), 4);
+            raw.append(reinterpret_cast<const char*>(&area.max_pos.z), 4);
             raw.push_back(static_cast<char>(area.type));
         }
         return raw;

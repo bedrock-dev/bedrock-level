@@ -33,18 +33,19 @@ namespace bl {
 
         [[nodiscard]] std::string to_string() const;
 
-        bool operator==(const chunk_pos &p) const;
+        bool operator==(const chunk_pos& p) const;
 
-        bool operator<(const chunk_pos &rhs) const;
-
-        [[nodiscard]] std::tuple<int32_t, int32_t> get_y_range(ChunkVersion v) const;
-
-        [[nodiscard]] std::tuple<int8_t, int8_t> get_subchunk_index_range(ChunkVersion v) const;
-        [[nodiscard]] block_pos get_min_pos(ChunkVersion v) const;
-        [[nodiscard]] block_pos get_max_pos(ChunkVersion v) const;
+        bool operator<(const chunk_pos& rhs) const;
 
         [[nodiscard]] bool is_slime() const;
     };
+
+    /// World Y that a Data3D biome payload starts at. The payload does not record where it
+    /// begins, so this is a property of the format rather than of any particular chunk: it is
+    /// the bottom of the dimension. Unrelated to ChunkVersion -- Data3D only exists in worlds
+    /// whose height is the 1.18+ one. Dimensions without a built-in convention read the floor
+    /// from bl::config.
+    [[nodiscard]] int32_t dimension_min_y(int32_t dim) noexcept;
 
     struct block_pos {
         int x{};
@@ -58,17 +59,17 @@ namespace bl {
 
         [[nodiscard]] chunk_pos in_chunk_offset() const;
 
-        [[nodiscard]] bool operator==(const block_pos &rhs) const noexcept { return x == rhs.x && y == rhs.y && z == rhs.z; }
-        [[nodiscard]] bool operator!=(const block_pos &rhs) const noexcept { return !(*this == rhs); }
-        [[nodiscard]] block_pos operator+(const block_pos &rhs) const noexcept { return {x + rhs.x, y + rhs.y, z + rhs.z}; }
-        [[nodiscard]] block_pos operator-(const block_pos &rhs) const noexcept { return {x - rhs.x, y - rhs.y, z - rhs.z}; }
-        block_pos &operator+=(const block_pos &rhs) noexcept {
+        [[nodiscard]] bool operator==(const block_pos& rhs) const noexcept { return x == rhs.x && y == rhs.y && z == rhs.z; }
+        [[nodiscard]] bool operator!=(const block_pos& rhs) const noexcept { return !(*this == rhs); }
+        [[nodiscard]] block_pos operator+(const block_pos& rhs) const noexcept { return {x + rhs.x, y + rhs.y, z + rhs.z}; }
+        [[nodiscard]] block_pos operator-(const block_pos& rhs) const noexcept { return {x - rhs.x, y - rhs.y, z - rhs.z}; }
+        block_pos& operator+=(const block_pos& rhs) noexcept {
             x += rhs.x;
             y += rhs.y;
             z += rhs.z;
             return *this;
         }
-        block_pos &operator-=(const block_pos &rhs) noexcept {
+        block_pos& operator-=(const block_pos& rhs) noexcept {
             x -= rhs.x;
             y -= rhs.y;
             z -= rhs.z;
@@ -83,9 +84,9 @@ namespace bl {
         block_pos max_pos{0, 0, 0};
 
         block_box() = default;
-        block_box(const block_pos &minimum, const block_pos &maximum) : min_pos(minimum), max_pos(maximum) {}
+        block_box(const block_pos& minimum, const block_pos& maximum) : min_pos(minimum), max_pos(maximum) {}
 
-        [[nodiscard]] static block_box from_min_and_size(const block_pos &minimum, int size_x, int size_y, int size_z) noexcept {
+        [[nodiscard]] static block_box from_min_and_size(const block_pos& minimum, int size_x, int size_y, int size_z) noexcept {
             return {{minimum.x, minimum.y, minimum.z}, {minimum.x + size_x, minimum.y + size_y, minimum.z + size_z}};
         }
 
@@ -95,7 +96,7 @@ namespace bl {
         [[nodiscard]] int size_y() const noexcept { return max_pos.y - min_pos.y; }
         [[nodiscard]] int size_z() const noexcept { return max_pos.z - min_pos.z; }
 
-        [[nodiscard]] bool contains(const block_pos &pos) const noexcept {
+        [[nodiscard]] bool contains(const block_pos& pos) const noexcept {
             return pos.x >= min_pos.x && pos.x < max_pos.x && pos.y >= min_pos.y && pos.y < max_pos.y && pos.z >= min_pos.z &&
                    pos.z < max_pos.z;
         }
@@ -105,14 +106,14 @@ namespace bl {
                     {std::max(min_pos.x, max_pos.x), std::max(min_pos.y, max_pos.y), std::max(min_pos.z, max_pos.z)}};
         }
 
-        [[nodiscard]] block_box intersected(const block_box &rhs) const noexcept {
+        [[nodiscard]] block_box intersected(const block_box& rhs) const noexcept {
             return {{std::max(min_pos.x, rhs.min_pos.x), std::max(min_pos.y, rhs.min_pos.y), std::max(min_pos.z, rhs.min_pos.z)},
                     {std::min(max_pos.x, rhs.max_pos.x), std::min(max_pos.y, rhs.max_pos.y), std::min(max_pos.z, rhs.max_pos.z)}};
         }
 
         [[nodiscard]] block_box translated(int dx, int dy, int dz) const noexcept { return translated(block_pos{dx, dy, dz}); }
 
-        [[nodiscard]] block_box translated(const block_pos &offset) const noexcept { return {min_pos + offset, max_pos + offset}; }
+        [[nodiscard]] block_box translated(const block_pos& offset) const noexcept { return {min_pos + offset, max_pos + offset}; }
     };
 
     struct vec3 {
@@ -160,7 +161,7 @@ namespace bl {
 
         static std::string chunk_key_to_str(chunk_key::key_type key);
 
-        static chunk_key parse(const std::string &key);
+        static chunk_key parse(const std::string& key);
 
         [[maybe_unused]] const static chunk_key INVALID_CHUNK_KEY;
 
@@ -178,13 +179,13 @@ namespace bl {
 
         [[nodiscard]] std::string to_string() const;
 
-        static actor_key parse(const std::string &key);
+        static actor_key parse(const std::string& key);
     };
 
     struct actor_digest_key {
         chunk_pos cp;
 
-        static actor_digest_key parse(const std::string &key);
+        static actor_digest_key parse(const std::string& key);
 
         [[nodiscard]] inline bool valid() const { return this->cp.valid(); }
 
@@ -202,7 +203,7 @@ namespace bl {
 
         [[nodiscard]] std::string to_string() const;
 
-        static village_key parse(const std::string &key);
+        static village_key parse(const std::string& key);
 
         [[nodiscard]] std::string to_raw() const;
 
@@ -231,11 +232,11 @@ namespace bl {
         [[nodiscard]] const_iterator begin() const { return areas_.begin(); }
         [[nodiscard]] const_iterator end() const { return areas_.end(); }
 
-        std::vector<hardcoded_spawn_area> &areas() { return areas_; }
-        const std::vector<hardcoded_spawn_area> &areas() const { return areas_; }
+        std::vector<hardcoded_spawn_area>& areas() { return areas_; }
+        const std::vector<hardcoded_spawn_area>& areas() const { return areas_; }
 
         void clear() { areas_.clear(); }
-        void add(const hardcoded_spawn_area &area) { areas_.push_back(area); }
+        void add(const hardcoded_spawn_area& area) { areas_.push_back(area); }
         bool remove(size_t idx) {
             if (idx >= areas_.size()) return false;
             areas_.erase(areas_.begin() + static_cast<std::ptrdiff_t>(idx));
@@ -243,7 +244,7 @@ namespace bl {
         }
 
         // payload layout: int32 count, then count * (min x/y/z, max x/y/z int32s + 1 type byte)
-        bool from_raw(const std::string &raw);
+        bool from_raw(const std::string& raw);
         [[nodiscard]] std::string to_raw() const;
 
        private:
@@ -255,7 +256,7 @@ namespace std {
 
     template <>
     struct hash<bl::chunk_pos> {
-        size_t operator()(const bl::chunk_pos &cp) const noexcept {
+        size_t operator()(const bl::chunk_pos& cp) const noexcept {
             size_t h1 = hash<int32_t>{}(cp.x);
             size_t h2 = hash<int32_t>{}(cp.z);
             size_t h3 = hash<int32_t>{}(cp.dim);

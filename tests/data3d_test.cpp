@@ -67,7 +67,6 @@ TEST_F(Data3dBenchmark, LoadD3dAll) {
         for (auto &p : payloads_) {
             bl::biome3d d3d;
             d3d.set_chunk_pos(bl::chunk_pos{0, 0, 0});
-            d3d.set_version(bl::ChunkVersion::New);
             ASSERT_TRUE(d3d.load_from_d3d(reinterpret_cast<const byte_t *>(p.data()), p.size()));
             bytes += p.size();
         }
@@ -87,7 +86,6 @@ TEST_F(Data3dBenchmark, ToRawAll) {
         bytes = 0;
         for (auto &p : payloads_) {
             bl::biome3d d3d;
-            d3d.set_version(bl::ChunkVersion::New);
             ASSERT_TRUE(d3d.load_from_d3d(reinterpret_cast<const byte_t *>(p.data()), p.size()));
             bytes += d3d.to_raw().size();
         }
@@ -104,7 +102,6 @@ TEST_F(Data3dBenchmark, BasicCorrectness) {
     for (auto &p : payloads_) {
         bl::biome3d d3d;
         d3d.set_chunk_pos(bl::chunk_pos{0, 0, 0});
-        d3d.set_version(bl::ChunkVersion::New);
         ASSERT_TRUE(d3d.load_from_d3d(reinterpret_cast<const byte_t *>(p.data()), p.size()));
         auto hm = d3d.height_map();
         for (auto h : hm) {
@@ -126,12 +123,10 @@ TEST_F(Data3dBenchmark, BasicCorrectness) {
 TEST_F(Data3dBenchmark, ReSerializeStable) {
     for (auto &p : payloads_) {
         bl::biome3d d1;
-        d1.set_version(bl::ChunkVersion::New);
         ASSERT_TRUE(d1.load_from_d3d(reinterpret_cast<const byte_t *>(p.data()), p.size()));
         auto r1 = d1.to_raw();
 
         bl::biome3d d2;
-        d2.set_version(bl::ChunkVersion::New);
         ASSERT_TRUE(d2.load_from_d3d(reinterpret_cast<const byte_t *>(r1.data()), r1.size()));
         EXPECT_EQ(d2.to_raw(), r1);
     }

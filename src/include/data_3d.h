@@ -129,12 +129,13 @@ namespace bl {
         // shifts the raw value by the dimension's min_y, so this stays unshifted.
         static constexpr int16_t INVALID_HEIGHT = 0xFFFF;
 
-        bool load_from_d3d(const byte_t *data, size_t len);
+        bool load_from_d3d(const byte_t* data, size_t len);
 
-        bool load_from_d2d(const byte_t *data, size_t len);
+        bool load_from_d2d(const byte_t* data, size_t len);
 
         inline int height(int x, int z) {
-            auto [my, _] = this->pos_.get_y_range(this->version_);
+            // Data2D stores no Y anchor (single layer); only the Data3D path shifts.
+            const int my = this->version_ == Old ? 0 : dimension_min_y(this->pos_.dim);
             return this->height_map_[x + z * 16] + my;
         }
 
@@ -146,7 +147,7 @@ namespace bl {
 
         biome get_top_biome(int cx, int cz);
 
-        void set_chunk_pos(const bl::chunk_pos &cp) { this->pos_ = cp; }
+        void set_chunk_pos(const bl::chunk_pos& cp) { this->pos_ = cp; }
 
         void set_all(biome b);
 
@@ -155,7 +156,7 @@ namespace bl {
        private:
         static constexpr std::array<int16_t, 256> make_invalid_height_map() {
             std::array<int16_t, 256> map{};
-            for (auto &h : map) h = INVALID_HEIGHT;
+            for (auto& h : map) h = INVALID_HEIGHT;
             return map;
         }
 

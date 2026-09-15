@@ -2,6 +2,8 @@
 // Created by xhy on 2023/3/29.
 //
 
+#include "mcstructure.h"
+
 #include <gtest/gtest.h>
 
 #include <chrono>
@@ -9,7 +11,6 @@
 #include <memory>
 #include <vector>
 
-#include "palette.h"
 #include "utils.h"
 
 #ifndef TEST_DATA_DIR
@@ -19,9 +20,7 @@
 namespace {
     std::vector<byte_t> load_mcstructure() { return bl::utils::read_file(TEST_DATA_DIR "/mcstructures/test.mcstructure"); }
 
-    bool is_visible_block_name(const std::string &name) {
-        return name != "minecraft:air" && name != "minecraft:cave_air" && name != "minecraft:void_air" && name != "minecraft:unknown";
-    }
+    bool is_visible_block_name(const std::string &name) { return name != "minecraft:air" && name != "minecraft:unknown"; }
 
     std::unique_ptr<bl::nbt::compound_tag> make_block_state_tag(const std::string &name) {
         auto tag = std::make_unique<bl::nbt::compound_tag>("block");
@@ -268,10 +267,8 @@ TEST(McStructureBuilder, SerializeBlockEntities) {
     auto stone = make_block_state_tag("minecraft:stone");
     auto chest = make_block_entity_tag("minecraft:chest");
 
-    auto structure = bl::mcstructure_builder({2, 2, 2}, {0, 0, 0})
-                         .set_block({0, 0, 0}, stone.get())
-                         .set_block_entity({1, 1, 1}, chest.get())
-                         .build();
+    auto structure =
+        bl::mcstructure_builder({2, 2, 2}, {0, 0, 0}).set_block({0, 0, 0}, stone.get()).set_block_entity({1, 1, 1}, chest.get()).build();
 
     auto dumped = structure.to_raw();
     EXPECT_NE(dumped.find("block_position_data"), std::string::npos);
@@ -297,9 +294,7 @@ TEST(McStructureBuilder, SerializeBlockEntities) {
 TEST(McStructureBuilder, WritesBlockEntityWorldPositionFromOrigin) {
     auto chest = make_block_entity_tag("minecraft:chest");
 
-    auto structure = bl::mcstructure_builder({4, 4, 4}, {10, 20, 30})
-                         .set_block_entity({1, 2, 3}, chest.get())
-                         .build();
+    auto structure = bl::mcstructure_builder({4, 4, 4}, {10, 20, 30}).set_block_entity({1, 2, 3}, chest.get()).build();
 
     ASSERT_EQ(structure.block_entity_count(), 1u);
     EXPECT_EQ(structure.block_entity_position(0), (bl::block_pos{1, 2, 3}));
@@ -324,9 +319,7 @@ TEST(McStructureBuilder, WritesBlockEntityWorldPositionFromOrigin) {
 
 TEST(McStructureBuilder, PreservesAbsoluteEntityPosition) {
     auto entity = make_entity_tag("minecraft:item", 101.5f, 22.0f, -4.25f);
-    auto structure = bl::mcstructure_builder({4, 4, 4}, {100, 20, -5})
-                         .add_entity(entity.get())
-                         .build();
+    auto structure = bl::mcstructure_builder({4, 4, 4}, {100, 20, -5}).add_entity(entity.get()).build();
 
     ASSERT_EQ(structure.entity_count(), 1u);
     const auto *stored = structure.entities().front();
@@ -427,8 +420,9 @@ TEST(McStructure, SerializeRoundTrip) {
         }
     }
 
-    auto temp = std::filesystem::temp_directory_path() /
-                ("bedrockmap_mcstructure_" + std::to_string(std::chrono::high_resolution_clock::now().time_since_epoch().count()) + ".mcstructure");
+    auto temp =
+        std::filesystem::temp_directory_path() /
+        ("bedrockmap_mcstructure_" + std::to_string(std::chrono::high_resolution_clock::now().time_since_epoch().count()) + ".mcstructure");
     ASSERT_TRUE(s.save_to_file(temp.string()));
     auto written = bl::utils::read_file(temp.string());
     EXPECT_EQ(std::vector<byte_t>(dumped.begin(), dumped.end()), written);

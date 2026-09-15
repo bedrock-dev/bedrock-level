@@ -22,12 +22,14 @@ add_library(bedrock-level
         STATIC
         src/sub_chunk.cpp
         src/palette.cpp
+        src/mcstructure.cpp
         src/utils.cpp
         src/nbt.cpp
         src/bedrock_level.cpp
         src/bedrock_key.cpp
         src/data_3d.cpp
         src/chunk.cpp
+        src/raw_chunk.cpp
         src/actor.cpp
         src/global.cpp
         src/color.cpp
@@ -107,6 +109,7 @@ if (BEDROCK_LEVEL_BUILD_TESTS)
     create_test(mcstructure_test tests/mcstructure_test.cpp)
     create_test(key_test tests/key_test.cpp)
     create_test(chunk_test tests/chunk_test.cpp)
+    create_test(sub_chunk_test tests/sub_chunk_test.cpp)
     create_test(stb_image_test tests/stb_image_test.cpp)
     create_test(color_test tests/color_test.cpp)
     create_test(large_nbt_test tests/large_nbt_test.cpp)
