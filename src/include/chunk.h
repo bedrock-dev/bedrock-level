@@ -42,6 +42,12 @@ namespace bl {
         /// Palette entries are appended, not deduplicated: compact() before writing the terrain out.
         void set_block(int cx, int y, int cz, const nbt::compound_tag* tag, int layer = 0);
 
+        /// Writes one block entity at the chunk-local position (cx, y, cz). The tag is cloned and
+        /// its x/y/z are rewritten to the matching world position, then it is appended to
+        /// block_entities_. A second write to the same position leaves both entries; compact()
+        /// drops the older one.
+        void set_block_entity(int cx, int y, int cz, const nbt::compound_tag* tag);
+
         /// Fills the blocks inside box with one block. x/z are chunk-local and clipped to 0..15,
         /// y is a world coordinate whose span may cross sub-chunk boundaries; the box itself is
         /// left-closed right-open like every other block_box.
@@ -49,18 +55,40 @@ namespace bl {
         /// touches sub-chunks and layers that already exist.
         void fill_blocks(const block_box& box, const nbt::compound_tag* tag, int layer = -1);
 
-        /// Rebuilds the chunk into its compact on-disk form. For now this forwards to every
-        /// sub-chunk; entity and block-entity compaction would belong here too.
+        /// Adds an entity to this chunk, placing it at the world position world_pos. The tag is
+        /// cloned, so the caller keeps ownership of it and may destroy it right away. The clone
+        /// gets a freshly generated unique id -- both UniqueID and the storage key the level
+        /// indexes the actor by -- because reusing the id of the actor the tag came from would
+        /// make the new one and the old one collide.
+        ///
+        /// The tag's own Pos is overwritten rather than shifted, so the result does not depend on
+        /// it: a caller moving a whole structure has to add that translation to each entity's
+        /// position itself.
+        ///
+        /// Returns false when tag is not a loadable actor (it needs Pos, identifier and
+        /// UniqueID), in which case the chunk is left untouched.
+        bool add_actor(bedrock_level& level, const nbt::compound_tag* tag, const vec3& world_pos);
+
+        /// Rebuilds the chunk into its compact on-disk form: every sub-chunk's palette is
+        /// deduplicated, block_entities_ is collapsed to the last write per position, and the
+        /// biome/height payload's height map is recomputed from the terrain, so block edits are
+        /// reflected in it. Entity compaction would belong here too.
         /// Invalidates any nbt::compound_tag* previously returned by get_block_raw().
         void compact();
 
-        /// Serializes the terrain into out, replacing out's SubChunkTerrain payloads. Everything
-        /// else in out is left untouched, so a raw_chunk read with chunk_load_policy::All keeps
-        /// its entities, block entities, ticks and HSA across a round trip.
+        /// Serializes the terrain into out: the sub-chunk payloads are replaced with the
+        /// chunk's blocks, the biome/height payload with its biome data, whose height map has
+        /// been recomputed from that terrain, and the block entities and entities with the
+        /// chunk's own. The entity payloads are only replaced when they were part of the load
+        /// (chunk_load_policy::Actor / BlockActor) — a chunk that never read them must not clear
+        /// the ones the raw_chunk already holds. The remaining keys in out are left untouched, so
+        /// a raw_chunk read with chunk_load_policy::All keeps its ticks and HSA across a round
+        /// trip.
         ///
-        /// Compacts first: editing appends palette entries, and skipping that would still write
-        /// valid data but could inflate a sub-chunk from tens of bytes to ~100 KB. Compacting is
-        /// therefore not const, and it invalidates nbt::compound_tag* values from get_block_raw().
+        /// Compacts first: editing appends palette entries and can leave several block entities
+        /// on one position, and skipping that would still write valid data but could inflate a
+        /// sub-chunk from tens of bytes to ~100 KB. Compacting is therefore not const, and it
+        /// invalidates nbt::compound_tag* values from get_block_raw().
         void to_raw_chunk(raw_chunk& out);
 
         biome get_biome(int cx, int y, int cz);
@@ -106,6 +134,9 @@ namespace bl {
         /// Sub-chunk containing y, created (empty) when the chunk has none at that Y index.
         [[nodiscard]] sub_chunk* ensure_sub_chunk(int y);
 
+        /// Recomputes the stored height map from the blocks the chunk currently holds.
+        void refresh_height_map();
+
        private:
         bool load_subchunks(const bl::raw_chunk& rc);
 
@@ -121,6 +152,9 @@ namespace bl {
 
         bool loaded_{false};
         const chunk_pos pos_;
+        // true once the matching payload has been read; see to_raw_chunk()
+        bool block_entities_loaded_{false};
+        bool entities_loaded_{false};
         // sub_chunks
         std::map<int, sub_chunk*> sub_chunks_;
         // biome and height map

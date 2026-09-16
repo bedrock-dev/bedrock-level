@@ -41,9 +41,11 @@ namespace bl {
             return tint_kind::none;
         }
 
-        // block names repeat heavily in a world, so classify each unique name once
+        // Block names repeat heavily in a world, so classify each unique name once.
+        // Section rendering calls this from several worker threads, so the cache is
+        // per-thread rather than shared.
         tint_kind get_tint_kind(const std::string& name) {
-            static std::unordered_map<std::string, tint_kind> cache;
+            static thread_local std::unordered_map<std::string, tint_kind> cache;
             auto it = cache.find(name);
             if (it != cache.end()) return it->second;
             auto kind = classify_tint(name);

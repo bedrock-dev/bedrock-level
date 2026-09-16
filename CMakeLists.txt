@@ -27,6 +27,7 @@ add_library(bedrock-level
         src/nbt.cpp
         src/bedrock_level.cpp
         src/bedrock_key.cpp
+        src/chunk_data_position.cpp
         src/data_3d.cpp
         src/chunk.cpp
         src/raw_chunk.cpp

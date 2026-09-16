@@ -297,7 +297,7 @@ TEST(McStructureBuilder, WritesBlockEntityWorldPositionFromOrigin) {
     auto structure = bl::mcstructure_builder({4, 4, 4}, {10, 20, 30}).set_block_entity({1, 2, 3}, chest.get()).build();
 
     ASSERT_EQ(structure.block_entity_count(), 1u);
-    EXPECT_EQ(structure.block_entity_position(0), (bl::block_pos{1, 2, 3}));
+    EXPECT_EQ(structure.block_entity_local_position(0), (bl::block_pos{1, 2, 3}));
 
     const auto *entity = structure.block_entities().front();
     ASSERT_NE(entity, nullptr);
@@ -308,7 +308,7 @@ TEST(McStructureBuilder, WritesBlockEntityWorldPositionFromOrigin) {
     const auto dumped = structure.to_raw();
     auto roundtrip = bl::parse_mcstructure(reinterpret_cast<const byte_t *>(dumped.data()), dumped.size());
     ASSERT_EQ(roundtrip.block_entity_count(), 1u);
-    EXPECT_EQ(roundtrip.block_entity_position(0), (bl::block_pos{1, 2, 3}));
+    EXPECT_EQ(roundtrip.block_entity_local_position(0), (bl::block_pos{1, 2, 3}));
 
     const auto *roundtrip_entity = roundtrip.block_entities().front();
     ASSERT_NE(roundtrip_entity, nullptr);
@@ -374,7 +374,7 @@ TEST(McStructure, UsesBlockPositionDataKeyAsBlockEntityPosition) {
     auto structure = bl::parse_mcstructure(raw.data(), raw.size());
 
     ASSERT_EQ(structure.block_entity_count(), 1u);
-    const auto pos = structure.block_entity_position(0);
+    const auto pos = structure.block_entity_local_position(0);
     EXPECT_EQ(pos.x, 1);
     EXPECT_EQ(pos.y, 1);
     EXPECT_EQ(pos.z, 1);
@@ -388,7 +388,7 @@ TEST(McStructure, UsesBlockPositionDataKeyAsBlockEntityPosition) {
     auto dumped = structure.to_raw();
     auto roundtrip = bl::parse_mcstructure(reinterpret_cast<const byte_t *>(dumped.data()), dumped.size());
     ASSERT_EQ(roundtrip.block_entity_count(), 1u);
-    const auto roundtrip_pos = roundtrip.block_entity_position(0);
+    const auto roundtrip_pos = roundtrip.block_entity_local_position(0);
     EXPECT_EQ(roundtrip_pos.x, 1);
     EXPECT_EQ(roundtrip_pos.y, 1);
     EXPECT_EQ(roundtrip_pos.z, 1);

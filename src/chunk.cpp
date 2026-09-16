@@ -8,7 +8,9 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <set>
 #include <string>
+#include <tuple>
 #include <utility>
 
 #include "actor.h"
@@ -21,6 +23,16 @@
 #include "utils.h"
 
 namespace bl {
+
+    namespace {
+        bool read_int_tag(const nbt::compound_tag* tag, const char* key, int& out) {
+            const auto* value = tag ? tag->get(key) : nullptr;
+            const auto* intTag = value ? value->as<const nbt::int_tag*>() : nullptr;
+            if (!intTag) return false;
+            out = intTag->value;
+            return true;
+        }
+    }  // namespace
 
     /**
      * Overworld [-64 ~-1]+[0~319]
@@ -97,6 +109,36 @@ namespace bl {
         target->set_block(cx, offset, cz, tag, layer);
     }
 
+    void chunk::set_block_entity(int cx, int y, int cz, const nbt::compound_tag* tag) {
+        if (!tag) return;
+        auto copy = std::unique_ptr<nbt::compound_tag>(static_cast<nbt::compound_tag*>(tag->copy()));
+        const int baseX = this->pos_.x * 16;
+        const int baseZ = this->pos_.z * 16;
+        set_block_entity_pos(copy.get(), {baseX + cx, y, baseZ + cz});
+        this->block_entities_.push_back(copy.release());
+    }
+
+    bool chunk::add_actor(bedrock_level& level, const nbt::compound_tag* tag, const vec3& world_pos) {
+        if (!tag) return false;
+
+        auto* copy = static_cast<nbt::compound_tag*>(tag->copy());
+        auto* added = new actor();
+        // Takes ownership of copy on success, which is what keeps the clone outlived by added.
+        if (!added->load_from_nbt_owned(copy)) {
+            delete added;
+            delete copy;
+            return false;
+        }
+
+        // The tag carries the id of the actor it was exported from, which is still in the level:
+        // a fresh one keeps the two apart and rewrites the storage key to match.
+        added->reassign_uid(static_cast<int64_t>(level.generate_actor_uid()));
+        added->set_pos(world_pos.x, world_pos.y, world_pos.z);
+
+        this->entities_.push_back(added);
+        return true;
+    }
+
     void chunk::fill_blocks(const block_box& box, const nbt::compound_tag* tag, int layer) {
         if (!tag) return;
         const auto area = box.normalized();
@@ -132,6 +174,46 @@ namespace bl {
         for (auto& [index, sub] : this->sub_chunks_) {
             if (sub) sub->compact();
         }
+
+        // Several writes to one position leave several entities behind; the last one is the live
+        // one, so scan backwards and keep the first entry seen for each position.
+        std::set<std::tuple<int, int, int>> occupied;
+        std::vector<nbt::compound_tag*> unique;
+        unique.reserve(this->block_entities_.size());
+        for (auto it = this->block_entities_.rbegin(); it != this->block_entities_.rend(); ++it) {
+            auto* entity = *it;
+            int x = 0;
+            int y = 0;
+            int z = 0;
+            const bool hasPosition = entity && read_int_tag(entity, "x", x) && read_int_tag(entity, "y", y) && read_int_tag(entity, "z", z);
+            if (hasPosition && !occupied.emplace(x, y, z).second) {
+                delete entity;
+                continue;
+            }
+            unique.push_back(entity);
+        }
+        std::reverse(unique.begin(), unique.end());
+        this->block_entities_ = std::move(unique);
+
+        this->refresh_height_map();
+    }
+
+    void chunk::refresh_height_map() {
+        // Without terrain there is nothing to derive heights from; keeping the payload as it
+        // is avoids turning an unloaded chunk into an all-void one.
+        if (this->sub_chunks_.empty()) return;
+
+        const auto [min_y, max_y] = this->get_y_range();
+        for (int x = 0; x < 16; ++x) {
+            for (int z = 0; z < 16; ++z) {
+                const int top_y = this->get_top_y(x, z, max_y).first;
+                if (top_y < min_y) {
+                    this->d3d_.set_void_height(x, z);
+                } else {
+                    this->d3d_.set_height(x, z, top_y);
+                }
+            }
+        }
     }
 
     void chunk::to_raw_chunk(raw_chunk& out) {
@@ -141,6 +223,9 @@ namespace bl {
             if (!sub) continue;
             out.set_sub_chunk(static_cast<int8_t>(index), sub->to_raw());
         }
+        out.set_biome_data(this->d3d_.to_raw(), this->d3d_.is_3d());
+        if (this->block_entities_loaded_) out.set_block_entities(this->block_entities_);
+        if (this->entities_loaded_) out.set_entities(this->entities_, this->version);
     }
 
     bool chunk::load_subchunks(const bl::raw_chunk& rc) {
@@ -247,9 +332,11 @@ namespace bl {
         }
         if (has_flag(policy, chunk_load_policy::Actor)) {
             this->load_entities(rc);
+            this->entities_loaded_ = true;
         }
         if (has_flag(policy, chunk_load_policy::BlockActor)) {
             this->load_block_entities(rc);
+            this->block_entities_loaded_ = true;
         }
         if (has_flag(policy, chunk_load_policy::PendingTick)) {
             this->load_pending_ticks(rc);

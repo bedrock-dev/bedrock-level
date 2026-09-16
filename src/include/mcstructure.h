@@ -23,10 +23,10 @@ namespace bl {
         using layer_type = std::vector<int32_t>;
 
         mcstructure() = default;
-        mcstructure(const mcstructure &) = delete;
-        mcstructure &operator=(const mcstructure &) = delete;
-        mcstructure(mcstructure &&) noexcept = default;
-        mcstructure &operator=(mcstructure &&) noexcept = default;
+        mcstructure(const mcstructure&) = delete;
+        mcstructure& operator=(const mcstructure&) = delete;
+        mcstructure(mcstructure&&) noexcept = default;
+        mcstructure& operator=(mcstructure&&) noexcept = default;
         ~mcstructure();
 
         [[nodiscard]] int size_x() const noexcept { return size_x_; }
@@ -37,33 +37,41 @@ namespace bl {
 
         [[nodiscard]] block_pos origin() const noexcept { return origin_; }
 
-        [[nodiscard]] const std::vector<palette_entry> &palette() const noexcept { return palette_; }
+        [[nodiscard]] const std::vector<palette_entry>& palette() const noexcept { return palette_; }
         [[nodiscard]] size_t palette_size() const noexcept { return palette_.size(); }
-        [[nodiscard]] const palette_entry *palette_entry_at(size_t index) const noexcept;
+        [[nodiscard]] const palette_entry* palette_entry_at(size_t index) const noexcept;
 
         [[nodiscard]] size_t layer_count() const noexcept { return 2; }
-        [[nodiscard]] const layer_type &layer(size_t index) const noexcept;
+        [[nodiscard]] const layer_type& layer(size_t index) const noexcept;
         [[nodiscard]] size_t layer_size(size_t index) const noexcept;
 
-        [[nodiscard]] const std::vector<bl::nbt::compound_tag *> &entities() const noexcept { return entities_; }
+        [[nodiscard]] const std::vector<bl::nbt::compound_tag*>& entities() const noexcept { return entities_; }
         [[nodiscard]] size_t entity_count() const noexcept { return entities_.size(); }
-        [[nodiscard]] const std::vector<bl::nbt::compound_tag *> &block_entities() const noexcept { return block_entities_; }
+
+        /// Block entities are two parallel arrays: block_entities()[i] pairs with
+        /// block_entity_local_position(i). That position is structure-local and comes from the
+        /// block_position_data key, while the tag's own x/y/z are the same point in world space
+        /// (origin() + local position); x/y/z of a chest's pairx/pairz partner are offset the
+        /// same way. When a file's key and x/y/z disagree the key wins -- read positions through
+        /// block_entity_local_position(i), never from the NBT. Use these coordinates to index the
+        /// structure's own blocks; add origin() to reach the world.
+        [[nodiscard]] const std::vector<bl::nbt::compound_tag*>& block_entities() const noexcept { return block_entities_; }
         [[nodiscard]] size_t block_entity_count() const noexcept { return block_entities_.size(); }
-        [[nodiscard]] block_pos block_entity_position(size_t index) const noexcept;
+        [[nodiscard]] block_pos block_entity_local_position(size_t index) const noexcept;
 
         [[nodiscard]] int32_t block_index(int layer, int x, int y, int z) const noexcept;
         [[nodiscard]] int32_t block_index(int x, int y, int z) const noexcept;
-        [[nodiscard]] const palette_entry *block_at(int layer, int x, int y, int z) const noexcept;
-        [[nodiscard]] const palette_entry *block_at(int x, int y, int z) const noexcept;
+        [[nodiscard]] const palette_entry* block_at(int layer, int x, int y, int z) const noexcept;
+        [[nodiscard]] const palette_entry* block_at(int x, int y, int z) const noexcept;
 
         [[nodiscard]] std::string to_raw() const;
-        [[nodiscard]] bool save_to_file(const std::string &file_name) const;
+        [[nodiscard]] bool save_to_file(const std::string& file_name) const;
 
         // readable summary of the parsed structure
         std::string dump() const;
 
        private:
-        friend mcstructure parse_mcstructure(const byte_t *data, size_t len);
+        friend mcstructure parse_mcstructure(const byte_t* data, size_t len);
         friend class mcstructure_builder;
 
         int size_x_{0}, size_y_{0}, size_z_{0};
@@ -71,29 +79,31 @@ namespace bl {
         std::vector<palette_entry> palette_;  // block states from the "default" palette; owns tags
         layer_type layers_[2];                // block index per layer (ZYX order); -1 = void
         block_pos origin_;
-        std::vector<bl::nbt::compound_tag *> entities_;        // owned
-        std::vector<bl::nbt::compound_tag *> block_entities_;  // owned
-        std::vector<block_pos> block_entity_positions_;        // local position of block entitiy
+        std::vector<bl::nbt::compound_tag*> entities_;  // owned
+        // paired by index with block_entities_; local to the structure, see block_entity_local_position()
+        std::vector<bl::nbt::compound_tag*> block_entities_;  // owned
+        std::vector<block_pos> block_entity_local_positions_;
     };
 
     // Parse a .mcstructure file from raw bytes.
-    mcstructure parse_mcstructure(const byte_t *data, size_t len);
+    mcstructure parse_mcstructure(const byte_t* data, size_t len);
 
     class mcstructure_builder {
        public:
         // origin is the structure_world_origin metadata used when the structure is loaded back into a world.
-        mcstructure_builder(const block_pos &size, const block_pos &origin, int32_t version = 1);
+        mcstructure_builder(const block_pos& size, const block_pos& origin, int32_t version = 1);
 
-        mcstructure_builder &set_block(const block_pos &pos, const bl::nbt::compound_tag *tag);
-        mcstructure_builder &set_block(int layer, const block_pos &pos, const bl::nbt::compound_tag *tag);
+        mcstructure_builder& set_block(const block_pos& pos, const bl::nbt::compound_tag* tag);
+        mcstructure_builder& set_block(int layer, const block_pos& pos, const bl::nbt::compound_tag* tag);
 
-        mcstructure_builder &fill_blocks(const block_box &box, const bl::nbt::compound_tag *tag);
-        mcstructure_builder &fill_blocks(int layer, const block_box &box, const bl::nbt::compound_tag *tag);
+        mcstructure_builder& fill_blocks(const block_box& box, const bl::nbt::compound_tag* tag);
+        mcstructure_builder& fill_blocks(int layer, const block_box& box, const bl::nbt::compound_tag* tag);
 
-        mcstructure_builder &set_block_entity(const block_pos &pos, const bl::nbt::compound_tag *tag);
+        /// pos is structure-local; the tag's x/y/z are overwritten with origin + pos.
+        mcstructure_builder& set_block_entity(const block_pos& pos, const bl::nbt::compound_tag* tag);
 
         /// Add an entity whose NBT coordinates are absolute world coordinates.
-        mcstructure_builder &add_entity(const bl::nbt::compound_tag *tag);
+        mcstructure_builder& add_entity(const bl::nbt::compound_tag* tag);
 
         [[nodiscard]] mcstructure build();
 
@@ -104,10 +114,10 @@ namespace bl {
         [[nodiscard]] block_pos size() const noexcept { return {size_x_, size_y_, size_z_}; }
         [[nodiscard]] bool has_size() const noexcept { return size_x_ > 0 && size_y_ > 0 && size_z_ > 0; }
         void reset_layers();
-        [[nodiscard]] layer_type &layer_at(int layer);
-        [[nodiscard]] const layer_type &layer_at(int layer) const;
-        [[nodiscard]] size_t ensure_palette_index(bl::nbt::compound_tag *tag);
-        [[nodiscard]] bl::nbt::compound_tag *intern_tag(const bl::nbt::compound_tag *tag, bool strip_version);
+        [[nodiscard]] layer_type& layer_at(int layer);
+        [[nodiscard]] const layer_type& layer_at(int layer) const;
+        [[nodiscard]] size_t ensure_palette_index(bl::nbt::compound_tag* tag);
+        [[nodiscard]] bl::nbt::compound_tag* intern_tag(const bl::nbt::compound_tag* tag, bool strip_version);
         void release_ownership();
 
         int size_x_{0}, size_y_{0}, size_z_{0};
@@ -117,11 +127,11 @@ namespace bl {
 
         std::vector<palette_entry> palette_;
         std::unordered_map<std::string, size_t> palette_index_by_raw_;
-        std::vector<bl::nbt::compound_tag *> block_entities_;
-        std::vector<block_pos> block_entity_positions_;
-        std::vector<bl::nbt::compound_tag *> entities_;
+        std::vector<bl::nbt::compound_tag*> block_entities_;
+        std::vector<block_pos> block_entity_local_positions_;
+        std::vector<bl::nbt::compound_tag*> entities_;
 
-        std::unordered_map<std::string, bl::nbt::compound_tag *> interned_tags_;
+        std::unordered_map<std::string, bl::nbt::compound_tag*> interned_tags_;
         std::vector<std::unique_ptr<bl::nbt::compound_tag>> owned_tags_;
     };
 }  // namespace bl

@@ -269,39 +269,50 @@ TEST(HardcodedSpawnAreaList, EditOps) {
     EXPECT_TRUE(list.empty());
 }
 
-TEST(BlockEntity, OffsetPos) {
+// Moving a chunk rewrites its block entities, so a chest pair has to travel with the chest.
+TEST(BlockEntity, RawChunkSetPosMovesChestPair) {
     using namespace bl;
 
-    auto block_entity_owner = std::make_unique<nbt::compound_tag>("block_entity");
-    auto* block_entity = block_entity_owner.get();
-    block_entity->put(new nbt::string_tag("id", "Chest"));
-    block_entity->put(new nbt::int_tag("x", 12));
-    block_entity->put(new nbt::int_tag("y", 64));
-    block_entity->put(new nbt::int_tag("z", -9));
-    block_entity->put(new nbt::int_tag("pairx", 20));
-    block_entity->put(new nbt::int_tag("pairz", 3));
+    bl::bedrock_level level;
+    bl::raw_chunk rc(chunk_pos{0, 0, 0});
 
-    offset_block_entity_pos(block_entity, 32, -16);
+    auto* chest = new nbt::compound_tag("");
+    chest->put(new nbt::string_tag("id", "Chest"));
+    chest->put(new nbt::int_tag("x", 12));
+    chest->put(new nbt::int_tag("y", 64));
+    chest->put(new nbt::int_tag("z", -9));
+    chest->put(new nbt::int_tag("pairx", 20));
+    chest->put(new nbt::int_tag("pairz", 3));
+    rc.set_normal(chunk_key::BlockEntity, chest->to_raw());
+    delete chest;
 
-    EXPECT_EQ(block_entity->get("x")->as<nbt::int_tag*>()->value, 44);
-    EXPECT_EQ(block_entity->get("y")->as<nbt::int_tag*>()->value, 64);
-    EXPECT_EQ(block_entity->get("z")->as<nbt::int_tag*>()->value, -25);
-    EXPECT_EQ(block_entity->get("pairx")->as<nbt::int_tag*>()->value, 52);
-    EXPECT_EQ(block_entity->get("pairz")->as<nbt::int_tag*>()->value, -13);
+    // move chunk by (+2, -1) chunks -> +32/-16 blocks
+    rc.set_pos(chunk_pos{2, -1, 0}, &level);
+
+    const auto payload = rc.get_normal_key(chunk_key::BlockEntity);
+    auto stored = nbt::read_palette_to_end(payload.data(), payload.size());
+    ASSERT_EQ(stored.size(), 1u);
+    EXPECT_EQ(stored[0]->get("x")->as<nbt::int_tag*>()->value, 44);
+    EXPECT_EQ(stored[0]->get("y")->as<nbt::int_tag*>()->value, 64);
+    EXPECT_EQ(stored[0]->get("z")->as<nbt::int_tag*>()->value, -25);
+    EXPECT_EQ(stored[0]->get("pairx")->as<nbt::int_tag*>()->value, 52);
+    EXPECT_EQ(stored[0]->get("pairz")->as<nbt::int_tag*>()->value, -13);
+    for (auto* tag : stored) delete tag;
 }
 
-TEST(BlockEntity, DoesNotOffsetPairPosForOtherTypes) {
+TEST(BlockEntity, DoesNotMovePairPosForOtherTypes) {
     using namespace bl;
 
     auto block_entity_owner = std::make_unique<nbt::compound_tag>("block_entity");
     auto* block_entity = block_entity_owner.get();
     block_entity->put(new nbt::string_tag("id", "Barrel"));
     block_entity->put(new nbt::int_tag("x", 12));
+    block_entity->put(new nbt::int_tag("y", 64));
     block_entity->put(new nbt::int_tag("z", -9));
     block_entity->put(new nbt::int_tag("pairx", 20));
     block_entity->put(new nbt::int_tag("pairz", 3));
 
-    offset_block_entity_pos(block_entity, 32, -16);
+    set_block_entity_pos(block_entity, {44, 64, -25});
 
     EXPECT_EQ(block_entity->get("x")->as<nbt::int_tag*>()->value, 44);
     EXPECT_EQ(block_entity->get("z")->as<nbt::int_tag*>()->value, -25);

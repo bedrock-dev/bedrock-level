@@ -26,7 +26,7 @@ namespace {
 
     std::vector<std::string> list_chunk_files() {
         std::vector<std::string> files;
-        for (auto &entry : fs::directory_iterator(TEST_DATA_DIR "/chunks")) {
+        for (auto& entry : fs::directory_iterator(TEST_DATA_DIR "/chunks")) {
             if (entry.path().extension() == ".chunk") {
                 files.push_back(entry.path().string());
             }
@@ -40,7 +40,7 @@ namespace {
 class Data3dBenchmark : public ::testing::Test {
    protected:
     void SetUp() override {
-        for (auto &f : list_chunk_files()) {
+        for (auto& f : list_chunk_files()) {
             auto raw = bl::utils::read_file(f);
             if (raw.empty()) continue;
             bl::raw_chunk rc;
@@ -64,10 +64,10 @@ TEST_F(Data3dBenchmark, LoadD3dAll) {
     size_t bytes = 0;
     for (int round = 0; round < kRounds; round++) {
         bytes = 0;
-        for (auto &p : payloads_) {
+        for (auto& p : payloads_) {
             bl::biome3d d3d;
             d3d.set_chunk_pos(bl::chunk_pos{0, 0, 0});
-            ASSERT_TRUE(d3d.load_from_d3d(reinterpret_cast<const byte_t *>(p.data()), p.size()));
+            ASSERT_TRUE(d3d.load_from_d3d(reinterpret_cast<const byte_t*>(p.data()), p.size()));
             bytes += p.size();
         }
     }
@@ -84,9 +84,9 @@ TEST_F(Data3dBenchmark, ToRawAll) {
     size_t bytes = 0;
     for (int round = 0; round < kRounds; round++) {
         bytes = 0;
-        for (auto &p : payloads_) {
+        for (auto& p : payloads_) {
             bl::biome3d d3d;
-            ASSERT_TRUE(d3d.load_from_d3d(reinterpret_cast<const byte_t *>(p.data()), p.size()));
+            ASSERT_TRUE(d3d.load_from_d3d(reinterpret_cast<const byte_t*>(p.data()), p.size()));
             bytes += d3d.to_raw().size();
         }
     }
@@ -99,10 +99,10 @@ TEST_F(Data3dBenchmark, ToRawAll) {
 // height map must be copied from the payload, and biome lookups must stay in range
 TEST_F(Data3dBenchmark, BasicCorrectness) {
     size_t nonzero_height = 0;
-    for (auto &p : payloads_) {
+    for (auto& p : payloads_) {
         bl::biome3d d3d;
         d3d.set_chunk_pos(bl::chunk_pos{0, 0, 0});
-        ASSERT_TRUE(d3d.load_from_d3d(reinterpret_cast<const byte_t *>(p.data()), p.size()));
+        ASSERT_TRUE(d3d.load_from_d3d(reinterpret_cast<const byte_t*>(p.data()), p.size()));
         auto hm = d3d.height_map();
         for (auto h : hm) {
             if (h != 0) nonzero_height++;
@@ -121,13 +121,42 @@ TEST_F(Data3dBenchmark, BasicCorrectness) {
 
 // load -> to_raw -> load must be stable (2nd to_raw identical)
 TEST_F(Data3dBenchmark, ReSerializeStable) {
-    for (auto &p : payloads_) {
+    for (auto& p : payloads_) {
         bl::biome3d d1;
-        ASSERT_TRUE(d1.load_from_d3d(reinterpret_cast<const byte_t *>(p.data()), p.size()));
+        ASSERT_TRUE(d1.load_from_d3d(reinterpret_cast<const byte_t*>(p.data()), p.size()));
         auto r1 = d1.to_raw();
 
         bl::biome3d d2;
-        ASSERT_TRUE(d2.load_from_d3d(reinterpret_cast<const byte_t *>(r1.data()), r1.size()));
+        ASSERT_TRUE(d2.load_from_d3d(reinterpret_cast<const byte_t*>(r1.data()), r1.size()));
         EXPECT_EQ(d2.to_raw(), r1);
+    }
+}
+
+// to_raw() re-packs every biome sub-chunk instead of collapsing it to one biome, so the
+// height map and the 3D biome layers must come back out of the serialized payload unchanged.
+TEST_F(Data3dBenchmark, ToRawKeepsHeightAndBiomes) {
+    bl::chunk_pos cp{0, 0, 0};
+    for (auto& p : payloads_) {
+        bl::biome3d d1;
+        d1.set_chunk_pos(cp);
+        ASSERT_TRUE(d1.load_from_d3d(reinterpret_cast<const byte_t*>(p.data()), p.size()));
+        const auto r1 = d1.to_raw();
+
+        bl::biome3d d2;
+        d2.set_chunk_pos(cp);
+        ASSERT_TRUE(d2.load_from_d3d(reinterpret_cast<const byte_t*>(r1.data()), r1.size()));
+
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
+                ASSERT_EQ(d1.height(x, z), d2.height(x, z)) << "height differs at " << x << "," << z;
+            }
+        }
+        for (int y = -64; y < 320; y++) {
+            for (int x = 0; x < 16; x++) {
+                for (int z = 0; z < 16; z++) {
+                    ASSERT_EQ(d1.get_biome(x, y, z), d2.get_biome(x, y, z)) << "biome differs at " << x << "," << y << "," << z;
+                }
+            }
+        }
     }
 }

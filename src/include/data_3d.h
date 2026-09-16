@@ -129,6 +129,9 @@ namespace bl {
         // shifts the raw value by the dimension's min_y, so this stays unshifted.
         static constexpr int16_t INVALID_HEIGHT = 0xFFFF;
 
+        // Raw height map value the game stores for a column that holds no block at all.
+        static constexpr int16_t VOID_HEIGHT = -128;
+
         bool load_from_d3d(const byte_t* data, size_t len);
 
         bool load_from_d2d(const byte_t* data, size_t len);
@@ -150,6 +153,16 @@ namespace bl {
         void set_chunk_pos(const bl::chunk_pos& cp) { this->pos_ = cp; }
 
         void set_all(biome b);
+
+        /// True when the payload is the 3D (Data3D) layout, false for the legacy 2D one.
+        [[nodiscard]] inline bool is_3d() const { return this->version_ == New; }
+
+        /// Records the world Y of the highest block of a column, in the same encoding
+        /// height() reads back.
+        void set_height(int x, int z, int world_y);
+
+        /// Marks a column as holding no block; see VOID_HEIGHT.
+        void set_void_height(int x, int z) { this->height_map_[x + z * 16] = VOID_HEIGHT; }
 
         [[nodiscard]] std::string to_raw() const;
 

@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 
+#include "bedrock_level.h"
 #include "utils.h"
 
 #ifndef TEST_DATA_DIR
@@ -209,6 +210,19 @@ namespace {
         return tag;
     }
 
+    // smallest NBT that actor::preload accepts: Pos + identifier + UniqueID
+    bl::nbt::compound_tag* make_actor_tag(const char* identifier, float x, float y, float z, int64_t uid) {
+        auto* tag = new bl::nbt::compound_tag("");
+        tag->put(new bl::nbt::string_tag("identifier", identifier));
+        tag->put(new bl::nbt::long_tag("UniqueID", uid));
+        auto* pos = new bl::nbt::list_tag("Pos");
+        pos->append(new bl::nbt::float_tag("", x));
+        pos->append(new bl::nbt::float_tag("", y));
+        pos->append(new bl::nbt::float_tag("", z));
+        tag->put(pos);
+        return tag;
+    }
+
     void set_named_block(bl::chunk& c, int cx, int y, int cz, const char* name, int layer = 0) {
         auto* tag = make_block_tag(name);
         c.set_block(cx, y, cz, tag, layer);
@@ -366,6 +380,188 @@ TEST(ChunkBlockEdit, ToRawChunkCompacts) {
     // 4096 un-deduplicated appends would be ~100 KB; compacted this is a couple hundred bytes.
     EXPECT_GT(raw.get_sub_chunk(0).size(), 0u);
     EXPECT_LT(raw.get_sub_chunk(0).size(), 200u) << "to_raw_chunk did not compact";
+}
+
+// A block entity written through set_block_entity has to reach the raw_chunk payload, which
+// is how an imported structure gets its chests and signs into the level. Positions in that
+// payload are world-space.
+TEST(ChunkBlockEdit, ToRawChunkWritesBlockEntities) {
+    const bl::chunk_pos pos(2, -3, 0);
+    bl::raw_chunk raw(pos);
+
+    bl::chunk c(pos);
+    ASSERT_TRUE(c.load_from_raw_chunk(raw));  // block entities must be part of the load
+    auto* chest = make_block_tag("minecraft:chest");
+    c.set_block_entity(3, 70, 4, chest);
+    delete chest;
+    c.to_raw_chunk(raw);
+
+    const auto payload = raw.get_normal_key(bl::chunk_key::BlockEntity);
+    ASSERT_FALSE(payload.empty()) << "block entities must be written back";
+    auto stored = bl::nbt::read_palette_to_end(payload.data(), payload.size());
+    ASSERT_EQ(stored.size(), 1u);
+    EXPECT_EQ(stored[0]->get("x")->as<bl::nbt::int_tag*>()->value, 2 * 16 + 3);
+    EXPECT_EQ(stored[0]->get("y")->as<bl::nbt::int_tag*>()->value, 70);
+    EXPECT_EQ(stored[0]->get("z")->as<bl::nbt::int_tag*>()->value, -3 * 16 + 4);
+    for (auto* tag : stored) delete tag;
+}
+
+// A chunk loaded without chunk_load_policy::BlockActor never saw the payload, so writing it
+// back must not clear what the raw_chunk already holds.
+TEST(ChunkBlockEdit, ToRawChunkKeepsUnloadedBlockEntities) {
+    const bl::chunk_pos pos(0, 0, 0);
+    bl::raw_chunk raw(pos);
+    raw.set_normal(bl::chunk_key::BlockEntity, "existing-payload");
+
+    bl::chunk c(pos);
+    ASSERT_TRUE(c.load_from_raw_chunk(raw, bl::chunk_load_policy::Terrain));
+    c.to_raw_chunk(raw);
+
+    EXPECT_EQ(raw.get_normal_key(bl::chunk_key::BlockEntity), "existing-payload");
+}
+
+// Rewriting one position leaves the last write as the live one, so importing over an existing
+// block entity replaces it instead of stacking a second one next to it.
+TEST(ChunkBlockEdit, SetBlockEntityReplacesSamePosition) {
+    const bl::chunk_pos pos(0, 0, 0);
+    bl::chunk c(pos);
+    auto* first = make_block_tag("minecraft:chest");
+    first->put(new bl::nbt::string_tag("custom", "old"));
+    auto* second = make_block_tag("minecraft:chest");
+    second->put(new bl::nbt::string_tag("custom", "new"));
+
+    c.set_block_entity(1, 60, 1, first);
+    c.set_block_entity(1, 60, 1, second);
+    delete first;
+    delete second;
+
+    c.compact();
+    ASSERT_EQ(c.block_entities().size(), 1u);
+    EXPECT_EQ(c.block_entities()[0]->get("custom")->as<bl::nbt::string_tag*>()->value, "new");
+}
+
+// A copied-in entity must not keep the id of the actor it was exported from, or the level would
+// hold two actors sharing one storage key.
+TEST(ChunkBlockEdit, AddActorAssignsNewUniqueId) {
+    bl::bedrock_level level;
+    bl::chunk c(bl::chunk_pos(0, 0, 0));
+    auto* source = make_actor_tag("minecraft:cow", 10.0f, 64.0f, -20.0f, 12345);
+
+    ASSERT_TRUE(c.add_actor(level, source, {42.0f, 69.0f, -36.0f}));
+    ASSERT_EQ(c.entities().size(), 1u);
+    auto* added = c.entities()[0];
+    EXPECT_NE(added->uid(), 12345);
+    EXPECT_EQ(added->identifier(), "minecraft:cow");
+    EXPECT_EQ(added->root()->get("UniqueID")->as<bl::nbt::long_tag*>()->value, added->uid())
+        << "the NBT UniqueID must match the uid the actor reports";
+
+    // the requested position wins, whatever the tag claimed
+    EXPECT_FLOAT_EQ(added->pos().x, 42.0f);
+    EXPECT_FLOAT_EQ(added->pos().y, 69.0f);
+    EXPECT_FLOAT_EQ(added->pos().z, -36.0f);
+    auto* added_pos = added->root()->get("Pos")->as<bl::nbt::list_tag*>();
+    EXPECT_FLOAT_EQ(added_pos->value[0]->as<bl::nbt::float_tag*>()->value, 42.0f);
+    EXPECT_FLOAT_EQ(added_pos->value[1]->as<bl::nbt::float_tag*>()->value, 69.0f);
+    EXPECT_FLOAT_EQ(added_pos->value[2]->as<bl::nbt::float_tag*>()->value, -36.0f);
+
+    // the source tag is the caller's and must come back untouched
+    EXPECT_EQ(source->get("UniqueID")->as<bl::nbt::long_tag*>()->value, 12345);
+    auto* source_pos = source->get("Pos")->as<bl::nbt::list_tag*>();
+    EXPECT_FLOAT_EQ(source_pos->value[0]->as<bl::nbt::float_tag*>()->value, 10.0f);
+    EXPECT_FLOAT_EQ(source_pos->value[1]->as<bl::nbt::float_tag*>()->value, 64.0f);
+    EXPECT_FLOAT_EQ(source_pos->value[2]->as<bl::nbt::float_tag*>()->value, -20.0f);
+
+    // a second copy of the same tag is a second, independent actor
+    ASSERT_TRUE(c.add_actor(level, source, {10.0f, 64.0f, -20.0f}));
+    ASSERT_EQ(c.entities().size(), 2u);
+    EXPECT_NE(c.entities()[1]->uid(), 12345);
+    EXPECT_NE(c.entities()[1]->uid(), added->uid());
+    EXPECT_FLOAT_EQ(c.entities()[1]->pos().x, 10.0f);
+
+    delete source;
+}
+
+// A tag that actor::preload cannot accept leaves the chunk alone instead of adding half an actor.
+TEST(ChunkBlockEdit, AddActorRejectsIncompleteTag) {
+    bl::bedrock_level level;
+    bl::chunk c(bl::chunk_pos(0, 0, 0));
+
+    auto* no_uid = make_actor_tag("minecraft:cow", 0.0f, 64.0f, 0.0f, 1);
+    no_uid->remove("UniqueID");
+    EXPECT_FALSE(c.add_actor(level, no_uid, {0.0f, 64.0f, 0.0f}));
+
+    auto* no_pos = make_actor_tag("minecraft:cow", 0.0f, 64.0f, 0.0f, 1);
+    no_pos->remove("Pos");
+    EXPECT_FALSE(c.add_actor(level, no_pos, {0.0f, 64.0f, 0.0f}));
+
+    EXPECT_FALSE(c.add_actor(level, nullptr, {0.0f, 64.0f, 0.0f}));
+    EXPECT_TRUE(c.entities().empty());
+
+    delete no_uid;
+    delete no_pos;
+}
+
+// An actor added through add_actor has to reach the raw_chunk, which is how the level indexes
+// entities: a new-version chunk stores one "actorprefix<key>" entry per actor plus a digest.
+TEST(ChunkBlockEdit, ToRawChunkWritesActors) {
+    const bl::chunk_pos pos(0, 0, 0);
+    bl::raw_chunk raw(pos);
+
+    bl::bedrock_level level;
+    bl::chunk c(pos);
+    ASSERT_TRUE(c.load_from_raw_chunk(raw, bl::chunk_load_policy::Terrain | bl::chunk_load_policy::Actor));
+    ASSERT_EQ(c.get_version(), bl::ChunkVersion::New);
+
+    auto* pig = make_actor_tag("minecraft:pig", 8.0f, 70.0f, 8.0f, 777);
+    ASSERT_TRUE(c.add_actor(level, pig, {8.5f, 70.0f, 9.5f}));
+    delete pig;
+    c.to_raw_chunk(raw);
+
+    ASSERT_EQ(raw.get_entities().size(), 1u) << "the actor must be indexed by its storage key";
+    ASSERT_EQ(raw.get_actor_digest().size(), 8u) << "one actor means one 8-byte digest entry";
+    EXPECT_EQ(raw.get_actor_digest(), raw.get_entities().begin()->first);
+
+    const auto& stored = raw.get_entities().begin()->second;
+    auto tags = bl::nbt::read_palette_to_end(stored.data(), stored.size());
+    ASSERT_EQ(tags.size(), 1u);
+    EXPECT_EQ(tags[0]->get("identifier")->as<bl::nbt::string_tag*>()->value, "minecraft:pig");
+    EXPECT_NE(tags[0]->get("UniqueID")->as<bl::nbt::long_tag*>()->value, 777);
+    auto* stored_pos = tags[0]->get("Pos")->as<bl::nbt::list_tag*>();
+    EXPECT_FLOAT_EQ(stored_pos->value[0]->as<bl::nbt::float_tag*>()->value, 8.5f);
+    EXPECT_FLOAT_EQ(stored_pos->value[2]->as<bl::nbt::float_tag*>()->value, 9.5f);
+    // the digest must describe this actor, or the level will not find it
+    EXPECT_EQ(raw.get_entities().begin()->first, c.entities()[0]->storage_key_raw());
+
+    // ... and the level must be able to read it back as a chunk entity
+    bl::chunk reloaded(pos);
+    ASSERT_TRUE(reloaded.load_from_raw_chunk(raw));
+    ASSERT_EQ(reloaded.entities().size(), 1u);
+    EXPECT_EQ(reloaded.entities()[0]->identifier(), "minecraft:pig");
+    for (auto* tag : tags) delete tag;
+}
+
+// Same guard as block entities: a chunk loaded without chunk_load_policy::Actor never saw the
+// entity payload, so writing it back must not wipe what the raw_chunk already holds.
+TEST(ChunkBlockEdit, ToRawChunkKeepsUnloadedActors) {
+    const bl::chunk_pos pos(0, 0, 0);
+    bl::raw_chunk raw(pos);
+
+    bl::bedrock_level level;
+    bl::chunk writer(pos);
+    ASSERT_TRUE(writer.load_from_raw_chunk(raw, bl::chunk_load_policy::Terrain | bl::chunk_load_policy::Actor));
+    auto* pig = make_actor_tag("minecraft:pig", 8.0f, 70.0f, 8.0f, 777);
+    ASSERT_TRUE(writer.add_actor(level, pig, {8.0f, 70.0f, 8.0f}));
+    delete pig;
+    writer.to_raw_chunk(raw);
+    ASSERT_EQ(raw.get_entities().size(), 1u);
+
+    bl::chunk terrain_only(pos);
+    ASSERT_TRUE(terrain_only.load_from_raw_chunk(raw, bl::chunk_load_policy::Terrain));
+    set_named_block(terrain_only, 0, 0, 0, "minecraft:stone");
+    terrain_only.to_raw_chunk(raw);
+
+    EXPECT_EQ(raw.get_entities().size(), 1u) << "the entity payload must survive an edit that never read it";
+    EXPECT_EQ(raw.get_actor_digest().size(), 8u);
 }
 
 // Bytes produced by to_raw_chunk must be a valid SubChunkTerrain payload on their own.

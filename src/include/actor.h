@@ -21,8 +21,11 @@ namespace bl {
         /// Take ownership of nbt (no deep copy); on failure the caller keeps ownership
         bool load_from_nbt_owned(bl::nbt::compound_tag* nbt);
 
-        /// Offset the entity's Pos x/z by (dx, dz), modify nbt in place
-        void offset_pos(float dx, float dz);
+        /// Offset the entity's Pos by (dx, dy, dz), modify nbt in place
+        void offset_pos(float dx, float dy, float dz);
+
+        /// Overwrite the entity's Pos, modify nbt in place
+        void set_pos(float x, float y, float z);
 
         void reassign_uid(int64_t uid);
 

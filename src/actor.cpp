@@ -13,7 +13,7 @@
 
 namespace bl {
 
-    bool actor::load(const byte_t *data, size_t len) {
+    bool actor::load(const byte_t* data, size_t len) {
         auto p = bl::nbt::read_palette_to_end(data, len);
         if (p.size() != 1) {
             LOG_F(ERROR, "Invalid Actor!!");
@@ -29,36 +29,36 @@ namespace bl {
         printf("- type: %s\n", this->identifier_.c_str());
         printf("- pos: [%f %f %f]\n", pos_.x, pos_.y, pos_.z);
         printf("- NBT:\n\n");
-        for (auto &kv : this->root_->value) {
+        for (auto& kv : this->root_->value) {
             kv.second->write(std::cout, 0);
             printf("=============================\n");
         }
     }
-    bool actor::load_from_nbt(bl::nbt::compound_tag *nbt) {
+    bool actor::load_from_nbt(bl::nbt::compound_tag* nbt) {
         if (!this->preload(nbt)) return false;
-        this->root_ = dynamic_cast<bl::nbt::compound_tag *>(nbt->copy());
+        this->root_ = dynamic_cast<bl::nbt::compound_tag*>(nbt->copy());
         return true;
     }
 
-    bool actor::load_from_nbt_owned(bl::nbt::compound_tag *nbt) {
+    bool actor::load_from_nbt_owned(bl::nbt::compound_tag* nbt) {
         if (!this->preload(nbt)) return false;
         this->root_ = nbt;
         this->loaded_ = true;
         return true;
     }
 
-    bool actor::preload(bl::nbt::compound_tag *root) {
+    bool actor::preload(bl::nbt::compound_tag* root) {
         if (!root) return false;
         bool read_pos = false;
         bool read_uid = false;
         bool read_identifier = false;
         auto it = root->value.find("Pos");
         if (it != root->value.end()) {
-            auto *pos_tag = dynamic_cast<bl::nbt::list_tag *>(it->second);
+            auto* pos_tag = dynamic_cast<bl::nbt::list_tag*>(it->second);
             if (pos_tag && pos_tag->value.size() == 3) {
-                auto *tag_x = dynamic_cast<bl::nbt::float_tag *>(pos_tag->value[0]);
-                auto *tag_y = dynamic_cast<bl::nbt::float_tag *>(pos_tag->value[1]);
-                auto *tag_z = dynamic_cast<bl::nbt::float_tag *>(pos_tag->value[2]);
+                auto* tag_x = dynamic_cast<bl::nbt::float_tag*>(pos_tag->value[0]);
+                auto* tag_y = dynamic_cast<bl::nbt::float_tag*>(pos_tag->value[1]);
+                auto* tag_z = dynamic_cast<bl::nbt::float_tag*>(pos_tag->value[2]);
                 if (tag_x && tag_y && tag_z) {
                     this->pos_.x = tag_x->value;
                     this->pos_.y = tag_y->value;
@@ -70,7 +70,7 @@ namespace bl {
 
         auto it2 = root->value.find("identifier");
         if (it2 != root->value.end()) {
-            auto *id_tag = dynamic_cast<bl::nbt::string_tag *>(it2->second);
+            auto* id_tag = dynamic_cast<bl::nbt::string_tag*>(it2->second);
             if (id_tag) {
                 this->identifier_ = id_tag->value;
                 read_identifier = true;
@@ -78,7 +78,7 @@ namespace bl {
         }
         auto it3 = root->value.find("UniqueID");
         if (it3 != root->value.end()) {
-            auto lt = dynamic_cast<bl::nbt::long_tag *>(it3->second);
+            auto lt = dynamic_cast<bl::nbt::long_tag*>(it3->second);
             if (lt) {
                 this->uid_ = lt->value;
                 read_uid = true;
@@ -95,7 +95,7 @@ namespace bl {
         // update UniqueID
         auto it = root_->value.find("UniqueID");
         if (it != root_->value.end()) {
-            auto *lt = dynamic_cast<bl::nbt::long_tag *>(it->second);
+            auto* lt = dynamic_cast<bl::nbt::long_tag*>(it->second);
             if (lt) {
                 lt->value = uid;
             }
@@ -103,12 +103,12 @@ namespace bl {
 
         // update internalComponents -> EntityStorageKeyComponent -> StorageKey
         auto storage_key = this->storage_key_raw();
-        auto *ic = dynamic_cast<bl::nbt::compound_tag *>(root_->get("internalComponents"));
+        auto* ic = dynamic_cast<bl::nbt::compound_tag*>(root_->get("internalComponents"));
         if (!ic) {
             ic = new bl::nbt::compound_tag("internalComponents");
             root_->put(ic);
         }
-        auto *eskc = dynamic_cast<bl::nbt::compound_tag *>(ic->get("EntityStorageKeyComponent"));
+        auto* eskc = dynamic_cast<bl::nbt::compound_tag*>(ic->get("EntityStorageKeyComponent"));
         if (!eskc) {
             eskc = new bl::nbt::compound_tag("EntityStorageKeyComponent");
             ic->put(eskc);
@@ -116,21 +116,41 @@ namespace bl {
         eskc->put(new bl::nbt::string_tag("StorageKey", storage_key));
     }
 
-    void actor::offset_pos(float dx, float dz) {
+    void actor::offset_pos(float dx, float dy, float dz) {
         if (!root_) return;
         auto it = root_->value.find("Pos");
         if (it == root_->value.end()) return;
-        auto *pos_tag = dynamic_cast<bl::nbt::list_tag *>(it->second);
+        auto* pos_tag = dynamic_cast<bl::nbt::list_tag*>(it->second);
         if (!pos_tag || pos_tag->value.size() != 3) return;
-        auto *tx = dynamic_cast<bl::nbt::float_tag *>(pos_tag->value[0]);
-        auto *tz = dynamic_cast<bl::nbt::float_tag *>(pos_tag->value[2]);
+        auto* tx = dynamic_cast<bl::nbt::float_tag*>(pos_tag->value[0]);
+        auto* ty = dynamic_cast<bl::nbt::float_tag*>(pos_tag->value[1]);
+        auto* tz = dynamic_cast<bl::nbt::float_tag*>(pos_tag->value[2]);
         if (tx) {
             tx->value += dx;
             pos_.x = tx->value;
+        }
+        if (ty) {
+            ty->value += dy;
+            pos_.y = ty->value;
         }
         if (tz) {
             tz->value += dz;
             pos_.z = tz->value;
         }
+    }
+
+    void actor::set_pos(float x, float y, float z) {
+        if (!root_) return;
+        auto it = root_->value.find("Pos");
+        if (it == root_->value.end()) return;
+        auto* pos_tag = dynamic_cast<bl::nbt::list_tag*>(it->second);
+        if (!pos_tag || pos_tag->value.size() != 3) return;
+        auto* tx = dynamic_cast<bl::nbt::float_tag*>(pos_tag->value[0]);
+        auto* ty = dynamic_cast<bl::nbt::float_tag*>(pos_tag->value[1]);
+        auto* tz = dynamic_cast<bl::nbt::float_tag*>(pos_tag->value[2]);
+        if (tx) tx->value = x;
+        if (ty) ty->value = y;
+        if (tz) tz->value = z;
+        pos_ = vec3{x, y, z};
     }
 }  // namespace bl

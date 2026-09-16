@@ -60,6 +60,60 @@ namespace bl {
 
             return res;
         }
+
+        void append_i32(std::string& out, int32_t v) {
+            out.push_back(static_cast<char>(v & 0xff));
+            out.push_back(static_cast<char>((v >> 8) & 0xff));
+            out.push_back(static_cast<char>((v >> 16) & 0xff));
+            out.push_back(static_cast<char>((v >> 24) & 0xff));
+        }
+
+        // Reverse of load_subchunk_biome(): packs one biome sub-chunk. values is indexed
+        // x * 256 + z * 16 + y, the order the on-disk array uses.
+        void append_packed_biome_sub_chunk(std::string& out, const std::vector<biome>& values) {
+            std::array<int32_t, 256> slot;
+            slot.fill(-1);
+            std::vector<biome> palette;
+            std::vector<int32_t> index(values.size(), 0);
+            for (size_t i = 0; i < values.size(); i++) {
+                const auto id = static_cast<uint8_t>(values[i]);
+                if (slot[id] < 0) {
+                    slot[id] = static_cast<int32_t>(palette.size());
+                    palette.push_back(values[i]);
+                }
+                index[i] = slot[id];
+            }
+
+            if (palette.size() <= 1) {
+                // 0xff is what the reader (and the game) uses for a sub-chunk that holds no
+                // biome record at all; a single biome needs no index array either.
+                if (palette.empty() || palette[0] == biome::none) {
+                    out.push_back(static_cast<char>(0xff));
+                    return;
+                }
+                out.push_back('\0');
+                append_i32(out, static_cast<int32_t>(palette[0]));
+                return;
+            }
+
+            int bits = 1;
+            while ((1 << bits) < static_cast<int>(palette.size())) bits++;
+            out.push_back(static_cast<char>(bits << 1));
+
+            const int bpw = 32 / bits;
+            const int total = static_cast<int>(index.size());
+            for (int word = 0; word * bpw < total; word++) {
+                uint32_t packed = 0;
+                for (int s = 0; s < bpw; s++) {
+                    const int pos = word * bpw + s;
+                    if (pos >= total) break;
+                    packed |= static_cast<uint32_t>(index[pos]) << (s * bits);
+                }
+                append_i32(out, static_cast<int32_t>(packed));
+            }
+            append_i32(out, static_cast<int32_t>(palette.size()));
+            for (const auto b : palette) append_i32(out, static_cast<int32_t>(b));
+        }
     }  // namespace
     bool biome3d::load_from_d3d(const byte_t* data, size_t len) {
         int index = 0;
@@ -155,6 +209,12 @@ namespace bl {
         }
     }
 
+    void biome3d::set_height(int x, int z, int world_y) {
+        // Inverse of height(): Data2D carries no Y anchor, so its rows stay world-space.
+        const int my = this->version_ == Old ? 0 : dimension_min_y(this->pos_.dim);
+        this->height_map_[x + z * 16] = static_cast<int16_t>(world_y - my);
+    }
+
     std::string biome3d::to_raw() const {
         if (version_ == Old) {
             std::string result(512 + 256, '\0');
@@ -170,18 +230,21 @@ namespace bl {
         }
 
         std::string result;
-        result.reserve(512 + biomes_.size() * 5);  // header(1) + id(4) = 5 per subchunk
+        result.reserve(512 + biomes_.size() * 5);
         result.append(reinterpret_cast<const char*>(height_map_.data()), 512);
 
-        size_t layer_count = biomes_.size();
-        size_t sub_chunk_count = (layer_count + 15) / 16;
-
-        for (size_t sc = 0; sc < sub_chunk_count; sc++) {
-            // header bits=0 → single palette (no index, no palette_len on disk)
-            result.push_back('\0');
-            biome b = biomes_[sc * 16][0];
-            int32_t id = static_cast<int32_t>(b);
-            result.append(reinterpret_cast<const char*>(&id), 4);
+        const size_t layer_count = biomes_.size();
+        for (size_t sc = 0; sc * 16 < layer_count; ++sc) {
+            std::vector<biome> values(4096, biome::none);
+            for (size_t y = 0; y < 16 && sc * 16 + y < layer_count; ++y) {
+                const auto& layer = biomes_[sc * 16 + y];
+                for (int x = 0; x < 16; x++) {
+                    for (int z = 0; z < 16; z++) {
+                        values[x * 256 + z * 16 + y] = layer[x * 16 + z];
+                    }
+                }
+            }
+            append_packed_biome_sub_chunk(result, values);
         }
         return result;
     }

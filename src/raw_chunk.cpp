@@ -5,6 +5,7 @@
 #include "raw_chunk.h"
 
 #include <cstddef>
+#include <cstring>
 #include <string>
 #include <utility>
 
@@ -330,7 +331,11 @@ namespace bl {
         if (auto it = data_.find(chunk_key::BlockEntity); it != data_.end()) {
             auto& data = it->second;
             auto palette = nbt::read_palette_to_end(data.data(), data.size());
-            for (auto*& p : palette) offset_block_entity_pos(p, dx, dz);
+            for (auto*& p : palette) {
+                block_pos world_pos;
+                if (!read_block_entity_pos(p, world_pos)) continue;
+                set_block_entity_pos(p, block_pos{world_pos.x + dx, world_pos.y, world_pos.z + dz});
+            }
             data.clear();
             for (auto* p : palette) data += p->to_raw();
             for (auto* p : palette) delete p;
@@ -367,7 +372,7 @@ namespace bl {
                 if (ac.load_from_nbt(p)) {
                     auto uid = level->generate_actor_uid();
                     ac.reassign_uid(uid);
-                    ac.offset_pos(static_cast<float>(dx), static_cast<float>(dz));
+                    ac.offset_pos(static_cast<float>(dx), 0.0f, static_cast<float>(dz));
                     data += ac.root()->to_raw();
                 } else {
                     data += p->to_raw();
@@ -383,7 +388,7 @@ namespace bl {
             if (ac.load(reinterpret_cast<const byte_t*>(raw.data()), raw.size())) {
                 auto new_uid = level->generate_actor_uid();
                 ac.reassign_uid(new_uid);
-                ac.offset_pos(static_cast<float>(dx), static_cast<float>(dz));
+                ac.offset_pos(static_cast<float>(dx), 0.0f, static_cast<float>(dz));
                 new_entities.emplace(ac.storage_key_raw(), ac.root()->to_raw());
             } else {
                 LOG_F(ERROR, "load actor (uid len=%zu) failed when reset raw chunk position", uid.size());
@@ -397,12 +402,20 @@ namespace bl {
         }
     }
 
-    void raw_chunk::set_entities(const std::vector<bl::actor*> entities) {
+    void raw_chunk::set_block_entities(const std::vector<nbt::compound_tag*>& entities) {
+        std::string payload;
+        for (const auto* entity : entities) {
+            if (entity) payload += entity->to_raw();
+        }
+        set_normal(chunk_key::BlockEntity, payload);
+    }
+
+    void raw_chunk::set_entities(const std::vector<bl::actor*> entities, ChunkVersion version) {
         actor_digest_.clear();
         set_normal(chunk_key::Entity, "");
         entities_.clear();
         // set actor by version different chunk version
-        if (version() == ChunkVersion::Old) {
+        if (version == ChunkVersion::Old) {
             std::string chunk_actor_data;
             // create palette
             for (auto* a : entities) {
@@ -432,6 +445,12 @@ namespace bl {
         d3d.set_all(biome);
         // write back to the key the data came from
         data_[has3d ? chunk_key::Data3D : chunk_key::Data2D] = d3d.to_raw();
+    }
+
+    void raw_chunk::set_biome_data(const std::string& payload, bool use_3d) {
+        const auto key = use_3d ? chunk_key::Data3D : chunk_key::Data2D;
+        if (data_.find(key) == data_.end()) return;
+        data_[key] = payload;
     }
 
 }  // namespace bl
