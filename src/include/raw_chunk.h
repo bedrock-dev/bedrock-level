@@ -51,15 +51,20 @@ namespace bl {
     // all keys-values from level, without parse
     class raw_chunk {
        public:
-        // version/terrain marker keys that always gate chunk validity
-        inline static const chunk_key::key_type MARKER_KEYS[] = {chunk_key::VersionOld, chunk_key::VersionNew, chunk_key::LegacyTerrain};
+        // version/terrain marker keys that always gate chunk validity, oldest format first
+        inline static const chunk_key::key_type MARKER_KEYS[] = {chunk_key::LegacyTerrain, chunk_key::VersionOld, chunk_key::VersionNew};
 
         explicit raw_chunk(const chunk_pos& pos) : pos_(pos) {}
 
         raw_chunk() = default;
         raw_chunk(const raw_chunk& other) = default;
 
-        [[nodiscard]] ChunkVersion version() const { return this->version_; }
+        /// Format the chunk was saved in, taken from the version marker payload.
+        [[nodiscard]] LevelChunkFormat chunk_format() const { return this->chunk_format_; }
+
+        /// Declares the format of a raw_chunk that was built from scratch instead of read from the
+        /// level; read()/from_raw() overwrite it from the marker key.
+        void set_chunk_format(LevelChunkFormat format) { this->chunk_format_ = format; }
 
         void clear_terrain();
         void clear_entities();
@@ -93,11 +98,10 @@ namespace bl {
         void set_normal(chunk_key::key_type key, const std::string& data) { data_[key] = data; }
         /// Replaces the SubChunkTerrain payload at yindex (empty data deletes the key on write).
         void set_sub_chunk(int8_t yindex, std::string data) { sub_chunk_data_[yindex] = std::move(data); }
-        /// Replaces the entity payload. version picks the storage layout -- Old concatenates the
-        /// tags into the Entity key, New writes one "actorprefix<key>" entry per actor plus the
-        /// digest -- and is the caller's chunk format: a raw_chunk that was never read from the
-        /// level does not know its own, so its version_ default must not decide this.
-        void set_entities(const std::vector<bl::actor*> actors, ChunkVersion version);
+        /// Replaces the entity payload. The layout follows this chunk's own format: the old one
+        /// concatenates the tags into the Entity key, the new one writes one "actorprefix<key>"
+        /// entry per actor plus the digest.
+        void set_entities(const std::vector<bl::actor*> actors);
 
         /// Replaces the BlockEntity payload with the raw NBT of each tag, concatenated the way
         /// the chunk stores them. An empty list clears the payload, which removes the key.
@@ -116,7 +120,7 @@ namespace bl {
         std::map<int8_t, std::string> sub_chunk_data_;
         std::string actor_digest_;
         std::map<std::string, std::string> entities_;
-        ChunkVersion version_{Old};
+        LevelChunkFormat chunk_format_{LevelChunkFormat::V1_18_3IndividualActorStorage};
     };
 
 }  // namespace bl

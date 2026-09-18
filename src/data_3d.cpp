@@ -121,7 +121,7 @@ namespace bl {
             LOG_F(ERROR, "Invalid Data3d format");
             return false;
         }
-        this->version_ = ChunkVersion::New;
+        this->use_3d_biome_maps_ = true;
         memcpy(this->height_map_.data(), data, 512);
         index += 512;
         while (index < static_cast<int>(len)) {
@@ -142,7 +142,7 @@ namespace bl {
     }
 
     biome biome3d::get_biome(int cx, int y, int cz) {
-        if (this->version_ == Old) {
+        if (!this->use_3d_biome_maps_) {
             return this->biomes_.empty() ? bl::biome::none : this->biomes_[0][cx * 16 + cz];
         }
         y -= dimension_min_y(this->pos_.dim);
@@ -156,7 +156,7 @@ namespace bl {
 
     std::vector<std::vector<biome>> biome3d::get_biome_y(int y) {
         std::vector<std::vector<biome>> layer(16, std::vector<biome>(16, bl::biome::none));
-        if (this->version_ == Old) {
+        if (!this->use_3d_biome_maps_) {
             if (!this->biomes_.empty()) {
                 for (int x = 0; x < 16; x++) {
                     for (int z = 0; z < 16; z++) {
@@ -179,7 +179,7 @@ namespace bl {
     }
 
     biome biome3d::get_top_biome(int cx, int cz) {
-        if (this->version_ == Old) return this->get_biome(cx, 0, cz);
+        if (!this->use_3d_biome_maps_) return this->get_biome(cx, 0, cz);
         int y = (int)this->biomes_.size() - 1;
         while (y >= 0 && this->biomes_[y][cx * 16 + cz] == none) {
             y--;
@@ -192,7 +192,7 @@ namespace bl {
             return false;
         }
         memcpy(this->height_map_.data(), data, 512);
-        this->version_ = ChunkVersion::Old;
+        this->use_3d_biome_maps_ = false;
         std::array<biome, 256> layer{};
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
@@ -211,12 +211,12 @@ namespace bl {
 
     void biome3d::set_height(int x, int z, int world_y) {
         // Inverse of height(): Data2D carries no Y anchor, so its rows stay world-space.
-        const int my = this->version_ == Old ? 0 : dimension_min_y(this->pos_.dim);
+        const int my = this->use_3d_biome_maps_ ? dimension_min_y(this->pos_.dim) : 0;
         this->height_map_[x + z * 16] = static_cast<int16_t>(world_y - my);
     }
 
     std::string biome3d::to_raw() const {
-        if (version_ == Old) {
+        if (!this->use_3d_biome_maps_) {
             std::string result(512 + 256, '\0');
             memcpy(result.data(), height_map_.data(), 512);
             if (!biomes_.empty()) {

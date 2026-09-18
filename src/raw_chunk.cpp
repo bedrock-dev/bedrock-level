@@ -46,6 +46,15 @@ namespace bl {
             p += size;
             return s;
         }
+
+        // A version marker key holds a single byte, the format the chunk was saved in.
+        bool parse_chunk_format(const std::string& payload, LevelChunkFormat& out) {
+            if (payload.empty()) return false;
+            const auto value = static_cast<unsigned char>(payload[0]);
+            if (value >= static_cast<unsigned char>(LevelChunkFormat::Count)) return false;
+            out = static_cast<LevelChunkFormat>(value);
+            return true;
+        }
     }  // namespace
 
     // do not remove entities
@@ -68,8 +77,8 @@ namespace bl {
             const bool present = level.load_raw(key.to_raw(), raw);
             if (present && (!bl::config::strict_chunk_existence() || !raw.empty())) {
                 valid = true;
+                parse_chunk_format(raw, this->chunk_format_);
                 this->data_[kt] = std::move(raw);
-                if (kt == chunk_key::VersionNew) this->version_ = ChunkVersion::New;
             }
         }
         if (!valid) return false;
@@ -271,7 +280,11 @@ namespace bl {
             auto kt = static_cast<chunk_key::key_type>(read_i32(p));
             data_[kt] = read_bytes(p);
         }
-        version_ = data_.find(chunk_key::VersionNew) != data_.end() ? ChunkVersion::New : ChunkVersion::Old;
+        // Same priority as read(): the marker coming last in MARKER_KEYS wins.
+        for (auto kt : MARKER_KEYS) {
+            auto it = data_.find(kt);
+            if (it != data_.end()) parse_chunk_format(it->second, chunk_format_);
+        }
 
         // sub chunks
         int32_t sub_count = read_i32(p);
@@ -410,21 +423,18 @@ namespace bl {
         set_normal(chunk_key::BlockEntity, payload);
     }
 
-    void raw_chunk::set_entities(const std::vector<bl::actor*> entities, ChunkVersion version) {
+    void raw_chunk::set_entities(const std::vector<bl::actor*> entities) {
         actor_digest_.clear();
         set_normal(chunk_key::Entity, "");
         entities_.clear();
-        // set actor by version different chunk version
-        if (version == ChunkVersion::Old) {
+        if (!uses_individual_actor_storage(this->chunk_format_)) {
             std::string chunk_actor_data;
-            // create palette
             for (auto* a : entities) {
                 if (!a) continue;
                 chunk_actor_data += a->root()->to_raw();
             }
             set_normal(chunk_key::Entity, chunk_actor_data);
         } else {
-            std::string digest;
             for (auto* ac : entities) {
                 entities_[ac->storage_key_raw()] = ac->root()->to_raw();
                 this->actor_digest_ += ac->storage_key_raw();

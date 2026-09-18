@@ -14,11 +14,15 @@
 namespace bl {
 
     struct ClientVersion {
-        std::array<int, 5> version;
+        std::array<int, 5> version{};
         std::string to_string() const;
         void read(nbt::list_tag* tag);
         void write(nbt::list_tag* tag) const;
     };
+
+    /// The chunk format a client of this version writes: the newest format that is not newer than
+    /// the client. Versions older than every known format map to the oldest one.
+    [[nodiscard]] LevelChunkFormat client_version_to_chunk_format(const ClientVersion& version);
 
     class level_dat {
        public:
@@ -31,7 +35,7 @@ namespace bl {
         [[nodiscard]] inline bool loaded() const { return this->loaded_; }
         [[nodiscard]] inline block_pos spawn_position() const { return this->spawn_position_; }
         [[deprecated("Wrong API")]] inline uint64_t storage_version() const { return this->storage_version_; }
-        [[nodiscard]] inline ClientVersion min_compat_version() { return this->min_compat_version_; }
+        [[nodiscard]] inline ClientVersion min_compat_version() const { return this->min_compat_version_; }
         [[nodiscard]] inline const std::string& level_name() const { return this->level_name_; }
         [[nodiscard]] bl::nbt::compound_tag* root() { return this->root_; }
         [[nodiscard]] int64_t world_start_count() { return this->world_start_count_; }

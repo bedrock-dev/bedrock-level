@@ -57,7 +57,11 @@ namespace bl {
         this->root_name_ = root;
         fs::path path(this->root_name_);
         path /= LEVEL_DATA;
-        this->is_open_ = this->dat_.load_from_file(path.string()) && this->load_db();
+        const bool loaded = this->dat_.load_from_file(path.string());
+        if (loaded) {
+            this->chunk_format_ = client_version_to_chunk_format(this->dat_.min_compat_version());
+        }
+        this->is_open_ = loaded && this->load_db();
         return this->is_open_;
     }
 

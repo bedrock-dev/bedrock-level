@@ -4,8 +4,11 @@
 
 #include "level_dat.h"
 
+#include <cctype>
 #include <filesystem>
+#include <string_view>
 
+#include "magic-enum/magic_enum.hpp"
 #include "nbt.h"
 #include "utils.h"
 
@@ -34,6 +37,38 @@ namespace bl {
     std::string ClientVersion::to_string() const {
         return std::to_string(version[0]) + "." + std::to_string(version[1]) + "." + std::to_string(version[2]) + "." +
                std::to_string(version[3]) + "." + std::to_string(version[4]);
+    }
+
+    LevelChunkFormat client_version_to_chunk_format(const ClientVersion& version) {
+        const std::array<int, 3> client{version.version[0], version.version[1], version.version[2]};
+        const auto formats = magic_enum::enum_values<LevelChunkFormat>();
+        // Formats are listed in the order they were introduced, so the newest one the client can
+        // read is the last entry that is not newer than the client.
+        for (auto it = formats.rbegin(); it != formats.rend(); ++it) {
+            if (*it == LevelChunkFormat::Count) continue;  // upper bound of the enum, not a format
+            // "V1_16_300CavesCliffsPart1" -> 1.16.300, "V9_00" -> 0.9.0. Digits inside a trailing
+            // label name a revision, so only the first three number groups are read.
+            std::array<int, 3> format{0, 0, 0};
+            const std::string_view name = magic_enum::enum_name(*it);
+            size_t groups = 0;
+            for (size_t i = 0; i < name.size() && groups < format.size();) {
+                if (!std::isdigit(static_cast<unsigned char>(name[i]))) {
+                    ++i;
+                    continue;
+                }
+                int value = 0;
+                while (i < name.size() && std::isdigit(static_cast<unsigned char>(name[i]))) {
+                    value = value * 10 + (name[i] - '0');
+                    ++i;
+                }
+                format[groups++] = value;
+            }
+            // Formats from before 1.0 drop the leading major ("V17_0" is 0.17.0), so a name that
+            // holds only two number groups is a 0.<major>.<minor> version.
+            if (groups == 2) format = {0, format[0], format[1]};
+            if (format <= client) return *it;
+        }
+        return formats.front();  // client older than every known format
     }
 
     bool level_dat::load_from_file(const std::string& path) {

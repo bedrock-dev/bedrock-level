@@ -138,7 +138,7 @@ namespace bl {
 
         inline int height(int x, int z) {
             // Data2D stores no Y anchor (single layer); only the Data3D path shifts.
-            const int my = this->version_ == Old ? 0 : dimension_min_y(this->pos_.dim);
+            const int my = this->use_3d_biome_maps_ ? dimension_min_y(this->pos_.dim) : 0;
             return this->height_map_[x + z * 16] + my;
         }
 
@@ -155,7 +155,7 @@ namespace bl {
         void set_all(biome b);
 
         /// True when the payload is the 3D (Data3D) layout, false for the legacy 2D one.
-        [[nodiscard]] inline bool is_3d() const { return this->version_ == New; }
+        [[nodiscard]] inline bool is_3d() const { return this->use_3d_biome_maps_; }
 
         /// Records the world Y of the highest block of a column, in the same encoding
         /// height() reads back.
@@ -177,9 +177,9 @@ namespace bl {
         // one 16x16 biome layer per y slice, indexed [layer][x*16+z]
         std::vector<std::array<biome, 256>> biomes_;
         bl::chunk_pos pos_;
-        // biome version, not the chunk version of it's owner, in some minecraft version, a new version of chunk owns a data2d(old version
-        // biome data). set by load_from_d3d / load_from_d2d.
-        ChunkVersion version_{New};
+        // Which layout the payload uses, set by load_from_d3d / load_from_d2d. This is a
+        // property of the payload itself: a 1.18+ chunk can still carry legacy Data2D biomes.
+        bool use_3d_biome_maps_{true};
     };
 }  // namespace bl
 

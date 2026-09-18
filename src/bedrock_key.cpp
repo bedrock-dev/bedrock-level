@@ -5,9 +5,7 @@
 #include "bedrock_key.h"
 
 #include <cstring>
-#include <random>
 
-#include "config.h"
 #include "magic-enum/magic_enum.hpp"
 #include "utils.h"
 
@@ -136,33 +134,6 @@ namespace bl {
         return name.empty() ? "Unknown" : std::string(name);
     }
 
-    std::string chunk_pos::to_string() const {
-        return std::to_string(this->x) + ", " + std::to_string(this->z) + ", " + std::to_string(this->dim);
-    }
-
-    bool chunk_pos::operator<(const chunk_pos& rhs) const {
-        if (x < rhs.x) return true;
-        if (rhs.x < x) return false;
-        if (z < rhs.z) return true;
-        if (rhs.z < z) return false;
-        return dim < rhs.dim;
-    }
-
-    bool chunk_pos::operator==(const chunk_pos& p) const { return this->x == p.x && this->dim == p.dim && this->z == p.z; }
-
-    int32_t dimension_min_y(int32_t dim) noexcept {
-        if (dim == 1 || dim == 2) return 0;  // nether and the end keep their legacy 0-based floors
-        if (dim == 0) return -64;            // overworld, 1.18+
-        // Custom dimensions have no built-in convention; the host configures their floor.
-        return config::custom_dimension_min_y();
-    }
-
-    bool chunk_pos::is_slime() const {
-        auto seed = (x * 0x1f1f1f1fu) ^ (uint32_t)z;
-        std::mt19937 mt(seed);
-        return mt() % 10 == 0;
-    }
-
     std::string chunk_key::to_string() const {
         auto type_info = chunk_key_to_str(type) + "(" + std::to_string(static_cast<int>(type)) + ")";
         auto index_info = std::string();
@@ -196,20 +167,6 @@ namespace bl {
     std::string actor_key::to_string() const { return std::to_string(this->actor_uid); }
 
     std::string village_key::to_string() const { return this->uuid + "," + village_key_type_to_str(this->type); }
-
-    chunk_pos block_pos::to_chunk_pos() const {
-        auto cx = x < 0 ? x - 15 : x;
-        auto cz = z < 0 ? z - 15 : z;
-        return {cx / 16, cz / 16, -1};
-    }
-
-    chunk_pos block_pos::in_chunk_offset() const {
-        auto ox = x % 16;
-        auto oz = z % 16;
-        if (ox < 0) ox += 16;
-        if (oz < 0) oz += 16;
-        return {ox, oz, -1};
-    }
 
     // 25 bytes per area: min(x,y,z) + max(x,y,z) as int32s + 1 type byte
     static constexpr size_t HSA_AREA_SIZE = 24 + 1;

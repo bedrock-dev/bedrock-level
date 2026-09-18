@@ -25,6 +25,7 @@ add_library(bedrock-level
         src/mcstructure.cpp
         src/utils.cpp
         src/nbt.cpp
+        src/geometry.cpp
         src/bedrock_level.cpp
         src/bedrock_key.cpp
         src/chunk_data_position.cpp

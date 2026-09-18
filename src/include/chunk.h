@@ -37,8 +37,8 @@ namespace bl {
         nbt::compound_tag* get_block_raw(int cx, int y, int cz, int layer = 0);
 
         /// Writes one block, creating the target layer and the sub-chunk holding it when either
-        /// is missing. New sub-chunks inherit this chunk's layout version, so the Y range that
-        /// get_version() selects stays consistent.
+        /// is missing. New sub-chunks inherit this chunk's format, so the Y range that
+        /// chunk_format() selects stays consistent.
         /// Palette entries are appended, not deduplicated: compact() before writing the terrain out.
         void set_block(int cx, int y, int cz, const nbt::compound_tag* tag, int layer = 0);
 
@@ -121,7 +121,9 @@ namespace bl {
 
         hardcoded_spawn_area_list& HSAs() { return this->HSAs_; }
 
-        [[nodiscard]] ChunkVersion get_version() const { return this->version; }
+        /// On-disk format of the chunk, taken from the raw_chunk it was loaded from. Also picks
+        /// the sub-chunk layout that new sub-chunks inherit.
+        [[nodiscard]] LevelChunkFormat chunk_format() const { return this->chunk_format_; }
 
        public:
         bool load_from_raw_chunk(const bl::raw_chunk& rc, chunk_load_policy policy = chunk_load_policy::All);
@@ -167,7 +169,7 @@ namespace bl {
         std::vector<bl::nbt::compound_tag*> pending_ticks_;
 
         bl::hardcoded_spawn_area_list HSAs_;
-        ChunkVersion version{New};
+        LevelChunkFormat chunk_format_{LevelChunkFormat::V1_18_3IndividualActorStorage};
     };
 }  // namespace bl
 

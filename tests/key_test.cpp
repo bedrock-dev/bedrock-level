@@ -31,7 +31,7 @@ TEST(ChunkPos, Equality) {
 }
 
 // The Data3D anchor is the bottom of the dimension; the payload cannot record it itself.
-// Nothing here depends on ChunkVersion, which only describes the serialized layout.
+// Nothing here depends on the chunk's serialized format.
 // Dimensions without a built-in convention fall back to the configured floor.
 TEST(ChunkPos, DimensionMinY) {
     using namespace bl;
@@ -59,6 +59,41 @@ TEST(ChunkPos, SubChunkIndexRangeIsConfigurable) {
     EXPECT_EQ(config::subchunk_index_range(), (std::make_pair<int8_t, int8_t>(0, 7)));
     config::set_subchunk_index_range(original.first, original.second);
     EXPECT_EQ(config::subchunk_index_range(), original);
+}
+
+// A client writes the newest chunk format it understands; older clients therefore get an
+// older format, and a client newer than every known format keeps the newest one.
+TEST(LevelChunkFormat, ClientVersionToFormat) {
+    using namespace bl;
+    EXPECT_EQ(client_version_to_chunk_format(ClientVersion{{1, 21, 120, 0, 0}}), LevelChunkFormat::V1_21_120);
+    EXPECT_EQ(client_version_to_chunk_format(ClientVersion{{1, 21, 121, 0, 0}}), LevelChunkFormat::V1_21_120);
+    EXPECT_EQ(client_version_to_chunk_format(ClientVersion{{2, 0, 0, 0, 0}}), LevelChunkFormat::V1_21_120);
+    EXPECT_EQ(client_version_to_chunk_format(ClientVersion{{1, 19, 0, 0, 0}}), LevelChunkFormat::V1_18_3IndividualActorStorage);
+    EXPECT_EQ(client_version_to_chunk_format(ClientVersion{{1, 18, 3, 0, 0}}), LevelChunkFormat::V1_18_3IndividualActorStorage);
+    EXPECT_EQ(client_version_to_chunk_format(ClientVersion{{1, 18, 2, 0, 0}}), LevelChunkFormat::V1_18_2Internal);
+    EXPECT_EQ(client_version_to_chunk_format(ClientVersion{{1, 16, 300, 0, 0}}),
+              LevelChunkFormat::V1_16_300CavesCliffsInternalV5);  // trailing "Part5" digits are not a version part
+    EXPECT_EQ(client_version_to_chunk_format(ClientVersion{{1, 16, 100, 0, 0}}), LevelChunkFormat::V1_16_100Bis);
+    EXPECT_EQ(client_version_to_chunk_format(ClientVersion{{1, 16, 0, 0, 0}}), LevelChunkFormat::V1_16_0Bis);
+    EXPECT_EQ(client_version_to_chunk_format(ClientVersion{{1, 14, 0, 0, 0}}), LevelChunkFormat::V1_14_0);
+    EXPECT_EQ(client_version_to_chunk_format(ClientVersion{{0, 17, 0, 0, 0}}), LevelChunkFormat::V17_0);
+    EXPECT_EQ(client_version_to_chunk_format(ClientVersion{{0, 9, 2, 0, 0}}), LevelChunkFormat::V9_02);
+    EXPECT_EQ(client_version_to_chunk_format(ClientVersion{{0, 9, 0, 0, 0}}), LevelChunkFormat::V9_00);
+    EXPECT_EQ(client_version_to_chunk_format(ClientVersion{{0, 0, 0, 0, 0}}),
+              LevelChunkFormat::V9_00);  // older than every known format
+}
+
+// Count is the enum's upper bound rather than a format, so it must never be returned.
+TEST(LevelChunkFormat, NeverReturnsCount) {
+    using namespace bl;
+    for (int major : {0, 1, 2}) {
+        for (int minor = 0; minor <= 25; ++minor) {
+            for (int patch : {0, 1, 2, 3, 4, 5, 10, 30, 100, 120, 121, 200, 210, 300}) {
+                EXPECT_NE(client_version_to_chunk_format(ClientVersion{{major, minor, patch, 0, 0}}), LevelChunkFormat::Count)
+                    << "client " << major << "." << minor << "." << patch;
+            }
+        }
+    }
 }
 
 // every parse(to_raw(k)) must reproduce k for all dim / type / y_index combinations

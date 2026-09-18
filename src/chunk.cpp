@@ -90,11 +90,9 @@ namespace bl {
         map_y_to_subchunk(y, index, offset);
         if (auto it = this->sub_chunks_.find(index); it != this->sub_chunks_.end()) return it->second;
 
-        // A built sub-chunk has no version byte of its own, so inherit the chunk's layout.
-        // This also keeps chunk::version (and through it the Y range) stable, because
-        // load_subchunks derives it from whichever sub-chunk happens to come first.
+        // A built sub-chunk has no version byte of its own, so inherit the chunk's format.
         auto* created = new bl::sub_chunk();
-        created->set_version(this->version == New ? SubChunkVersion::V9 : SubChunkVersion::V8);
+        created->set_version(is_new_chunk_format(this->chunk_format_) ? SubChunkVersion::V9 : SubChunkVersion::V8);
         created->set_y_index(static_cast<int8_t>(index));
         this->sub_chunks_[index] = created;
         return created;
@@ -225,7 +223,7 @@ namespace bl {
         }
         out.set_biome_data(this->d3d_.to_raw(), this->d3d_.is_3d());
         if (this->block_entities_loaded_) out.set_block_entities(this->block_entities_);
-        if (this->entities_loaded_) out.set_entities(this->entities_, this->version);
+        if (this->entities_loaded_) out.set_entities(this->entities_);
     }
 
     bool chunk::load_subchunks(const bl::raw_chunk& rc) {
@@ -240,12 +238,6 @@ namespace bl {
                 continue;
             }
             this->sub_chunks_[sub_index] = sb;
-        }
-        if (sub_chunks_.empty()) {
-            // LOG_F(ERROR, "Can not load terrain data of chunk %s", pos_.to_string().c_str());
-        } else {
-            const auto sub_chunk_version = this->sub_chunks_.begin()->second->version();
-            this->version = sub_chunk_version == static_cast<uint8_t>(SubChunkVersion::V9) ? New : Old;
         }
         return true;
     }
@@ -326,6 +318,7 @@ namespace bl {
     }
 
     bool chunk::load_from_raw_chunk(const bl::raw_chunk& rc, chunk_load_policy policy) {
+        this->chunk_format_ = rc.chunk_format();
         if (has_flag(policy, chunk_load_policy::Terrain)) {
             this->load_subchunks(rc);
             this->load_biomes(rc);

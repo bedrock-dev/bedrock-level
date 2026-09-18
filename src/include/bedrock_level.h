@@ -39,6 +39,18 @@ namespace bl {
         bl::general_kv_nbts& map_item_data() { return this->map_item_data_; }
         bl::general_kv_nbts& other_item_data() { return this->other_data_; }
         level_dat& dat() { return this->dat_; }
+        [[nodiscard]] LevelChunkFormat chunk_format() const { return this->chunk_format_; }
+
+        /// True when the level's chunks carry 3D biome maps (Data3D) instead of the legacy 2D
+        /// payload. Decided from the level's own version rather than from chunk_format(), which is
+        /// only the format a client of that version would have written.
+        [[nodiscard]] bool use_3d_biome_maps() const {
+            // Copy, not a reference: min_compat_version() returns by value and its temporary
+            // would not outlive this statement.
+            const std::array<int, 5> v = this->dat_.min_compat_version().version;
+            return std::array<int, 3>{v[0], v[1], v[2]} >= std::array<int, 3>{1, 18, 0};
+        }
+
         const std::unordered_map<std::string, int>& custom_dimension_table() const { return custom_dimension_table_; }
         chunk* get_chunk(const chunk_pos& cp, chunk_load_policy policy = chunk_load_policy::All);
 
@@ -76,6 +88,7 @@ namespace bl {
         std::string root_name_;
         // data
         level_dat dat_;
+        LevelChunkFormat chunk_format_{LevelChunkFormat::V9_00};
         bl::village_data village_data_;
         bl::general_kv_nbts player_data_;
         bl::general_kv_nbts map_item_data_;

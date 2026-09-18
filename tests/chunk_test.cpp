@@ -233,13 +233,13 @@ namespace {
 // set_block must create the sub-chunk that holds the Y when the chunk has none there.
 TEST(ChunkBlockEdit, SetBlockCreatesMissingSubChunk) {
     bl::chunk c(bl::chunk_pos(0, 0, 0));
-    const auto version_before = c.get_version();
+    const auto format_before = c.chunk_format();
 
     set_named_block(c, 3, 5, 7, "minecraft:stone");
 
     EXPECT_EQ(c.get_block_name(3, 5, 7), "minecraft:stone");
     EXPECT_EQ(c.get_block_name(0, 0, 0), "minecraft:air") << "untouched positions read back as air";
-    EXPECT_EQ(c.get_version(), version_before) << "creating a sub-chunk must not shift the chunk version";
+    EXPECT_EQ(c.chunk_format(), format_before) << "creating a sub-chunk must not shift the chunk format";
 }
 
 // Y maps onto different sub-chunks, including negative indexes on 1.18+ worlds.
@@ -506,11 +506,13 @@ TEST(ChunkBlockEdit, AddActorRejectsIncompleteTag) {
 TEST(ChunkBlockEdit, ToRawChunkWritesActors) {
     const bl::chunk_pos pos(0, 0, 0);
     bl::raw_chunk raw(pos);
+    // built from scratch, so nothing told it which entity layout to write
+    raw.set_chunk_format(bl::LevelChunkFormat::V1_18_3IndividualActorStorage);
 
     bl::bedrock_level level;
     bl::chunk c(pos);
     ASSERT_TRUE(c.load_from_raw_chunk(raw, bl::chunk_load_policy::Terrain | bl::chunk_load_policy::Actor));
-    ASSERT_EQ(c.get_version(), bl::ChunkVersion::New);
+    ASSERT_EQ(c.chunk_format(), bl::LevelChunkFormat::V1_18_3IndividualActorStorage);
 
     auto* pig = make_actor_tag("minecraft:pig", 8.0f, 70.0f, 8.0f, 777);
     ASSERT_TRUE(c.add_actor(level, pig, {8.5f, 70.0f, 9.5f}));
@@ -545,6 +547,7 @@ TEST(ChunkBlockEdit, ToRawChunkWritesActors) {
 TEST(ChunkBlockEdit, ToRawChunkKeepsUnloadedActors) {
     const bl::chunk_pos pos(0, 0, 0);
     bl::raw_chunk raw(pos);
+    raw.set_chunk_format(bl::LevelChunkFormat::V1_18_3IndividualActorStorage);
 
     bl::bedrock_level level;
     bl::chunk writer(pos);
