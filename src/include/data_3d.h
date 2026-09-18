@@ -16,6 +16,8 @@
 
 namespace bl {
 
+    class raw_chunk;
+
     // clang-format off
 
     enum biome  : uint8_t {
@@ -181,6 +183,11 @@ namespace bl {
         // property of the payload itself: a 1.18+ chunk can still carry legacy Data2D biomes.
         bool use_3d_biome_maps_{true};
     };
+
+    /// Replaces every biome of chunk's stored biome payload, keeping the encoding it was read
+    /// with: Data3D and Data2D are different layouts and the payload has to match its key.
+    /// Returns false when the chunk holds neither key.
+    bool set_raw_chunk_biome(raw_chunk& chunk, biome b);
 }  // namespace bl
 
 #endif  // BEDROCK_LEVEL_DATA_3D_H

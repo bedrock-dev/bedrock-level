@@ -14,7 +14,6 @@
 #include "bedrock_level.h"
 #include "chunk_data_position.h"
 #include "config.h"
-#include "data_3d.h"
 #include "nbt.h"
 #include "utils.h"
 
@@ -336,7 +335,7 @@ namespace bl {
         return {first * 16, last * 16 + 15};
     }
 
-    void raw_chunk::set_pos(const bl::chunk_pos& pos, bl::bedrock_level* level) {
+    void raw_chunk::move_to(const bl::chunk_pos& pos, bl::bedrock_level* level) {
         int dx = (pos.x - this->pos_.x) * 16;
         int dz = (pos.z - this->pos_.z) * 16;
         this->pos_ = pos;
@@ -440,27 +439,6 @@ namespace bl {
                 this->actor_digest_ += ac->storage_key_raw();
             }
         }
-    }
-
-    void raw_chunk::set_biome(biome biome) {
-        biome3d d3d;
-        d3d.set_chunk_pos(pos_);
-        auto raw = get_normal_key(chunk_key::Data3D);
-        const bool has3d = !raw.empty();
-        if (!has3d) raw = get_normal_key(chunk_key::Data2D);
-        if (raw.empty()) return;
-        const bool ok = has3d ? d3d.load_from_d3d(reinterpret_cast<const byte_t*>(raw.data()), raw.size())
-                              : d3d.load_from_d2d(reinterpret_cast<const byte_t*>(raw.data()), raw.size());
-        if (!ok) return;
-        d3d.set_all(biome);
-        // write back to the key the data came from
-        data_[has3d ? chunk_key::Data3D : chunk_key::Data2D] = d3d.to_raw();
-    }
-
-    void raw_chunk::set_biome_data(const std::string& payload, bool use_3d) {
-        const auto key = use_3d ? chunk_key::Data3D : chunk_key::Data2D;
-        if (data_.find(key) == data_.end()) return;
-        data_[key] = payload;
     }
 
 }  // namespace bl

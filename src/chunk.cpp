@@ -32,6 +32,9 @@ namespace bl {
             out = intTag->value;
             return true;
         }
+
+        // Payload of the FinalizedState key: a little-endian int32, 2 meaning the chunk is done.
+        const std::string FINALIZED_STATE_PAYLOAD{'\x02', '\0', '\0', '\0'};
     }  // namespace
 
     /**
@@ -214,16 +217,26 @@ namespace bl {
         }
     }
 
-    void chunk::to_raw_chunk(raw_chunk& out) {
+    raw_chunk chunk::to_raw_chunk() {
         // Compacting first keeps the written sub-chunks small; see the header comment.
         this->compact();
+        raw_chunk out(this->pos_);
+        out.set_chunk_format(this->chunk_format_);
+        // Without a version marker the game does not see the chunk at all, and the format it
+        // reads back is the marker's single-byte payload.
+        out.set_normal(is_new_chunk_format(this->chunk_format_) ? chunk_key::VersionNew : chunk_key::VersionOld,
+                       std::string(1, static_cast<char>(this->chunk_format_)));
+        out.set_normal(chunk_key::FinalizedState, FINALIZED_STATE_PAYLOAD);
         for (auto& [index, sub] : this->sub_chunks_) {
             if (!sub) continue;
             out.set_sub_chunk(static_cast<int8_t>(index), sub->to_raw());
         }
-        out.set_biome_data(this->d3d_.to_raw(), this->d3d_.is_3d());
+        // The key has to match the layout the payload is in: Data3D and Data2D are not
+        // interchangeable, so it follows what the parsed biome data was read as.
+        out.set_normal(this->d3d_.is_3d() ? chunk_key::Data3D : chunk_key::Data2D, this->d3d_.to_raw());
         if (this->block_entities_loaded_) out.set_block_entities(this->block_entities_);
         if (this->entities_loaded_) out.set_entities(this->entities_);
+        return out;
     }
 
     bool chunk::load_subchunks(const bl::raw_chunk& rc) {
@@ -257,6 +270,7 @@ namespace bl {
         }
         return true;
     }
+
     void chunk::load_entities(const bl::raw_chunk& rc) {
         // try read old version actors
         auto raw = rc.get_normal_key(chunk_key::Entity);
@@ -302,6 +316,7 @@ namespace bl {
         if (raw.empty()) return;
         this->HSAs_.from_raw(raw);
     }
+
     bool chunk::load_block_entities(const bl::raw_chunk& rc) {
         auto raw = rc.get_normal_key(chunk_key::BlockEntity);
         if (!raw.empty()) {
@@ -359,25 +374,25 @@ namespace bl {
         for (int y = max_y; y >= min_y; y--) {
             const auto& name = get_block_name(cx, y, cz);  // no per-block string copy
             if (name == "minecraft:unknown") continue;
-
             if (top_y < min_y && name != "minecraft:air") {
                 top_y = y;
             }
-
             // solid_y is the highest non-air, non-water block at or below top_y
             if (name != "minecraft:air" && name != "minecraft:water" && solid_y < min_y) {
                 solid_y = y;
             }
-
             if (top_y >= min_y && solid_y >= min_y) break;
         }
 
         return {top_y, solid_y};
     }
+
     biome chunk::get_top_biome(int cx, int cz) { return this->d3d_.get_top_biome(cx, cz); }
 
     std::vector<std::vector<biome>> chunk::get_biome_y(int y) { return this->d3d_.get_biome_y(y); }
+
     bl::chunk_pos chunk::get_pos() const { return this->pos_; }
+
     chunk::~chunk() {
         for (auto& sub : this->sub_chunks_) {
             delete sub.second;

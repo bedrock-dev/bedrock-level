@@ -76,20 +76,17 @@ namespace bl {
         /// Invalidates any nbt::compound_tag* previously returned by get_block_raw().
         void compact();
 
-        /// Serializes the terrain into out: the sub-chunk payloads are replaced with the
-        /// chunk's blocks, the biome/height payload with its biome data, whose height map has
-        /// been recomputed from that terrain, and the block entities and entities with the
-        /// chunk's own. The entity payloads are only replaced when they were part of the load
-        /// (chunk_load_policy::Actor / BlockActor) — a chunk that never read them must not clear
-        /// the ones the raw_chunk already holds. The remaining keys in out are left untouched, so
-        /// a raw_chunk read with chunk_load_policy::All keeps its ticks and HSA across a round
-        /// trip.
+        /// Serializes this chunk into a fresh raw_chunk: the version marker, the finalized state,
+        /// the sub-chunk payloads, the biome/height payload (whose height map has been recomputed
+        /// from the terrain) and, when they were part of the load (chunk_load_policy::Actor /
+        /// BlockActor), the block entities and entities. Keys the chunk never read are left out,
+        /// which also keeps raw_chunk::write from touching them in the level.
         ///
         /// Compacts first: editing appends palette entries and can leave several block entities
         /// on one position, and skipping that would still write valid data but could inflate a
         /// sub-chunk from tens of bytes to ~100 KB. Compacting is therefore not const, and it
         /// invalidates nbt::compound_tag* values from get_block_raw().
-        void to_raw_chunk(raw_chunk& out);
+        [[nodiscard]] raw_chunk to_raw_chunk();
 
         biome get_biome(int cx, int y, int cz);
 

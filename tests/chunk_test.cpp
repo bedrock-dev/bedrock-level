@@ -308,10 +308,10 @@ TEST(ChunkBlockEdit, RawChunkYRangeIgnoresEmptyPayloads) {
 
     bl::chunk c(bl::chunk_pos(0, 0, 0));
     set_named_block(c, 0, 20, 0, "minecraft:stone");  // sub-chunk 1 only
-    c.to_raw_chunk(raw);
+    const auto out = c.to_raw_chunk();
 
     // to_raw_chunk writes only the sub-chunks that exist, so the range is exactly that one.
-    EXPECT_EQ(raw.get_y_range(), std::make_pair(16, 31));
+    EXPECT_EQ(out.get_y_range(), std::make_pair(16, 31));
 }
 
 // compact() on a chunk loaded from a real save must be idempotent and preserve the terrain.
@@ -343,24 +343,43 @@ TEST_F(ChunkBenchmark, CompactLoadedChunkIsStable) {
     }
 }
 
-// to_raw_chunk must write terrain a fresh chunk can read back, and must not disturb the
-// non-terrain keys that were already in the raw_chunk.
-TEST(ChunkBlockEdit, ToRawChunkRoundTripsAndKeepsOtherKeys) {
+// to_raw_chunk must produce a self-contained chunk: the version marker the game gates the chunk
+// on, a finalized state, and terrain a fresh chunk can read back.
+TEST(ChunkBlockEdit, ToRawChunkRoundTrips) {
     const bl::chunk_pos pos(0, 0, 0);
-    bl::raw_chunk raw(pos);
-    raw.set_normal(bl::chunk_key::PendingTicks, "sentinel-pending-ticks");
-
     bl::chunk c(pos);
     set_named_block(c, 3, 4, 5, "minecraft:stone");
-    c.to_raw_chunk(raw);
+    const auto raw = c.to_raw_chunk();
 
     EXPECT_FALSE(raw.get_sub_chunk(0).empty()) << "terrain must have been written";
-    EXPECT_EQ(raw.get_normal_key(bl::chunk_key::PendingTicks), "sentinel-pending-ticks") << "non-terrain keys must survive";
+    ASSERT_EQ(raw.get_normal_key(bl::chunk_key::VersionNew).size(), 1u) << "the version marker gates the chunk";
+    EXPECT_EQ(static_cast<unsigned char>(raw.get_normal_key(bl::chunk_key::VersionNew)[0]), static_cast<unsigned char>(c.chunk_format()));
+    EXPECT_EQ(raw.chunk_format(), c.chunk_format());
+    ASSERT_EQ(raw.get_normal_key(bl::chunk_key::FinalizedState).size(), 4u);
+    EXPECT_EQ(raw.get_normal_key(bl::chunk_key::FinalizedState)[0], 2) << "FinalizedState is an int32 fixed at 2";
 
     bl::chunk reloaded(pos);
     ASSERT_TRUE(reloaded.load_from_raw_chunk(raw, bl::chunk_load_policy::Terrain));
     EXPECT_EQ(reloaded.get_block_name(3, 4, 5), "minecraft:stone");
     EXPECT_EQ(reloaded.get_block_name(0, 0, 0), "minecraft:air");
+}
+
+// An old-format chunk keeps its layout: the version marker is the legacy key and the sub-chunks
+// it builds inherit the v8 header.
+TEST(ChunkBlockEdit, ToRawChunkKeepsOldFormat) {
+    bl::raw_chunk source(bl::chunk_pos(0, 0, 0));
+    source.set_chunk_format(bl::LevelChunkFormat::V1_12_0);
+
+    bl::chunk c(bl::chunk_pos(0, 0, 0));
+    ASSERT_TRUE(c.load_from_raw_chunk(source, bl::chunk_load_policy::Terrain));
+    set_named_block(c, 1, 5, 1, "minecraft:stone");
+    const auto raw = c.to_raw_chunk();
+
+    EXPECT_TRUE(raw.get_normal_key(bl::chunk_key::VersionNew).empty()) << "V1_12_0 is not a new-format chunk";
+    ASSERT_EQ(raw.get_normal_key(bl::chunk_key::VersionOld).size(), 1u);
+    EXPECT_EQ(static_cast<unsigned char>(raw.get_normal_key(bl::chunk_key::VersionOld)[0]),
+              static_cast<unsigned char>(bl::LevelChunkFormat::V1_12_0));
+    EXPECT_EQ(raw.chunk_format(), bl::LevelChunkFormat::V1_12_0);
 }
 
 // to_raw_chunk compacts, so terrain built by per-block set_block writes in compact form.
@@ -374,8 +393,7 @@ TEST(ChunkBlockEdit, ToRawChunkCompacts) {
         }
     }
 
-    bl::raw_chunk raw(bl::chunk_pos(0, 0, 0));
-    c.to_raw_chunk(raw);
+    const auto raw = c.to_raw_chunk();
 
     // 4096 un-deduplicated appends would be ~100 KB; compacted this is a couple hundred bytes.
     EXPECT_GT(raw.get_sub_chunk(0).size(), 0u);
@@ -394,9 +412,9 @@ TEST(ChunkBlockEdit, ToRawChunkWritesBlockEntities) {
     auto* chest = make_block_tag("minecraft:chest");
     c.set_block_entity(3, 70, 4, chest);
     delete chest;
-    c.to_raw_chunk(raw);
+    const auto out = c.to_raw_chunk();
 
-    const auto payload = raw.get_normal_key(bl::chunk_key::BlockEntity);
+    const auto payload = out.get_normal_key(bl::chunk_key::BlockEntity);
     ASSERT_FALSE(payload.empty()) << "block entities must be written back";
     auto stored = bl::nbt::read_palette_to_end(payload.data(), payload.size());
     ASSERT_EQ(stored.size(), 1u);
@@ -406,18 +424,19 @@ TEST(ChunkBlockEdit, ToRawChunkWritesBlockEntities) {
     for (auto* tag : stored) delete tag;
 }
 
-// A chunk loaded without chunk_load_policy::BlockActor never saw the payload, so writing it
-// back must not clear what the raw_chunk already holds.
-TEST(ChunkBlockEdit, ToRawChunkKeepsUnloadedBlockEntities) {
+// A chunk loaded without chunk_load_policy::BlockActor never saw the payload, so it must not
+// appear in the output: raw_chunk::write only touches the keys a chunk holds, which is what
+// keeps the stored payload in the level alive.
+TEST(ChunkBlockEdit, ToRawChunkSkipsUnloadedBlockEntities) {
     const bl::chunk_pos pos(0, 0, 0);
     bl::raw_chunk raw(pos);
     raw.set_normal(bl::chunk_key::BlockEntity, "existing-payload");
 
     bl::chunk c(pos);
     ASSERT_TRUE(c.load_from_raw_chunk(raw, bl::chunk_load_policy::Terrain));
-    c.to_raw_chunk(raw);
+    const auto out = c.to_raw_chunk();
 
-    EXPECT_EQ(raw.get_normal_key(bl::chunk_key::BlockEntity), "existing-payload");
+    EXPECT_TRUE(out.get_normal_key(bl::chunk_key::BlockEntity).empty());
 }
 
 // Rewriting one position leaves the last write as the live one, so importing over an existing
@@ -505,19 +524,19 @@ TEST(ChunkBlockEdit, AddActorRejectsIncompleteTag) {
 // entities: a new-version chunk stores one "actorprefix<key>" entry per actor plus a digest.
 TEST(ChunkBlockEdit, ToRawChunkWritesActors) {
     const bl::chunk_pos pos(0, 0, 0);
-    bl::raw_chunk raw(pos);
+    bl::raw_chunk source(pos);
     // built from scratch, so nothing told it which entity layout to write
-    raw.set_chunk_format(bl::LevelChunkFormat::V1_18_3IndividualActorStorage);
+    source.set_chunk_format(bl::LevelChunkFormat::V1_18_3IndividualActorStorage);
 
     bl::bedrock_level level;
     bl::chunk c(pos);
-    ASSERT_TRUE(c.load_from_raw_chunk(raw, bl::chunk_load_policy::Terrain | bl::chunk_load_policy::Actor));
+    ASSERT_TRUE(c.load_from_raw_chunk(source, bl::chunk_load_policy::Terrain | bl::chunk_load_policy::Actor));
     ASSERT_EQ(c.chunk_format(), bl::LevelChunkFormat::V1_18_3IndividualActorStorage);
 
     auto* pig = make_actor_tag("minecraft:pig", 8.0f, 70.0f, 8.0f, 777);
     ASSERT_TRUE(c.add_actor(level, pig, {8.5f, 70.0f, 9.5f}));
     delete pig;
-    c.to_raw_chunk(raw);
+    const auto raw = c.to_raw_chunk();
 
     ASSERT_EQ(raw.get_entities().size(), 1u) << "the actor must be indexed by its storage key";
     ASSERT_EQ(raw.get_actor_digest().size(), 8u) << "one actor means one 8-byte digest entry";
@@ -543,28 +562,27 @@ TEST(ChunkBlockEdit, ToRawChunkWritesActors) {
 }
 
 // Same guard as block entities: a chunk loaded without chunk_load_policy::Actor never saw the
-// entity payload, so writing it back must not wipe what the raw_chunk already holds.
-TEST(ChunkBlockEdit, ToRawChunkKeepsUnloadedActors) {
+// entity payload, so it must not appear in the output and end up overwriting the stored one.
+TEST(ChunkBlockEdit, ToRawChunkSkipsUnloadedActors) {
     const bl::chunk_pos pos(0, 0, 0);
-    bl::raw_chunk raw(pos);
-    raw.set_chunk_format(bl::LevelChunkFormat::V1_18_3IndividualActorStorage);
+    bl::raw_chunk source(pos);
 
     bl::bedrock_level level;
     bl::chunk writer(pos);
-    ASSERT_TRUE(writer.load_from_raw_chunk(raw, bl::chunk_load_policy::Terrain | bl::chunk_load_policy::Actor));
+    ASSERT_TRUE(writer.load_from_raw_chunk(source, bl::chunk_load_policy::Terrain | bl::chunk_load_policy::Actor));
     auto* pig = make_actor_tag("minecraft:pig", 8.0f, 70.0f, 8.0f, 777);
     ASSERT_TRUE(writer.add_actor(level, pig, {8.0f, 70.0f, 8.0f}));
     delete pig;
-    writer.to_raw_chunk(raw);
-    ASSERT_EQ(raw.get_entities().size(), 1u);
+    const auto loaded = writer.to_raw_chunk();
+    ASSERT_EQ(loaded.get_entities().size(), 1u);
 
     bl::chunk terrain_only(pos);
-    ASSERT_TRUE(terrain_only.load_from_raw_chunk(raw, bl::chunk_load_policy::Terrain));
+    ASSERT_TRUE(terrain_only.load_from_raw_chunk(loaded, bl::chunk_load_policy::Terrain));
     set_named_block(terrain_only, 0, 0, 0, "minecraft:stone");
-    terrain_only.to_raw_chunk(raw);
+    const auto edited = terrain_only.to_raw_chunk();
 
-    EXPECT_EQ(raw.get_entities().size(), 1u) << "the entity payload must survive an edit that never read it";
-    EXPECT_EQ(raw.get_actor_digest().size(), 8u);
+    EXPECT_TRUE(edited.get_entities().empty()) << "an edit that never read the entities must not write them";
+    EXPECT_TRUE(edited.get_actor_digest().empty());
 }
 
 // Bytes produced by to_raw_chunk must be a valid SubChunkTerrain payload on their own.
@@ -572,8 +590,7 @@ TEST(ChunkBlockEdit, ToRawChunkOutputIsLoadable) {
     bl::chunk c(bl::chunk_pos(0, 0, 0));
     set_named_block(c, 1, -1, 2, "minecraft:gold_block");
 
-    bl::raw_chunk raw(bl::chunk_pos(0, 0, 0));
-    c.to_raw_chunk(raw);
+    const auto raw = c.to_raw_chunk();
 
     const auto payload = raw.get_sub_chunk(-1);
     ASSERT_FALSE(payload.empty());

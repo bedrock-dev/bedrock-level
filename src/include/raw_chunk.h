@@ -23,10 +23,6 @@ namespace bl {
         class compound_tag;
     }  // namespace nbt
 
-    // Matches the declaration in data_3d.h; kept as a forward declaration so this header
-    // does not pull in the biome table.
-    enum biome : uint8_t;
-
     // Only ever held by pointer here, so the full definition is not needed.
     class actor;
 
@@ -94,7 +90,11 @@ namespace bl {
         [[nodiscard]] std::pair<int, int> get_y_range() const;
 
         // setter
-        void set_pos(const bl::chunk_pos& pos, bedrock_level* level);
+        /// Moves the whole chunk to another position: every stored world coordinate is shifted
+        /// by the chunk delta -- block entities, pending ticks, hardcoded spawn areas and actors
+        /// (which also get fresh unique ids, since their old ones may already exist in the
+        /// target area).
+        void move_to(const bl::chunk_pos& pos, bedrock_level* level);
         void set_normal(chunk_key::key_type key, const std::string& data) { data_[key] = data; }
         /// Replaces the SubChunkTerrain payload at yindex (empty data deletes the key on write).
         void set_sub_chunk(int8_t yindex, std::string data) { sub_chunk_data_[yindex] = std::move(data); }
@@ -106,13 +106,6 @@ namespace bl {
         /// Replaces the BlockEntity payload with the raw NBT of each tag, concatenated the way
         /// the chunk stores them. An empty list clears the payload, which removes the key.
         void set_block_entities(const std::vector<nbt::compound_tag*>& entities);
-
-        void set_biome(biome biome);
-
-        /// Replaces the biome/height payload of out's existing biome key: Data3D for the 3D
-        /// layout, Data2D for the legacy one. The payload has to match the key, and a chunk
-        /// that has neither key has nowhere to put it, so it is left alone.
-        void set_biome_data(const std::string& payload, bool use_3d);
 
        private:
         chunk_pos pos_;

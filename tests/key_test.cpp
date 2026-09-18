@@ -305,7 +305,7 @@ TEST(HardcodedSpawnAreaList, EditOps) {
 }
 
 // Moving a chunk rewrites its block entities, so a chest pair has to travel with the chest.
-TEST(BlockEntity, RawChunkSetPosMovesChestPair) {
+TEST(BlockEntity, RawChunkMoveToMovesChestPair) {
     using namespace bl;
 
     bl::bedrock_level level;
@@ -322,7 +322,7 @@ TEST(BlockEntity, RawChunkSetPosMovesChestPair) {
     delete chest;
 
     // move chunk by (+2, -1) chunks -> +32/-16 blocks
-    rc.set_pos(chunk_pos{2, -1, 0}, &level);
+    rc.move_to(chunk_pos{2, -1, 0}, &level);
 
     const auto payload = rc.get_normal_key(chunk_key::BlockEntity);
     auto stored = nbt::read_palette_to_end(payload.data(), payload.size());
@@ -395,9 +395,9 @@ TEST(PendingTicks, OffsetPos) {
     EXPECT_EQ(tick->get("z")->as<nbt::int_tag*>()->value, -20);
 }
 
-// raw_chunk::set_pos must offset HardCodedSpawnAreas coordinates with the chunk
+// raw_chunk::move_to must offset HardCodedSpawnAreas coordinates with the chunk
 // displacement, like it does for block entities / pending ticks / entities.
-TEST(HardcodedSpawnAreaList, SetPosOffsets) {
+TEST(HardcodedSpawnAreaList, MoveToOffsets) {
     using namespace bl;
     bl::bedrock_level level;
 
@@ -408,7 +408,7 @@ TEST(HardcodedSpawnAreaList, SetPosOffsets) {
     rc.set_normal(chunk_key::HardCodedSpawnAreas, list.to_raw());
 
     // move chunk by (+2, +3) chunks -> +32/+48 blocks
-    rc.set_pos(chunk_pos{2, 3, 0}, &level);
+    rc.move_to(chunk_pos{2, 3, 0}, &level);
 
     hardcoded_spawn_area_list parsed;
     ASSERT_TRUE(parsed.from_raw(rc.get_normal_key(chunk_key::HardCodedSpawnAreas)));

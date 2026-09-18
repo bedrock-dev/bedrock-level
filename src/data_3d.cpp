@@ -7,6 +7,7 @@
 #include <cstdio>
 
 #include "bedrock_key.h"
+#include "raw_chunk.h"
 #include "utils.h"
 
 namespace bl {
@@ -115,6 +116,7 @@ namespace bl {
             for (const auto b : palette) append_i32(out, static_cast<int32_t>(b));
         }
     }  // namespace
+
     bool biome3d::load_from_d3d(const byte_t* data, size_t len) {
         int index = 0;
         if (len < 512) {
@@ -207,6 +209,23 @@ namespace bl {
         for (auto& layer : biomes_) {
             std::fill(layer.begin(), layer.end(), b);
         }
+    }
+
+    bool set_raw_chunk_biome(raw_chunk& chunk, biome b) {
+        auto payload = chunk.get_normal_key(chunk_key::Data3D);
+        const bool has3d = !payload.empty();
+        if (!has3d) payload = chunk.get_normal_key(chunk_key::Data2D);
+        if (payload.empty()) return false;
+
+        biome3d d3d;
+        d3d.set_chunk_pos(chunk.pos());
+        const bool loaded = has3d ? d3d.load_from_d3d(reinterpret_cast<const byte_t*>(payload.data()), payload.size())
+                                  : d3d.load_from_d2d(reinterpret_cast<const byte_t*>(payload.data()), payload.size());
+        if (!loaded) return false;
+
+        d3d.set_all(b);
+        chunk.set_normal(has3d ? chunk_key::Data3D : chunk_key::Data2D, d3d.to_raw());
+        return true;
     }
 
     void biome3d::set_height(int x, int z, int world_y) {
