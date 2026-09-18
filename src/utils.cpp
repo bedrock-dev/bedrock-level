@@ -11,7 +11,7 @@
 #include <iostream>
 #include <sstream>
 
-void M_Assert(const char *expr_str, bool expr, const char *file, int line, const char *msg, ...) {
+void M_Assert(const char* expr_str, bool expr, const char* file, int line, const char* msg, ...) {
     if (!expr) {
         fprintf(stderr, "Assert failed:\t");
         va_list args;
@@ -25,7 +25,7 @@ void M_Assert(const char *expr_str, bool expr, const char *file, int line, const
 #include <filesystem>
 namespace bl::utils {
 
-    std::vector<byte_t> read_file(const std::string &file_name) {
+    std::vector<byte_t> read_file(const std::string& file_name) {
         std::ifstream input(std::filesystem::u8path(file_name), std::ios::binary);
         if (!input.is_open()) {
             LOG_F(ERROR, "Can not open file %s", file_name.c_str());
@@ -36,13 +36,13 @@ namespace bl::utils {
         return bytes;
     }
 
-    bool write_file(const std::string &file_name, const byte_t *data, size_t len) {
+    bool write_file(const std::string& file_name, const byte_t* data, size_t len) {
         std::ofstream output(file_name, std::ios::binary);
         if (!output.is_open()) {
             LOG_F(ERROR, "Can not open file %s", file_name.c_str());
             return false;
         }
-        output.write(reinterpret_cast<const char *>(data), static_cast<std::streamsize>(len));
+        output.write(reinterpret_cast<const char*>(data), static_cast<std::streamsize>(len));
         if (!output.good()) {
             LOG_F(ERROR, "Can not write file %s", file_name.c_str());
             return false;
@@ -54,15 +54,15 @@ namespace bl::utils {
 
 #ifdef _WIN32
 #include <windows.h>
-    std::string UTF8ToGBEx(const char *utf8) {
+    std::string UTF8ToGBEx(const char* utf8) {
         if (!utf8 || strlen(utf8) < 1) return "";
         std::stringstream ss;
         int len = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, nullptr, 0);
-        wchar_t *wstr = new wchar_t[len + 1];
+        wchar_t* wstr = new wchar_t[len + 1];
         memset(wstr, 0, len + 1);
         MultiByteToWideChar(CP_UTF8, 0, utf8, -1, wstr, len);
         len = WideCharToMultiByte(CP_ACP, 0, wstr, -1, nullptr, 0, nullptr, nullptr);
-        char *str = new char[len + 1];
+        char* str = new char[len + 1];
         memset(str, 0, len + 1);
         WideCharToMultiByte(CP_ACP, 0, wstr, -1, str, len, nullptr, nullptr);
         ss << str;
@@ -71,10 +71,10 @@ namespace bl::utils {
         return ss.str();
     }
 #else
-    std::string UTF8ToGBEx(const char *utf8) { return std::string(utf8); }
+    std::string UTF8ToGBEx(const char* utf8) { return std::string(utf8); }
 #endif
 
-    std::vector<std::string> splitStr(const std::string &str, char delimiter) {
+    std::vector<std::string> splitStr(const std::string& str, char delimiter) {
         std::vector<std::string> tokens;
         std::string token;
         std::istringstream tokenStream(str);
@@ -84,22 +84,22 @@ namespace bl::utils {
         return tokens;
     }
 
-    void printReadableBytes(const std::string &bytes) {
-        for (const auto &c : bytes) {
+    void printReadableBytes(const std::string& bytes) {
+        for (const auto& c : bytes) {
             if (std::isprint(c)) {
                 printf("%c", c);
             }
         }
     }
 
-    void printByteArray(const std::string &bytes) {
-        for (const auto &c : bytes) {
+    void printByteArray(const std::string& bytes) {
+        for (const auto& c : bytes) {
             printf("%02X ", static_cast<unsigned char>(c));
         }
         printf("\n");
     }
 
-    std::string toHexStr(const std::string &bytes, int n) {
+    std::string toHexStr(const std::string& bytes, int n) {
         static const char hex_chars[] = "0123456789ABCDEF";
         std::string result;
         size_t len = bytes.size();

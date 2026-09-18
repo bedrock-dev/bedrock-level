@@ -17,7 +17,7 @@
 
 namespace fs = std::filesystem;
 
-int main(int argc, const char *argv[]) {
+int main(int argc, const char* argv[]) {
     if (argc != 3) {
         fprintf(stderr, "Usage: dump_chunks <level path> <output dir>\n");
         return 1;

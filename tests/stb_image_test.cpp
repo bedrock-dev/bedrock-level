@@ -3,6 +3,7 @@
 //
 
 #include <gtest/gtest.h>
+
 #include "stb/stb_image_write.h"
 #include "utils.h"
 

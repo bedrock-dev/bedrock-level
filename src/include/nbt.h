@@ -25,19 +25,17 @@ namespace bl::nbt {
 
     // Bedrock NBT stores all multi-byte values in little-endian order.
     namespace detail {
-        inline uint16_t read_u16_le(const byte_t *data) noexcept {
-            return static_cast<uint16_t>(static_cast<uint8_t>(data[0])) |
-                   (static_cast<uint16_t>(static_cast<uint8_t>(data[1])) << 8);
+        inline uint16_t read_u16_le(const byte_t* data) noexcept {
+            return static_cast<uint16_t>(static_cast<uint8_t>(data[0])) | (static_cast<uint16_t>(static_cast<uint8_t>(data[1])) << 8);
         }
 
-        inline uint32_t read_u32_le(const byte_t *data) noexcept {
-            return static_cast<uint32_t>(static_cast<uint8_t>(data[0])) |
-                   (static_cast<uint32_t>(static_cast<uint8_t>(data[1])) << 8) |
+        inline uint32_t read_u32_le(const byte_t* data) noexcept {
+            return static_cast<uint32_t>(static_cast<uint8_t>(data[0])) | (static_cast<uint32_t>(static_cast<uint8_t>(data[1])) << 8) |
                    (static_cast<uint32_t>(static_cast<uint8_t>(data[2])) << 16) |
                    (static_cast<uint32_t>(static_cast<uint8_t>(data[3])) << 24);
         }
 
-        inline uint64_t read_u64_le(const byte_t *data) noexcept {
+        inline uint64_t read_u64_le(const byte_t* data) noexcept {
             uint64_t value = 0;
             for (unsigned i = 0; i < 8; ++i) {
                 value |= static_cast<uint64_t>(static_cast<uint8_t>(data[i])) << (i * 8);
@@ -46,7 +44,7 @@ namespace bl::nbt {
         }
 
         template <typename T>
-        T read_scalar_le(const byte_t *data) noexcept {
+        T read_scalar_le(const byte_t* data) noexcept {
             static_assert(std::is_arithmetic_v<T>);
             if constexpr (std::is_same_v<T, float>) {
                 return std::bit_cast<float>(read_u32_le(data));
@@ -64,21 +62,21 @@ namespace bl::nbt {
             }
         }
 
-        inline void append_u16_le(std::string &out, uint16_t value) {
+        inline void append_u16_le(std::string& out, uint16_t value) {
             out.push_back(static_cast<char>(value & 0xffu));
             out.push_back(static_cast<char>((value >> 8) & 0xffu));
         }
 
-        inline void append_u32_le(std::string &out, uint32_t value) {
+        inline void append_u32_le(std::string& out, uint32_t value) {
             for (unsigned i = 0; i < 4; ++i) out.push_back(static_cast<char>((value >> (i * 8)) & 0xffu));
         }
 
-        inline void append_u64_le(std::string &out, uint64_t value) {
+        inline void append_u64_le(std::string& out, uint64_t value) {
             for (unsigned i = 0; i < 8; ++i) out.push_back(static_cast<char>((value >> (i * 8)) & 0xffu));
         }
 
         template <typename T>
-        void append_scalar_le(std::string &out, T value) {
+        void append_scalar_le(std::string& out, T value) {
             static_assert(std::is_arithmetic_v<T>);
             if constexpr (std::is_same_v<T, float>) {
                 append_u32_le(out, std::bit_cast<uint32_t>(value));
@@ -118,7 +116,7 @@ namespace bl::nbt {
        public:
         explicit abstract_tag(std::string key) : key_(std::move(key)) {}
 
-        abstract_tag(const abstract_tag &tag) = default;
+        abstract_tag(const abstract_tag& tag) = default;
 
         [[nodiscard]] std::string to_readable_string() const {
             std::stringstream s;
@@ -126,12 +124,12 @@ namespace bl::nbt {
             return s.str();
         }
 
-        abstract_tag &operator=(const abstract_tag &tag) = default;
+        abstract_tag& operator=(const abstract_tag& tag) = default;
 
        public:
         [[nodiscard]] virtual tag_type type() const = 0;
         [[nodiscard]] virtual std::string value_string() const = 0;
-        [[nodiscard]] virtual abstract_tag *copy() const = 0;
+        [[nodiscard]] virtual abstract_tag* copy() const = 0;
         [[nodiscard]] virtual std::string restricted_value_string() const { return this->value_string(); }
         [[nodiscard]] std::string to_raw() const {
             std::string out;
@@ -139,18 +137,18 @@ namespace bl::nbt {
             this->write_raw(out);
             return out;
         }
-        [[nodiscard]] const std::string &key() const { return this->key_; }
-        void set_key(const std::string &key) { this->key_ = key; }
+        [[nodiscard]] const std::string& key() const { return this->key_; }
+        void set_key(const std::string& key) { this->key_ = key; }
 
         // append type + key + payload into out, avoids intermediate strings
-        void write_raw(std::string &out) const {
+        void write_raw(std::string& out) const {
             out.push_back(static_cast<char>(this->type()));
             this->write_key(out);
             this->write_payload(out);
         }
 
         // append payload only (list elements carry no type/key)
-        virtual void write_payload(std::string &out) const = 0;
+        virtual void write_payload(std::string& out) const = 0;
 
         template <typename T>
         T as() {
@@ -159,14 +157,14 @@ namespace bl::nbt {
 
         template <typename T>
         T as() const {
-            return dynamic_cast<T>(const_cast<abstract_tag *>(this));
+            return dynamic_cast<T>(const_cast<abstract_tag*>(this));
         }
 
         // traverse compound/list children by path, e.g. "A.B[1].C"; nullptr on any miss
-        abstract_tag *getByPath(const std::string &path);
+        abstract_tag* getByPath(const std::string& path);
 
        public:
-        virtual void write(std::ostream &o, int indent) const {
+        virtual void write(std::ostream& o, int indent) const {
             if (indent != 0) {
                 o << std::string(indent, ' ');
             }
@@ -177,7 +175,7 @@ namespace bl::nbt {
         virtual ~abstract_tag() = default;
 
        protected:
-        void write_key(std::string &out) const {
+        void write_key(std::string& out) const {
             if (this->key_.size() > std::numeric_limits<uint16_t>::max()) {
                 throw std::length_error("NBT key exceeds 16-bit length");
             }
@@ -192,7 +190,7 @@ namespace bl::nbt {
     // flat sorted map: faster and more compact than std::map for small child counts
     class tag_map {
        public:
-        using value_type = std::pair<std::string, abstract_tag *>;
+        using value_type = std::pair<std::string, abstract_tag*>;
         using iterator = std::vector<value_type>::iterator;
         using const_iterator = std::vector<value_type>::const_iterator;
 
@@ -203,26 +201,26 @@ namespace bl::nbt {
         [[nodiscard]] size_t size() const { return vec_.size(); }
         [[nodiscard]] bool empty() const { return vec_.empty(); }
 
-        [[nodiscard]] iterator find(const std::string &key) {
+        [[nodiscard]] iterator find(const std::string& key) {
             auto it = lower_bound(key);
             return (it != vec_.end() && it->first == key) ? it : vec_.end();
         }
 
-        [[nodiscard]] const_iterator find(const std::string &key) const {
+        [[nodiscard]] const_iterator find(const std::string& key) const {
             auto it = lower_bound(key);
             return (it != vec_.end() && it->first == key) ? it : vec_.end();
         }
 
-        [[nodiscard]] size_t count(const std::string &key) const { return find(key) == end() ? 0 : 1; }
+        [[nodiscard]] size_t count(const std::string& key) const { return find(key) == end() ? 0 : 1; }
 
-        abstract_tag *&operator[](const std::string &key) {
+        abstract_tag*& operator[](const std::string& key) {
             auto it = lower_bound(key);
             if (it != vec_.end() && it->first == key) return it->second;
             return vec_.emplace(it, key, nullptr)->second;
         }
 
         // replace-or-insert: deletes the previous child on duplicate key (single lookup)
-        void assign(abstract_tag *tag) {
+        void assign(abstract_tag* tag) {
             auto it = lower_bound(tag->key());
             if (it != vec_.end() && it->first == tag->key()) {
                 delete it->second;
@@ -232,7 +230,7 @@ namespace bl::nbt {
             }
         }
 
-        size_t erase(const std::string &key) {
+        size_t erase(const std::string& key) {
             auto it = find(key);
             if (it == vec_.end()) return 0;
             vec_.erase(it);
@@ -242,32 +240,32 @@ namespace bl::nbt {
         void clear() { vec_.clear(); }
 
        private:
-        [[nodiscard]] iterator lower_bound(const std::string &key) {
-            return std::lower_bound(vec_.begin(), vec_.end(), key, [](const value_type &a, const std::string &k) { return a.first < k; });
+        [[nodiscard]] iterator lower_bound(const std::string& key) {
+            return std::lower_bound(vec_.begin(), vec_.end(), key, [](const value_type& a, const std::string& k) { return a.first < k; });
         }
 
-        [[nodiscard]] const_iterator lower_bound(const std::string &key) const {
-            return std::lower_bound(vec_.begin(), vec_.end(), key, [](const value_type &a, const std::string &k) { return a.first < k; });
+        [[nodiscard]] const_iterator lower_bound(const std::string& key) const {
+            return std::lower_bound(vec_.begin(), vec_.end(), key, [](const value_type& a, const std::string& k) { return a.first < k; });
         }
 
         std::vector<value_type> vec_;
     };
 
     struct compound_tag : public abstract_tag {
-        explicit compound_tag(const std::string &key) : abstract_tag(key) {}
-        compound_tag(const compound_tag &tag) : abstract_tag(tag.key_) {
+        explicit compound_tag(const std::string& key) : abstract_tag(key) {}
+        compound_tag(const compound_tag& tag) : abstract_tag(tag.key_) {
             this->key_ = tag.key_;
-            for (auto &kv : tag.value) {
+            for (auto& kv : tag.value) {
                 this->value[kv.first] = kv.second->copy();
             }
         }
 
-        compound_tag &operator=(const compound_tag &tag) {
+        compound_tag& operator=(const compound_tag& tag) {
             if (this == &tag) return *this;
-            for (auto &kv : this->value) delete kv.second;
+            for (auto& kv : this->value) delete kv.second;
             this->value.clear();
             this->key_ = tag.key_;
-            for (auto &kv : tag.value) {
+            for (auto& kv : tag.value) {
                 this->value[kv.first] = kv.second->copy();
             }
             return *this;
@@ -275,10 +273,10 @@ namespace bl::nbt {
 
         [[nodiscard]] tag_type type() const override { return Compound; }
 
-        void write(std::ostream &o, int indent) const override {
+        void write(std::ostream& o, int indent) const override {
             abstract_tag::write(o, indent);
             o << "{\n";
-            for (auto &kv : this->value) {
+            for (auto& kv : this->value) {
                 kv.second->write(o, indent + 4);
             }
 
@@ -290,9 +288,9 @@ namespace bl::nbt {
 
         [[nodiscard]] std::string value_string() const override { return "(...)"; };
 
-        void put(abstract_tag *tag) { this->value.assign(tag); }
+        void put(abstract_tag* tag) { this->value.assign(tag); }
 
-        void remove(const std::string &key) {
+        void remove(const std::string& key) {
             auto it = this->value.find(key);
             if (it != this->value.end()) {
                 delete it->second;
@@ -300,33 +298,33 @@ namespace bl::nbt {
             this->value.erase(key);
         }
 
-        [[nodiscard]] abstract_tag *get(const std::string &key) {
+        [[nodiscard]] abstract_tag* get(const std::string& key) {
             auto it = this->value.find(key);
             return it == this->value.end() ? nullptr : it->second;
         }
 
-        [[nodiscard]] const abstract_tag *get(const std::string &key) const {
+        [[nodiscard]] const abstract_tag* get(const std::string& key) const {
             auto it = this->value.find(key);
             return it == this->value.end() ? nullptr : it->second;
         }
 
-        [[nodiscard]] abstract_tag *copy() const override {
-            auto *res = new compound_tag(this->key_);
-            for (auto &kv : this->value) {
+        [[nodiscard]] abstract_tag* copy() const override {
+            auto* res = new compound_tag(this->key_);
+            for (auto& kv : this->value) {
                 res->put(kv.second->copy());
             }
             return res;
         }
 
         ~compound_tag() override {
-            for (auto &kv : this->value) {
+            for (auto& kv : this->value) {
                 delete kv.second;
             }
         }
 
        public:
-        void write_payload(std::string &out) const override {
-            for (auto &kv : this->value) {
+        void write_payload(std::string& out) const override {
+            for (auto& kv : this->value) {
                 kv.second->write_raw(out);
             }
             out.push_back(static_cast<char>(bl::nbt::tag_type::End));
@@ -338,30 +336,30 @@ namespace bl::nbt {
     struct list_tag : public abstract_tag {
         friend class abstract_tag;
 
-        list_tag(const list_tag &tag) : abstract_tag(tag.key_) {
-            for (auto &k : tag.value) {
+        list_tag(const list_tag& tag) : abstract_tag(tag.key_) {
+            for (auto& k : tag.value) {
                 this->value.push_back(k->copy());
             }
         }
-        list_tag &operator=(const list_tag &tag) {
+        list_tag& operator=(const list_tag& tag) {
             if (this == &tag) return *this;
-            for (auto *item : this->value) delete item;
+            for (auto* item : this->value) delete item;
             this->value.clear();
             this->key_ = tag.key_;
-            for (auto &k : tag.value) {
+            for (auto& k : tag.value) {
                 this->value.push_back(k->copy());
             }
             return *this;
         }
-        explicit list_tag(const std::string &key) : abstract_tag(key) {}
+        explicit list_tag(const std::string& key) : abstract_tag(key) {}
 
         [[nodiscard]] tag_type type() const override { return List; }
 
-        void write(std::ostream &o, int indent) const override {
+        void write(std::ostream& o, int indent) const override {
             abstract_tag::write(o, indent);
             o << "[" << this->value.size() << "] ";
             o << "{\n";
-            for (auto &tag : this->value) {
+            for (auto& tag : this->value) {
                 tag->write(o, indent + 4);
             }
             if (indent != 0) {
@@ -370,21 +368,21 @@ namespace bl::nbt {
             o << "}\n";
         }
         [[nodiscard]] std::string value_string() const override { return "[...]"; };
-        [[nodiscard]] abstract_tag *copy() const override {
-            auto *res = new list_tag(this->key_);
-            for (auto &item : this->value) {
+        [[nodiscard]] abstract_tag* copy() const override {
+            auto* res = new list_tag(this->key_);
+            for (auto& item : this->value) {
                 res->value.push_back(item->copy());
             }
 
             return res;
         }
-        void append(abstract_tag *tag) {
+        void append(abstract_tag* tag) {
             if (tag) {
                 this->value.push_back(tag);
             }
         }
 
-        bool push_back(abstract_tag *tag) {
+        bool push_back(abstract_tag* tag) {
             if (!tag) return false;
             if (this->value.empty() || this->value[0]->type() == tag->type()) {
                 this->value.push_back(tag);
@@ -393,7 +391,7 @@ namespace bl::nbt {
             return false;
         }
 
-        bool insert(abstract_tag *tag, size_t idx) {
+        bool insert(abstract_tag* tag, size_t idx) {
             if (!tag || idx > this->value.size()) return false;
             if (this->value.empty() || this->value[0]->type() == tag->type()) {
                 this->value.insert(this->value.begin() + idx, tag);
@@ -410,10 +408,10 @@ namespace bl::nbt {
         }
 
         ~list_tag() override;
-        std::vector<abstract_tag *> value;
+        std::vector<abstract_tag*> value;
 
        public:
-        void write_payload(std::string &out) const override {
+        void write_payload(std::string& out) const override {
             auto child_type = End;
             if (!value.empty()) {
                 // assume on nullptr in list
@@ -425,27 +423,27 @@ namespace bl::nbt {
             }
             auto sz = static_cast<int32_t>(value.size());
             detail::append_scalar_le(out, sz);
-            for (auto *child : value) {
+            for (auto* child : value) {
                 child->write_payload(out);
             }
         }
     };
 
     struct string_tag : public abstract_tag {
-        explicit string_tag(const std::string &key) : abstract_tag(key) {}
+        explicit string_tag(const std::string& key) : abstract_tag(key) {}
 
-        string_tag(const std::string &key, std::string value) : abstract_tag(key), value(std::move(value)) {}
+        string_tag(const std::string& key, std::string value) : abstract_tag(key), value(std::move(value)) {}
 
         [[nodiscard]] tag_type type() const override { return String; }
 
-        void write(std::ostream &o, int indent) const override {
+        void write(std::ostream& o, int indent) const override {
             abstract_tag::write(o, indent);
             o << "'" << this->value << "'" << std::endl;
         }
         [[nodiscard]] std::string value_string() const override { return this->value; };
 
-        [[nodiscard]] abstract_tag *copy() const override {
-            auto *res = new string_tag(this->key_);
+        [[nodiscard]] abstract_tag* copy() const override {
+            auto* res = new string_tag(this->key_);
             res->value = this->value;
             return res;
         }
@@ -454,7 +452,7 @@ namespace bl::nbt {
         std::string value;
 
        public:
-        void write_payload(std::string &out) const override {
+        void write_payload(std::string& out) const override {
             if (this->value.size() > std::numeric_limits<uint16_t>::max()) {
                 throw std::length_error("NBT string exceeds 16-bit length");
             }
@@ -466,18 +464,18 @@ namespace bl::nbt {
 
     template <typename ValueType, tag_type TT, size_t ValueSize>
     struct scalar_tag : public abstract_tag {
-        explicit scalar_tag(const std::string &key) : abstract_tag(key) {}
-        scalar_tag(const std::string &key, ValueType v) : abstract_tag(key), value(v) {}
+        explicit scalar_tag(const std::string& key) : abstract_tag(key) {}
+        scalar_tag(const std::string& key, ValueType v) : abstract_tag(key), value(v) {}
 
         [[nodiscard]] tag_type type() const override { return TT; }
 
-        void write(std::ostream &o, int indent) const override {
+        void write(std::ostream& o, int indent) const override {
             abstract_tag::write(o, indent);
             o << this->value << std::endl;
         }
         [[nodiscard]] std::string value_string() const override { return std::to_string(this->value); }
-        [[nodiscard]] abstract_tag *copy() const override {
-            auto *res = new scalar_tag(this->key_);
+        [[nodiscard]] abstract_tag* copy() const override {
+            auto* res = new scalar_tag(this->key_);
             res->value = this->value;
             return res;
         }
@@ -486,7 +484,7 @@ namespace bl::nbt {
         ValueType value{};
 
        public:
-        void write_payload(std::string &out) const override { detail::append_scalar_le(out, this->value); }
+        void write_payload(std::string& out) const override { detail::append_scalar_le(out, this->value); }
     };
 
     using short_tag = scalar_tag<int16_t, Short, 2>;
@@ -498,12 +496,12 @@ namespace bl::nbt {
     // byte_tag kept standalone for static_cast<int> in write()
     struct byte_tag : public scalar_tag<int8_t, Byte, 1> {
         using scalar_tag::scalar_tag;
-        void write(std::ostream &o, int indent) const override {
+        void write(std::ostream& o, int indent) const override {
             abstract_tag::write(o, indent);
             o << static_cast<int>(this->value) << std::endl;
         }
-        [[nodiscard]] abstract_tag *copy() const override {
-            auto *res = new byte_tag(this->key_);
+        [[nodiscard]] abstract_tag* copy() const override {
+            auto* res = new byte_tag(this->key_);
             res->value = this->value;
             return res;
         }
@@ -511,20 +509,20 @@ namespace bl::nbt {
 
     template <typename ElemType, tag_type TT>
     struct array_tag : public abstract_tag {
-        explicit array_tag(const std::string &key) : abstract_tag(key) {}
-        array_tag(const std::string &key, std::vector<ElemType> v) : abstract_tag(key), value(std::move(v)) {}
+        explicit array_tag(const std::string& key) : abstract_tag(key) {}
+        array_tag(const std::string& key, std::vector<ElemType> v) : abstract_tag(key), value(std::move(v)) {}
 
         [[nodiscard]] tag_type type() const override { return TT; }
 
-        void write(std::ostream &o, int indent) const override {
+        void write(std::ostream& o, int indent) const override {
             abstract_tag::write(o, indent);
             o << "[ ..." << this->value.size() << " X " << sizeof(ElemType) << " bytes ... ]" << std::endl;
         }
         [[nodiscard]] std::string value_string() const override { return "[ ..." + std::to_string(this->value.size()) + "... ]"; }
         [[nodiscard]] std::string restricted_value_string() const override { return bl::utils::numberVecToString(this->value); }
 
-        [[nodiscard]] abstract_tag *copy() const override {
-            auto *res = new array_tag(this->key_);
+        [[nodiscard]] abstract_tag* copy() const override {
+            auto* res = new array_tag(this->key_);
             res->value = this->value;
             return res;
         }
@@ -532,14 +530,14 @@ namespace bl::nbt {
         std::vector<ElemType> value;
 
        public:
-        void write_payload(std::string &out) const override {
+        void write_payload(std::string& out) const override {
             if (this->value.size() > static_cast<size_t>(std::numeric_limits<int32_t>::max())) {
                 throw std::length_error("NBT array exceeds 32-bit length");
             }
             auto size = static_cast<int32_t>(this->value.size());
             detail::append_scalar_le(out, size);
             if constexpr (sizeof(ElemType) == 1) {
-                if (!this->value.empty()) out.append(reinterpret_cast<const char *>(this->value.data()), this->value.size());
+                if (!this->value.empty()) out.append(reinterpret_cast<const char*>(this->value.data()), this->value.size());
             } else {
                 for (const auto value : this->value) detail::append_scalar_le(out, value);
             }
@@ -550,10 +548,10 @@ namespace bl::nbt {
     using int_array_tag = array_tag<int32_t, IntArray>;
     using long_array_tag = array_tag<int64_t, LongArray>;
 
-    compound_tag *read_one_palette(const byte_t *data, int &read);
-    compound_tag *read_one_palette(const byte_t *data, size_t data_len, int &read);
+    compound_tag* read_one_palette(const byte_t* data, int& read);
+    compound_tag* read_one_palette(const byte_t* data, size_t data_len, int& read);
 
-    std::vector<compound_tag *> read_palette_to_end(const byte_t *data, size_t len);
+    std::vector<compound_tag*> read_palette_to_end(const byte_t* data, size_t len);
 }  // namespace bl::nbt
 
 #endif  // BEDROCK_LEVEL_NBT_H

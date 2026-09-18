@@ -11,7 +11,7 @@ namespace bl {
         constexpr auto BLOCK_NUM = 16 * 16 * 16;
     }  // namespace
 
-    std::vector<uint16_t> read_block_indices(const byte_t *stream, int &read, uint8_t &bits, uint32_t &palette_len) {
+    std::vector<uint16_t> read_block_indices(const byte_t* stream, int& read, uint8_t& bits, uint32_t& palette_len) {
         read = 0;
         auto layer_header = stream[0];
         read++;
@@ -24,7 +24,7 @@ namespace bl {
             if (BLOCK_NUM % block_per_word != 0) wordCount++;
             int position = 0;
             for (int wordi = 0; wordi < wordCount; wordi++) {
-                auto word = *reinterpret_cast<const int *>(stream + read + wordi * 4);
+                auto word = *reinterpret_cast<const int*>(stream + read + wordi * 4);
                 for (int block = 0; block < block_per_word; block++) {
                     int state = (word >> ((position % block_per_word) * bits)) & ((1 << bits) - 1);
                     if (position < static_cast<int>(blocks.size())) {
@@ -34,7 +34,7 @@ namespace bl {
                 }
             }
             read += wordCount << 2;
-            palette_len = *reinterpret_cast<const int *>(stream + read);
+            palette_len = *reinterpret_cast<const int*>(stream + read);
             read += 4;
         } else {  // uniform
             blocks = std::vector<uint16_t>(BLOCK_NUM, 0);
@@ -43,13 +43,13 @@ namespace bl {
         return blocks;
     }
 
-    std::vector<palette_entry> read_palettes(const byte_t *stream, size_t number, size_t len, int &read) {
+    std::vector<palette_entry> read_palettes(const byte_t* stream, size_t number, size_t len, int& read) {
         read = 0;
         std::vector<palette_entry> result;
         result.reserve(number);
         for (auto i = 0u; i < number; i++) {
             int r = 0;
-            auto *tag = bl::nbt::read_one_palette(stream + read, len - read, r);
+            auto* tag = bl::nbt::read_one_palette(stream + read, len - read, r);
             if (tag) {
                 result.push_back(make_palette_entry(tag));
             } else {
@@ -61,7 +61,7 @@ namespace bl {
         return result;
     }
 
-    void write_layer(std::string &out, const std::vector<uint16_t> &blocks, const std::vector<palette_entry> &palette) {
+    void write_layer(std::string& out, const std::vector<uint16_t>& blocks, const std::vector<palette_entry>& palette) {
         // bits has to cover every palette index; a 1-entry palette collapses to the uniform form
         uint8_t bits = 0;
         while ((1u << bits) < palette.size()) bits++;
@@ -85,19 +85,19 @@ namespace bl {
             for (int byte = 0; byte < 4; byte++) out.push_back(static_cast<char>((palette_len >> (byte * 8)) & 0xff));
         }
 
-        for (const auto &entry : palette) {
+        for (const auto& entry : palette) {
             if (entry.tag) out += entry.tag->to_raw();
         }
     }
 
-    palette_entry make_palette_entry(bl::nbt::compound_tag *tag) {
+    palette_entry make_palette_entry(bl::nbt::compound_tag* tag) {
         palette_entry entry;
         entry.tag = tag;
         tag->remove("version");  // remove version tag(compatibility for color table)
         // pre-resolve block name so per-block lookups become O(1) indexing
         std::string name{"minecraft:unknown"};
-        if (auto *name_tag = tag->get("name"); name_tag) {
-            if (auto *st = name_tag->as<bl::nbt::string_tag *>(); st) {
+        if (auto* name_tag = tag->get("name"); name_tag) {
+            if (auto* st = name_tag->as<bl::nbt::string_tag*>(); st) {
                 name = st->value;
             }
         }

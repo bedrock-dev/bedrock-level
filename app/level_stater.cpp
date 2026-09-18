@@ -13,7 +13,7 @@
 
 namespace fs = std::filesystem;
 
-uintmax_t getTotalLdbSize(const fs::path &path) {
+uintmax_t getTotalLdbSize(const fs::path& path) {
     uintmax_t totalSize = 0;
 
     std::error_code ec;
@@ -29,7 +29,7 @@ uintmax_t getTotalLdbSize(const fs::path &path) {
     }
 
     if (fs::is_directory(path, ec) && !ec) {
-        for (const auto &entry : fs::recursive_directory_iterator(path, fs::directory_options::skip_permission_denied, ec)) {
+        for (const auto& entry : fs::recursive_directory_iterator(path, fs::directory_options::skip_permission_denied, ec)) {
             if (ec) {
                 ec.clear();
                 continue;
@@ -48,7 +48,7 @@ uintmax_t getTotalLdbSize(const fs::path &path) {
     return totalSize;
 }
 
-void PrintDatabaseStats(leveldb::DB *db) {
+void PrintDatabaseStats(leveldb::DB* db) {
     if (db == nullptr) return;
     std::string stats;
     if (db->GetProperty("leveldb.stats", &stats)) {
@@ -76,7 +76,7 @@ struct Options {
     int dim{0};
 };
 
-void printUsage(const char *prog) {
+void printUsage(const char* prog) {
     fprintf(stderr,
             "Usage: %s --path <level> [mode] [options]\n"
             "\n"
@@ -96,19 +96,19 @@ void printUsage(const char *prog) {
             prog);
 }
 
-bool parseInt(const std::string &s, int &out) {
+bool parseInt(const std::string& s, int& out) {
     if (s.empty()) return false;
-    char *end = nullptr;
+    char* end = nullptr;
     long v = std::strtol(s.c_str(), &end, 10);
     if (end == s.c_str() || *end != '\0') return false;
     out = static_cast<int>(v);
     return true;
 }
 
-bool parseArgs(int argc, const char *argv[], Options &opt) {
+bool parseArgs(int argc, const char* argv[], Options& opt) {
     for (int i = 1; i < argc; i++) {
         std::string a = argv[i];
-        auto takeValue = [&](std::string &out) {
+        auto takeValue = [&](std::string& out) {
             if (i + 1 >= argc) {
                 fprintf(stderr, "Missing value for %s\n", a.c_str());
                 return false;
@@ -171,7 +171,7 @@ bool parseArgs(int argc, const char *argv[], Options &opt) {
 
 // ----------------------------- export -----------------------------
 
-std::string hexEncode(const std::string &s) {
+std::string hexEncode(const std::string& s) {
     static const char hex[] = "0123456789abcdef";
     std::string out;
     out.reserve(s.size() * 2);
@@ -182,7 +182,7 @@ std::string hexEncode(const std::string &s) {
     return out;
 }
 
-const char *keySuffix(bl::chunk_key::key_type kt) {
+const char* keySuffix(bl::chunk_key::key_type kt) {
     switch (kt) {
         case bl::chunk_key::BlockEntity:
         case bl::chunk_key::Entity:
@@ -193,13 +193,13 @@ const char *keySuffix(bl::chunk_key::key_type kt) {
     }
 }
 
-std::string chunkDirName(const bl::chunk_pos &cp) {
+std::string chunkDirName(const bl::chunk_pos& cp) {
     return "chunk_" + std::to_string(cp.x) + "_" + std::to_string(cp.z) + "_" + std::to_string(cp.dim);
 }
 
-bool chunkPresent(const bl::raw_chunk &rc) { return !rc.get_sub_chunks().empty() || !rc.get_entities().empty(); }
+bool chunkPresent(const bl::raw_chunk& rc) { return !rc.get_sub_chunks().empty() || !rc.get_entities().empty(); }
 
-bool exportChunk(bl::bedrock_level &level, const bl::chunk_pos &cp, const fs::path &outDir, bool unpack) {
+bool exportChunk(bl::bedrock_level& level, const bl::chunk_pos& cp, const fs::path& outDir, bool unpack) {
     bl::raw_chunk rc(cp);
     if (!rc.read(level) || !chunkPresent(rc)) {
         fprintf(stderr, "  [skip] chunk %s not present\n", cp.to_string().c_str());
@@ -217,22 +217,22 @@ bool exportChunk(bl::bedrock_level &level, const bl::chunk_pos &cp, const fs::pa
     auto dir = outDir / chunkDirName(cp);
     fs::create_directories(dir);
     size_t files = 0, bytes = 0;
-    for (const auto &[kt, data] : rc.get_normal_data()) {
+    for (const auto& [kt, data] : rc.get_normal_data()) {
         if (data.empty()) continue;
         bl::utils::write_file((dir / (bl::chunk_key::chunk_key_to_str(kt) + keySuffix(kt))).string(), data.data(), data.size());
         files++, bytes += data.size();
     }
-    for (const auto &[idx, data] : rc.get_sub_chunks()) {
+    for (const auto& [idx, data] : rc.get_sub_chunks()) {
         if (data.empty()) continue;
         bl::utils::write_file((dir / ("SubChunkTerrain_" + std::to_string(idx) + ".bin")).string(), data.data(), data.size());
         files++, bytes += data.size();
     }
     if (!rc.get_actor_digest().empty()) {
-        const auto &d = rc.get_actor_digest();
+        const auto& d = rc.get_actor_digest();
         bl::utils::write_file((dir / "ActorDigest.bin").string(), d.data(), d.size());
         files++, bytes += d.size();
     }
-    for (const auto &[uid, data] : rc.get_entities()) {
+    for (const auto& [uid, data] : rc.get_entities()) {
         if (data.empty()) continue;
         bl::utils::write_file((dir / ("Entity_" + hexEncode(uid) + ".bin")).string(), data.data(), data.size());
         files++, bytes += data.size();
@@ -243,7 +243,7 @@ bool exportChunk(bl::bedrock_level &level, const bl::chunk_pos &cp, const fs::pa
 
 // ----------------------------- stats -----------------------------
 
-int printStats(bl::bedrock_level &level, const std::string &path) {
+int printStats(bl::bedrock_level& level, const std::string& path) {
     auto fileSz = getTotalLdbSize(path);
     printf("Data Stats for level %s:\n", level.dat().level_name().c_str());
     printf("RealDB size %zu bytes (%.2f MiB)\n", fileSz, (fileSz / (1024.0 * 1024.0)));
@@ -252,7 +252,7 @@ int printStats(bl::bedrock_level &level, const std::string &path) {
     return 0;
 }
 
-int main(int argc, const char *argv[]) {
+int main(int argc, const char* argv[]) {
     for (int i = 1; i < argc; i++) {
         std::string a = argv[i];
         if (a == "-h" || a == "--help") {

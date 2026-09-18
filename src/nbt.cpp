@@ -12,9 +12,9 @@
 
 namespace bl::nbt {
 
-    std::tuple<abstract_tag *, size_t> read_nbt(const byte_t *data, size_t data_len);
-    std::tuple<compound_tag *, size_t> read_compound_value(const byte_t *data, size_t data_len, const std::string &key);
-    std::tuple<abstract_tag *, size_t> read_value_by_type(tag_type type, const byte_t *data, size_t data_len, const std::string &key);
+    std::tuple<abstract_tag*, size_t> read_nbt(const byte_t* data, size_t data_len);
+    std::tuple<compound_tag*, size_t> read_compound_value(const byte_t* data, size_t data_len, const std::string& key);
+    std::tuple<abstract_tag*, size_t> read_value_by_type(tag_type type, const byte_t* data, size_t data_len, const std::string& key);
 
     std::string tag_type_to_str(tag_type type) {
         auto name = magic_enum::enum_name(type);
@@ -22,7 +22,7 @@ namespace bl::nbt {
     }
 
     // used by all key and string value
-    int read_string(const byte_t *data, size_t data_len, std::string &val) {
+    int read_string(const byte_t* data, size_t data_len, std::string& val) {
         if (!data || data_len < 2) return 0;
         const uint16_t len = detail::read_u16_le(data);
         if (static_cast<size_t>(len) > data_len - 2) return 0;
@@ -34,24 +34,24 @@ namespace bl::nbt {
         return len + 2;
     }
 
-    int read_tag_type(const byte_t *data, size_t data_len, tag_type &type) {
+    int read_tag_type(const byte_t* data, size_t data_len, tag_type& type) {
         if (!data || data_len < 1) return 0;
         type = static_cast<tag_type>(data[0]);
         return 1;
     }
 
     template <typename TagType>
-    std::tuple<TagType *, size_t> read_scalar_value(const byte_t *data, size_t data_len, const std::string &key) {
+    std::tuple<TagType*, size_t> read_scalar_value(const byte_t* data, size_t data_len, const std::string& key) {
         using value_type = decltype(TagType::value);
         constexpr size_t value_size = sizeof(value_type);
         if (!data || data_len < value_size) return {nullptr, 0};
-        auto *tag = new TagType(key);
+        auto* tag = new TagType(key);
         tag->value = detail::read_scalar_le<value_type>(data);
         return {tag, value_size};
     }
 
     template <typename TagType>
-    std::tuple<TagType *, size_t> read_array_value(const byte_t *data, size_t data_len, const std::string &key) {
+    std::tuple<TagType*, size_t> read_array_value(const byte_t* data, size_t data_len, const std::string& key) {
         using elem_type = typename decltype(TagType::value)::value_type;
         if (!data || data_len < 4) return {nullptr, 0};
         const int32_t len = detail::read_scalar_le<int32_t>(data);
@@ -71,7 +71,7 @@ namespace bl::nbt {
         return {tag.release(), consumed};
     }
 
-    std::tuple<string_tag *, size_t> read_string_value(const byte_t *data, size_t data_len, const std::string &key) {
+    std::tuple<string_tag*, size_t> read_string_value(const byte_t* data, size_t data_len, const std::string& key) {
         auto tag = std::make_unique<string_tag>(key);
         int r = read_string(data, data_len, tag->value);
         if (r == 0) {
@@ -80,7 +80,7 @@ namespace bl::nbt {
         return {tag.release(), static_cast<size_t>(r)};
     }
 
-    std::tuple<list_tag *, size_t> read_list_tag_value(const byte_t *data, size_t data_len, const std::string &key) {
+    std::tuple<list_tag*, size_t> read_list_tag_value(const byte_t* data, size_t data_len, const std::string& key) {
         if (!data) return {nullptr, 0};
         size_t read = 0;
         auto tag = std::make_unique<list_tag>(key);
@@ -110,7 +110,7 @@ namespace bl::nbt {
         return {tag.release(), read};
     }
 
-    std::tuple<compound_tag *, size_t> read_compound_value(const byte_t *data, size_t data_len, const std::string &key) {
+    std::tuple<compound_tag*, size_t> read_compound_value(const byte_t* data, size_t data_len, const std::string& key) {
         if (!data) return {nullptr, 0};
         auto tag = std::make_unique<compound_tag>(key);
         size_t total = 0;
@@ -130,7 +130,7 @@ namespace bl::nbt {
         return {nullptr, 0};
     }
 
-    std::tuple<abstract_tag *, size_t> read_value_by_type(tag_type type, const byte_t *data, size_t data_len, const std::string &key) {
+    std::tuple<abstract_tag*, size_t> read_value_by_type(tag_type type, const byte_t* data, size_t data_len, const std::string& key) {
         switch (type) {
             case Compound:
                 return read_compound_value(data, data_len, key);
@@ -161,7 +161,7 @@ namespace bl::nbt {
         }
     }
 
-    std::tuple<abstract_tag *, size_t> read_nbt(const byte_t *data, size_t data_len) {
+    std::tuple<abstract_tag*, size_t> read_nbt(const byte_t* data, size_t data_len) {
         if (!data || data_len == 0) return {nullptr, 0};
         int read = 0;
         tag_type type;
@@ -184,12 +184,12 @@ namespace bl::nbt {
         return {tag, read + len};
     }
 
-    compound_tag *read_one_palette(const byte_t *data, int &read) {
+    compound_tag* read_one_palette(const byte_t* data, int& read) {
         // legacy overload: no bounds, caller must ensure enough data
         return read_one_palette(data, SIZE_MAX, read);
     }
 
-    compound_tag *read_one_palette(const byte_t *data, size_t data_len, int &read) {
+    compound_tag* read_one_palette(const byte_t* data, size_t data_len, int& read) {
         read = 0;
         auto [r, x] = read_nbt(data, data_len);
         read = static_cast<int>(x);
@@ -198,16 +198,16 @@ namespace bl::nbt {
             delete r;
             return nullptr;
         } else {
-            return r->as<compound_tag *>();
+            return r->as<compound_tag*>();
         }
     }
 
-    std::vector<compound_tag *> read_palette_to_end(const byte_t *data, size_t len) {
+    std::vector<compound_tag*> read_palette_to_end(const byte_t* data, size_t len) {
         size_t ptr = 0;
-        std::vector<compound_tag *> res;
+        std::vector<compound_tag*> res;
         while (ptr < len) {
             int read;
-            auto *tag = read_one_palette(data + ptr, len - ptr, read);
+            auto* tag = read_one_palette(data + ptr, len - ptr, read);
             if (read == 0) break;
             ptr += read;
             if (tag) res.push_back(tag);
@@ -223,8 +223,8 @@ namespace bl::nbt {
         }
     }
 
-    abstract_tag *abstract_tag::getByPath(const std::string &path) {
-        abstract_tag *cur = this;
+    abstract_tag* abstract_tag::getByPath(const std::string& path) {
+        abstract_tag* cur = this;
         size_t i = 0;
         while (cur && i < path.size()) {
             if (path[i] == '.') {
@@ -236,7 +236,7 @@ namespace bl::nbt {
                 auto end = path.find_first_of(".[", i);
                 auto name = path.substr(i, end == std::string::npos ? std::string::npos : end - i);
                 i = (end == std::string::npos) ? path.size() : end;
-                auto *comp = cur->as<compound_tag *>();
+                auto* comp = cur->as<compound_tag*>();
                 if (!comp) return nullptr;
                 cur = comp->get(name);
             }
@@ -253,7 +253,7 @@ namespace bl::nbt {
                         idx = idx * 10 + (path[k] - '0');
                     }
                 }
-                auto *list = cur->as<list_tag *>();
+                auto* list = cur->as<list_tag*>();
                 if (!valid || !list || idx >= static_cast<int>(list->value.size())) return nullptr;
                 cur = list->value[idx];
                 i = close + 1;

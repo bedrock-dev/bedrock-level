@@ -33,21 +33,21 @@ namespace {
 #pragma GCC diagnostic ignored "-Wmismatched-new-delete"
 #endif
 
-void *operator new(std::size_t n) {
+void* operator new(std::size_t n) {
     g_alloc_net.fetch_add(1, std::memory_order_relaxed);
     return std::malloc(n);
 }
-void operator delete(void *p) noexcept {
+void operator delete(void* p) noexcept {
     if (p) g_alloc_net.fetch_sub(1, std::memory_order_relaxed);
     std::free(p);
 }
-void operator delete(void *p, std::size_t) noexcept { operator delete(p); }
+void operator delete(void* p, std::size_t) noexcept { operator delete(p); }
 
 namespace {
 
     std::vector<std::string> list_chunk_files() {
         std::vector<std::string> files;
-        for (auto &entry : fs::directory_iterator(TEST_DATA_DIR "/chunks")) {
+        for (auto& entry : fs::directory_iterator(TEST_DATA_DIR "/chunks")) {
             if (entry.path().extension() == ".chunk") {
                 files.push_back(entry.path().string());
             }
@@ -57,9 +57,9 @@ namespace {
     }
 
     // collect raw nbt payloads of actors + pending ticks from a raw chunk
-    void collect_palette_raws(const bl::raw_chunk &rc, std::vector<std::string> &out) {
+    void collect_palette_raws(const bl::raw_chunk& rc, std::vector<std::string>& out) {
         // actors (new version): one compound per entity
-        for (auto &[uid, raw] : rc.get_entities()) {
+        for (auto& [uid, raw] : rc.get_entities()) {
             if (!raw.empty()) out.push_back(raw);
         }
         // actors (old version): concatenated compounds in Entity key
@@ -80,7 +80,7 @@ class PaletteBenchmark : public ::testing::Test {
     void SetUp() override {
         files_ = list_chunk_files();
         ASSERT_FALSE(files_.empty());
-        for (auto &f : files_) {
+        for (auto& f : files_) {
             auto raw = bl::utils::read_file(f);
             if (raw.empty()) continue;
             bl::raw_chunk rc;
@@ -102,10 +102,10 @@ TEST_F(PaletteBenchmark, ParseAllPalettes) {
     size_t tags = 0;
     for (int round = 0; round < kRounds; round++) {
         tags = 0;
-        for (auto &raw : raw_palettes_) {
-            auto palettes = bl::nbt::read_palette_to_end(reinterpret_cast<const byte_t *>(raw.data()), raw.size());
+        for (auto& raw : raw_palettes_) {
+            auto palettes = bl::nbt::read_palette_to_end(reinterpret_cast<const byte_t*>(raw.data()), raw.size());
             tags += palettes.size();
-            for (auto *p : palettes) delete p;
+            for (auto* p : palettes) delete p;
         }
     }
     auto elapsed_ms = std::chrono::duration<double, std::milli>(steady_clock_t::now() - start).count();
@@ -122,12 +122,12 @@ TEST_F(PaletteBenchmark, SerializeAllPalettes) {
     size_t total_bytes = 0;
     for (int round = 0; round < kRounds; round++) {
         total_bytes = 0;
-        for (auto &raw : raw_palettes_) {
-            auto palettes = bl::nbt::read_palette_to_end(reinterpret_cast<const byte_t *>(raw.data()), raw.size());
-            for (auto *p : palettes) {
+        for (auto& raw : raw_palettes_) {
+            auto palettes = bl::nbt::read_palette_to_end(reinterpret_cast<const byte_t*>(raw.data()), raw.size());
+            for (auto* p : palettes) {
                 total_bytes += p->to_raw().size();
             }
-            for (auto *p : palettes) delete p;
+            for (auto* p : palettes) delete p;
         }
     }
     auto elapsed_ms = std::chrono::duration<double, std::milli>(steady_clock_t::now() - start).count();
@@ -139,12 +139,12 @@ TEST_F(PaletteBenchmark, SerializeAllPalettes) {
 // parse -> to_raw must reproduce the input bytes exactly (parse/serialize are inverses)
 TEST_F(PaletteBenchmark, RoundTrip) {
     size_t ok = 0;
-    for (auto &raw : raw_palettes_) {
-        auto palettes = bl::nbt::read_palette_to_end(reinterpret_cast<const byte_t *>(raw.data()), raw.size());
+    for (auto& raw : raw_palettes_) {
+        auto palettes = bl::nbt::read_palette_to_end(reinterpret_cast<const byte_t*>(raw.data()), raw.size());
         std::string reencoded;
-        for (auto *p : palettes) reencoded += p->to_raw();
+        for (auto* p : palettes) reencoded += p->to_raw();
         if (reencoded == raw) ok++;
-        for (auto *p : palettes) delete p;
+        for (auto* p : palettes) delete p;
     }
     std::cout << "round trip ok: " << ok << "/" << raw_palettes_.size() << "\n";
     EXPECT_EQ(ok, raw_palettes_.size());
@@ -152,16 +152,16 @@ TEST_F(PaletteBenchmark, RoundTrip) {
 
 // serialize -> parse -> serialize must be stable (idempotent, byte-identical on 2nd round)
 TEST_F(PaletteBenchmark, ReSerializeStable) {
-    for (auto &raw : raw_palettes_) {
-        auto first = bl::nbt::read_palette_to_end(reinterpret_cast<const byte_t *>(raw.data()), raw.size());
+    for (auto& raw : raw_palettes_) {
+        auto first = bl::nbt::read_palette_to_end(reinterpret_cast<const byte_t*>(raw.data()), raw.size());
         std::string first_raw;
-        for (auto *p : first) first_raw += p->to_raw();
-        for (auto *p : first) delete p;
+        for (auto* p : first) first_raw += p->to_raw();
+        for (auto* p : first) delete p;
 
-        auto second = bl::nbt::read_palette_to_end(reinterpret_cast<const byte_t *>(first_raw.data()), first_raw.size());
+        auto second = bl::nbt::read_palette_to_end(reinterpret_cast<const byte_t*>(first_raw.data()), first_raw.size());
         std::string second_raw;
-        for (auto *p : second) second_raw += p->to_raw();
-        for (auto *p : second) delete p;
+        for (auto* p : second) second_raw += p->to_raw();
+        for (auto* p : second) delete p;
 
         EXPECT_EQ(first_raw, second_raw) << "2nd serialization differs for palette of " << first_raw.size() << " bytes";
     }
@@ -190,26 +190,26 @@ TEST(PaletteLeak, DuplicateKeyParse) {
         std::string raw;
         raw.push_back(static_cast<char>(10));  // Compound
         uint16_t klen = 0;
-        raw.append(reinterpret_cast<const char *>(&klen), 2);
+        raw.append(reinterpret_cast<const char*>(&klen), 2);
         // child 1: Int "k"
         raw.push_back(static_cast<char>(3));
         uint16_t l1 = 1;
-        raw.append(reinterpret_cast<const char *>(&l1), 2);
+        raw.append(reinterpret_cast<const char*>(&l1), 2);
         raw += 'k';
         int32_t v1 = 1;
-        raw.append(reinterpret_cast<const char *>(&v1), 4);
+        raw.append(reinterpret_cast<const char*>(&v1), 4);
         // child 2: String "k" (duplicate key)
         raw.push_back(static_cast<char>(8));
         uint16_t l2 = 1;
-        raw.append(reinterpret_cast<const char *>(&l2), 2);
+        raw.append(reinterpret_cast<const char*>(&l2), 2);
         raw += 'k';
         uint16_t sl = 2;
-        raw.append(reinterpret_cast<const char *>(&sl), 2);
+        raw.append(reinterpret_cast<const char*>(&sl), 2);
         raw += "hi";
         raw.push_back(0);  // End
 
         int read = 0;
-        auto *nbt = bl::nbt::read_one_palette(raw.data(), raw.size(), read);
+        auto* nbt = bl::nbt::read_one_palette(raw.data(), raw.size(), read);
         ASSERT_NE(nbt, nullptr);
         EXPECT_EQ(nbt->value.size(), 1u);  // older Int "k" dropped
         EXPECT_NE(nbt->get("k"), nullptr);

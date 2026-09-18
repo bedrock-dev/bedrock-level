@@ -52,7 +52,7 @@ namespace bl {
         delete this->read_option_.decompress_allocator;
     };
 
-    bool bedrock_level::open(const std::string &root) {
+    bool bedrock_level::open(const std::string& root) {
         namespace fs = std::filesystem;
         this->root_name_ = root;
         fs::path path(this->root_name_);
@@ -69,20 +69,20 @@ namespace bl {
         this->is_open_ = false;
     }
 
-    chunk *bedrock_level::get_chunk(const chunk_pos &cp, chunk_load_policy policy) {
+    chunk* bedrock_level::get_chunk(const chunk_pos& cp, chunk_load_policy policy) {
         if (!this->is_open()) {
             return nullptr;
         }
         return this->load_chunk(cp, policy);
     }
 
-    bool bedrock_level::load_raw(const std::string &key, std::string &value) {
+    bool bedrock_level::load_raw(const std::string& key, std::string& value) {
         if (!this->is_open() || !this->db_) return false;
         auto r = this->db_->Get(read_option_, key, &value);
         return r.ok();
     }
     void bedrock_level::load_global_data() {
-        this->foreach_global_keys([this](const std::string &key, const std::string &value) {
+        this->foreach_global_keys([this](const std::string& key, const std::string& value) {
             if (key.find("player") != std::string::npos) {
                 this->player_data_.append_nbt(key, value);
             } else if (key.find("map") == 0) {
@@ -95,8 +95,8 @@ namespace bl {
             }
         });
     }
-    void bedrock_level::foreach_global_keys(const std::function<void(const std::string &, const std::string &)> &f) {
-        auto *it = this->db_->NewIterator(this->read_option_);
+    void bedrock_level::foreach_global_keys(const std::function<void(const std::string&, const std::string&)>& f) {
+        auto* it = this->db_->NewIterator(this->read_option_);
         for (it->SeekToFirst(); it->Valid(); it->Next()) {
             auto ck = bl::chunk_key::parse(it->key().ToString());
             if (ck.valid()) continue;
@@ -107,10 +107,10 @@ namespace bl {
         delete it;
     }
 
-    void bedrock_level::foreach_key_with_prefix(const std::string &prefix,
-                                                const std::function<void(const std::string &, const std::string &)> &f,
-                                                std::atomic_bool &stop, int max) {
-        auto *it = this->db_->NewIterator(this->read_option_);
+    void bedrock_level::foreach_key_with_prefix(const std::string& prefix,
+                                                const std::function<void(const std::string&, const std::string&)>& f,
+                                                std::atomic_bool& stop, int max) {
+        auto* it = this->db_->NewIterator(this->read_option_);
         int count = 0;
         for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
             f(it->key().ToString(), it->value().ToString());
@@ -131,8 +131,8 @@ namespace bl {
     }
 
     // private
-    chunk *bedrock_level::load_chunk(const chunk_pos &cp, chunk_load_policy policy) {
-        auto *chunk = new bl::chunk(cp);
+    chunk* bedrock_level::load_chunk(const chunk_pos& cp, chunk_load_policy policy) {
+        auto* chunk = new bl::chunk(cp);
         if (!chunk->load_data(*this, policy)) {
             delete chunk;
             return nullptr;
@@ -160,16 +160,16 @@ namespace bl {
         auto r = this->db_->Get(read_option_, CUSTOM_DIM_TABLE_KEY, &value);
         if (!r.ok()) return;
         int read;
-        auto *nbt = bl::nbt::read_one_palette(value.c_str(), read);
+        auto* nbt = bl::nbt::read_one_palette(value.c_str(), read);
         if (!nbt) return;
 
-        auto *entries = nbt->get("entries");
+        auto* entries = nbt->get("entries");
         if (entries) {
-            auto *entries_compound = dynamic_cast<bl::nbt::compound_tag *>(entries);
+            auto* entries_compound = dynamic_cast<bl::nbt::compound_tag*>(entries);
             if (entries_compound) {
                 custom_dimension_table_.clear();
-                for (auto &[dim_name, tag] : entries_compound->value) {
-                    auto *int_tag = dynamic_cast<bl::nbt::int_tag *>(tag);
+                for (auto& [dim_name, tag] : entries_compound->value) {
+                    auto* int_tag = dynamic_cast<bl::nbt::int_tag*>(tag);
                     if (int_tag) {
                         custom_dimension_table_[dim_name] = int_tag->value;
                     }

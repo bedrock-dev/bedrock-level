@@ -27,7 +27,7 @@ int main() {
     std::vector<std::vector<bl::color>> cm(H * 16, std::vector<bl::color>(W * 16, bl::color()));
     for (int x = minP.x; x <= maxP.x; x++) {
         for (int z = minP.z; z <= maxP.z; z++) {
-            auto *chunk = level.get_chunk({x, z, DIM});
+            auto* chunk = level.get_chunk({x, z, DIM});
             if (chunk) {
                 for (int xx = 0; xx < 16; xx++) {
                     for (int zz = 0; zz < 16; zz++) {
