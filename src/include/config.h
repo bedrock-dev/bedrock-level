@@ -25,6 +25,19 @@ namespace bl::config {
     /// the overworld / nether / end. Custom dimensions can place it wherever they like.
     void set_custom_dimension_min_y(int32_t minimum);
     int32_t custom_dimension_min_y();
+
+    /// Multiplier applied to the biome tint colors (grass / leaves / water) when the biome color
+    /// table is loaded, so the map can be lightened or darkened without editing the tables. 1.0
+    /// (the default) keeps them as authored.
+    ///
+    /// Only tints are scaled: a tinted block stores a gray value and is colored by
+    /// `gray / 255 * tint`, so scaling the tint changes every such pixel exactly once. The block
+    /// table is left alone, because untinted blocks (stone, sand, ...) already match the
+    /// reference renderer.
+    ///
+    /// The tables are baked at load time, so a change only takes effect on the next table load.
+    void set_color_brightness(float factor);
+    float color_brightness();
 }  // namespace bl::config
 
 #endif

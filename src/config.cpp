@@ -1,6 +1,8 @@
 
 #include "config.h"
 
+#include <algorithm>
+
 namespace {
     bool log_mismatched_actor_{true};
     bool log_missing_block_color_{false};
@@ -8,6 +10,8 @@ namespace {
     // -4..19 covers y -64..319, the 1.18+ overworld
     std::pair<int8_t, int8_t> subchunk_index_range_{-4, 19};
     int32_t custom_dimension_min_y_{-64};
+    // 1.0 = color tables as authored
+    float color_brightness_{1.2f};
 }  // namespace
 namespace bl::config {
     void set_log_mismatched_actor(bool enable) { log_mismatched_actor_ = enable; }
@@ -24,4 +28,7 @@ namespace bl::config {
 
     void set_custom_dimension_min_y(int32_t minimum) { custom_dimension_min_y_ = minimum; }
     int32_t custom_dimension_min_y() { return custom_dimension_min_y_; }
+
+    void set_color_brightness(float factor) { color_brightness_ = std::clamp(factor, 0.0f, 8.0f); }
+    float color_brightness() { return color_brightness_; }
 }  // namespace bl::config

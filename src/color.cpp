@@ -4,6 +4,7 @@
 
 #include "color.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <fstream>
 #include <string>
@@ -89,6 +90,18 @@ namespace bl {
             return gray;
         }
 
+        // Multiplies a color by the configured brightness. Alpha carries blending information
+        // (a grass overlay, say) instead of brightness, so it is left alone.
+        bl::color apply_color_brightness(bl::color c) {
+            const float factor = bl::config::color_brightness();
+            if (factor == 1.0f) return c;
+            const auto scale = [factor](uint8_t v) { return static_cast<uint8_t>(std::clamp(v * factor, 0.0f, 255.0f)); };
+            c.r = scale(c.r);
+            c.g = scale(c.g);
+            c.b = scale(c.b);
+            return c;
+        }
+
         bl::color read_rgb_color(const nlohmann::json& arr) {
             bl::color c;
             if (arr.size() < 3) return c;
@@ -97,6 +110,12 @@ namespace bl {
             c.b = static_cast<uint8_t>(arr[2].get<int>());
             return c;
         }
+
+        /// Tint colors are what the map's brightness is applied to. A tinted block stores a gray
+        /// value in the block table and gets its color from `gray / 255 * tint`, so scaling the
+        /// tint here scales every grass / leaf / water pixel exactly once. Scaling the block table
+        /// instead would hit untinted blocks too, which already match the reference renderer.
+        bl::color read_tint_color(const nlohmann::json& arr) { return apply_color_brightness(read_rgb_color(arr)); }
 
     }  // namespace
 
@@ -152,19 +171,19 @@ namespace bl {
 
                 // water
                 if (value.contains("water")) {
-                    auto c = read_rgb_color(value["water"]);
+                    auto c = read_tint_color(value["water"]);
                     biome_water_map[static_cast<biome>(id)] = c;
                     if (key == "default") default_water_color = c;
                 }
 
                 if (value.contains("grass")) {
-                    auto c = read_rgb_color(value["grass"]);
+                    auto c = read_tint_color(value["grass"]);
                     biome_grass_map[static_cast<biome>(id)] = c;
                     if (key == "default") default_grass_color = c;
                 }
 
                 if (value.contains("leaves")) {
-                    auto c = read_rgb_color(value["leaves"]);
+                    auto c = read_tint_color(value["leaves"]);
                     biome_leave_map[static_cast<biome>(id)] = c;
                     if (key == "default") default_leave_color = c;
                 }
