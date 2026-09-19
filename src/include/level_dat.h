@@ -56,7 +56,6 @@ namespace bl {
         ClientVersion min_compat_version_;
         bl::nbt::compound_tag* root_{nullptr};
         std::string header_;
-        int64_t world_start_count_{0xffffffff};
     };
 }  // namespace bl
 

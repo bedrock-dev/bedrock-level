@@ -113,11 +113,6 @@ namespace bl {
         if (ver_tag && ver_tag->type() == tag_type::List) {
             this->min_compat_version_.read(dynamic_cast<list_tag*>(ver_tag));
         }
-
-        auto* world_start_count_tag = root_->get("worldStartCount");
-        if (world_start_count_tag && world_start_count_tag->type() == tag_type::Long) {
-            world_start_count_ = dynamic_cast<long_tag*>(world_start_count_tag)->value;
-        }
         return true;
     }
 
