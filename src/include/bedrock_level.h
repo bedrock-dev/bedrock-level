@@ -63,6 +63,10 @@ namespace bl {
                                      std::atomic_bool& stop, int max = -1);
 
         // others
+        /// Unique id for a newly created actor, shaped (session tag << 32) | counter. The tag is
+        /// drawn once per instance and kept out of the game's own range, so ids from two runs of
+        /// this tool cannot collide with each other or with the level's existing actors. Nothing
+        /// is persisted for it, which keeps opening a level read-only.
         uint64_t generate_actor_uid();
 
         static const std::string LEVEL_DATA;
@@ -75,6 +79,8 @@ namespace bl {
         chunk* load_chunk(const bl::chunk_pos& cp, chunk_load_policy policy);
         bool load_db();
         void load_dimension_name_id_table();
+        /// Draws the high half of the uids generate_actor_uid() hands out; called once per open.
+        void roll_actor_uid_tag();
         // write
 
        private:
@@ -95,7 +101,10 @@ namespace bl {
         bl::general_kv_nbts other_data_;
         std::unordered_map<std::string, int> custom_dimension_table_;
 
-        uint64_t wsc_uid{1};
+        // high half of the uids generate_actor_uid() hands out; drawn by roll_actor_uid_tag()
+        uint32_t actor_uid_tag_{0};
+        // low half, restarting at 1 for every tag; atomic because imports run on worker threads
+        std::atomic<uint64_t> actor_uid_index{1};
     };
 }  // namespace bl
 

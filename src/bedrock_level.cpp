@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <iostream>
+#include <random>
 #include <string>
 
 #include "bedrock_key.h"
@@ -60,6 +61,7 @@ namespace bl {
         const bool loaded = this->dat_.load_from_file(path.string());
         if (loaded) {
             this->chunk_format_ = client_version_to_chunk_format(this->dat_.min_compat_version());
+            this->roll_actor_uid_tag();
         }
         this->is_open_ = loaded && this->load_db();
         return this->is_open_;
@@ -71,6 +73,8 @@ namespace bl {
         delete this->db_;
         this->db_ = nullptr;
         this->is_open_ = false;
+        this->actor_uid_tag_ = 0;
+        this->actor_uid_index = 1;
     }
 
     chunk* bedrock_level::get_chunk(const chunk_pos& cp, chunk_load_policy policy) {
@@ -127,12 +131,19 @@ namespace bl {
         delete it;
     }
 
-    uint64_t bedrock_level::generate_actor_uid() {
-        auto wsc = static_cast<uint64_t>(dat_.world_start_count() - 1) & 0x00000000ffffffff;
-        auto uid = (wsc << 32) | wsc_uid;
-        wsc_uid++;
-        return uid;
+    void bedrock_level::roll_actor_uid_tag() {
+        // The game's own counter walks down from the top of the 32-bit space (worldStartCount
+        // counts down from there, one step per world open), so a tag at or below it is either in
+        // use or about to be. Drawing from the lower half stays clear of that path -- the game
+        // would need billions of world opens to reach it -- and a fresh draw per open keeps two
+        // runs of this tool from producing the same ids.
+        std::random_device device;
+        std::uniform_int_distribution<uint32_t> distribution(1, 0x7FFFFFFFu);
+        this->actor_uid_tag_ = distribution(device);
+        this->actor_uid_index = 1;
     }
+
+    uint64_t bedrock_level::generate_actor_uid() { return (static_cast<uint64_t>(this->actor_uid_tag_) << 32) | this->actor_uid_index++; }
 
     // private
     chunk* bedrock_level::load_chunk(const chunk_pos& cp, chunk_load_policy policy) {
