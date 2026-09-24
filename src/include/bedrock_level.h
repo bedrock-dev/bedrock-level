@@ -21,7 +21,10 @@ namespace bl {
 
     class bedrock_level {
        public:
-        bedrock_level();
+        /// `libdeflate` picks the codec that inflates the raw-deflate blocks the level's
+        /// tables are stored with: true uses libdeflate, false the historical zlib.  The two
+        /// read byte-identical streams, so this only trades speed, never readability.
+        explicit bedrock_level(bool libdeflate = false);
         ~bedrock_level();
 
         // open && close

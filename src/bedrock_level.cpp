@@ -20,6 +20,7 @@
 #include "leveldb/decompress_allocator.h"
 #include "leveldb/env.h"
 #include "leveldb/filter_policy.h"
+#include "leveldb/libdeflate_compressor.h"
 #include "leveldb/options.h"
 #include "leveldb/write_batch.h"
 #include "leveldb/zlib_compressor.h"
@@ -33,12 +34,19 @@ namespace bl {
     const std::string bedrock_level::CUSTOM_DIM_KEY_PREFIX = "custom_dim:";
     const std::string bedrock_level::CUSTOM_DIM_TABLE_KEY = "DimensionNameIdTable";
 
-    bedrock_level::bedrock_level() {
+    bedrock_level::bedrock_level(bool libdeflate) {
         options_.filter_policy = leveldb::NewBloomFilterPolicy(10);
         options_.block_cache = leveldb::NewLRUCache(20 * 1024 * 1024);
         options_.write_buffer_size = 4 * 1024 * 1024;
         options_.block_size = 163840;
-        options_.compressors[0] = new leveldb::ZlibCompressorRaw(-1);
+        // Slot 0 is the reader for the raw-deflate block tables the world is stored with,
+        // slot 1 for zlib-wrapped data. Both codecs share the serialize ids, so swapping
+        // the slot 0 object changes the speed of every block read and nothing else.
+        if (libdeflate) {
+            options_.compressors[0] = new leveldb::LibdeflateCompressorRaw(6);
+        } else {
+            options_.compressors[0] = new leveldb::ZlibCompressorRaw(-1);
+        }
         options_.compressors[1] = new leveldb::ZlibCompressor();
         // read option
         read_option_.decompress_allocator = new leveldb::DecompressAllocator();
