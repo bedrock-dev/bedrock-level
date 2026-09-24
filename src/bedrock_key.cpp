@@ -12,7 +12,7 @@
 namespace bl {
     const chunk_key chunk_key::INVALID_CHUNK_KEY = chunk_key{chunk_key::Unknown, bl::chunk_pos(), 0};
 
-    chunk_key chunk_key::parse(const std::string& key) {
+    chunk_key chunk_key::parse(std::string_view key) {
         auto sz = key.size();
         if (sz == 9 || sz == 10 || sz == 13 || sz == 14) {
             int x, z;
@@ -47,7 +47,7 @@ namespace bl {
         }
     }
 
-    actor_key actor_key::parse(const std::string& key) {
+    actor_key actor_key::parse(std::string_view key) {
         actor_key res;
         if (key.size() != 19 || key.rfind("actorprefix", 0) != 0) return res;
         memcpy(&res.actor_uid, key.data() + 11, 8);

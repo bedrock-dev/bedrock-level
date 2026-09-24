@@ -61,6 +61,13 @@ namespace bl {
         bool load_raw(const std::string& key, std::string& value);
         void load_global_data();
 
+        /// Read options for a traversal that walks a large part of the database, as
+        /// opposed to the single-key reads load_raw() does: blocks decompress through
+        /// the level's shared allocator, and they are deliberately kept out of the
+        /// block cache, which a whole-key-space scan would otherwise evict before the
+        /// map gets to read from it.
+        [[nodiscard]] leveldb::ReadOptions bulk_read_options() const;
+
         void foreach_global_keys(const std::function<void(const std::string&, const std::string&)>& f);
         void foreach_key_with_prefix(const std::string& prefix, const std::function<void(const std::string&, const std::string&)>& f,
                                      std::atomic_bool& stop, int max = -1);

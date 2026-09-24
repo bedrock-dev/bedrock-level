@@ -81,7 +81,6 @@ if (BEDROCK_LEVEL_BUILD_APPS)
     create_app(biome_png app/biome_png.cpp)
     create_app(dump_chunks app/dump_chunks.cpp)
     create_app(level_stater app/level_stater.cpp)
-    create_app(db_bench app/db_bench.cpp)
 endif ()
 
 if (BEDROCK_LEVEL_BUILD_TESTS)

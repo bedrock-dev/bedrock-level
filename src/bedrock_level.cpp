@@ -10,6 +10,7 @@
 #include <iostream>
 #include <random>
 #include <string>
+#include <string_view>
 
 #include "bedrock_key.h"
 #include "chunk.h"
@@ -22,11 +23,19 @@
 #include "leveldb/filter_policy.h"
 #include "leveldb/libdeflate_compressor.h"
 #include "leveldb/options.h"
+#include "leveldb/slice.h"
 #include "leveldb/write_batch.h"
 #include "leveldb/zlib_compressor.h"
 #include "nbt.h"
 
 class SlowEnv : public leveldb::Env {};
+
+namespace {
+    /// A key never needs to be copied to be classified, so scans read it as a view.
+    [[nodiscard]] inline std::string_view slice_view(const leveldb::Slice& slice) noexcept {
+        return std::string_view(slice.data(), slice.size());
+    }
+}  // namespace
 
 namespace bl {
     const std::string bedrock_level::LEVEL_DATA = "level.dat";
@@ -97,6 +106,13 @@ namespace bl {
         auto r = this->db_->Get(read_option_, key, &value);
         return r.ok();
     }
+
+    leveldb::ReadOptions bedrock_level::bulk_read_options() const {
+        leveldb::ReadOptions options = this->read_option_;
+        options.fill_cache = false;
+        return options;
+    }
+
     void bedrock_level::load_global_data() {
         this->foreach_global_keys([this](const std::string& key, const std::string& value) {
             if (key.find("player") != std::string::npos) {
@@ -114,9 +130,10 @@ namespace bl {
     void bedrock_level::foreach_global_keys(const std::function<void(const std::string&, const std::string&)>& f) {
         auto* it = this->db_->NewIterator(this->read_option_);
         for (it->SeekToFirst(); it->Valid(); it->Next()) {
-            auto ck = bl::chunk_key::parse(it->key().ToString());
+            const auto key = slice_view(it->key());
+            auto ck = bl::chunk_key::parse(key);
             if (ck.valid()) continue;
-            auto actor_key = bl::actor_key::parse(it->key().ToString());
+            auto actor_key = bl::actor_key::parse(key);
             if (actor_key.valid()) continue;
             f(it->key().ToString(), it->value().ToString());
         }

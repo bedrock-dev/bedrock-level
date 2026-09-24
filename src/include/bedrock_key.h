@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "geometry.h"
@@ -108,7 +109,9 @@ namespace bl {
 
         static std::string chunk_key_to_str(chunk_key::key_type key);
 
-        static chunk_key parse(const std::string& key);
+        /// Classification only reads the key, so it takes a view: a scan that
+        /// walks the database can pass iterator keys without copying each one.
+        static chunk_key parse(std::string_view key);
 
         [[maybe_unused]] const static chunk_key INVALID_CHUNK_KEY;
 
@@ -126,7 +129,7 @@ namespace bl {
 
         [[nodiscard]] std::string to_string() const;
 
-        static actor_key parse(const std::string& key);
+        static actor_key parse(std::string_view key);
     };
 
     struct actor_digest_key {
