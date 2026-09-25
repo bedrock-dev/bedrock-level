@@ -34,7 +34,7 @@ namespace bl {
                 if (name.find(s) != std::string_view::npos) return tint_kind::water;
             }
             for (const auto& s : leaves_block_names) {
-                if (name.find(s) != std::string_view::npos) return tint_kind::leaves;
+                if (name.find(s) != std::string_view::npos && name.find("cherry") == std::string::npos) return tint_kind::leaves;
             }
             for (const auto& s : grass_block_names) {
                 if (name.find(s) != std::string_view::npos) return tint_kind::grass;
@@ -109,6 +109,49 @@ namespace bl {
             c.g = static_cast<uint8_t>(arr[1].get<int>());
             c.b = static_cast<uint8_t>(arr[2].get<int>());
             return c;
+        }
+
+        [[nodiscard]] int hex_digit(char ch) {
+            if (ch >= '0' && ch <= '9') return ch - '0';
+            if (ch >= 'a' && ch <= 'f') return ch - 'a' + 10;
+            if (ch >= 'A' && ch <= 'F') return ch - 'A' + 10;
+            return -1;
+        }
+
+        /// "#rrggbbaa" with the leading '#' optional; opaque black on a malformed value.
+        bl::color read_hex_color(const std::string& text) {
+            const std::string digits = (!text.empty() && text.front() == '#') ? text.substr(1) : text;
+            if (digits.size() != 8) {
+                LOG_F(ERROR, "Invalid color string '%s'", text.c_str());
+                return {};
+            }
+            uint8_t channels[4]{};
+            for (size_t i = 0; i < 4; i++) {
+                const int hi = hex_digit(digits[i * 2]);
+                const int lo = hex_digit(digits[i * 2 + 1]);
+                if (hi < 0 || lo < 0) {
+                    LOG_F(ERROR, "Invalid color string '%s'", text.c_str());
+                    return {};
+                }
+                channels[i] = static_cast<uint8_t>(hi * 16 + lo);
+            }
+            return {channels[0], channels[1], channels[2], channels[3]};
+        }
+
+        /// Block color entry as either "#rrggbbaa" or a 4-element [r, g, b, a] array, so tables
+        /// written before the hex format keep loading.
+        bl::color read_block_color(const nlohmann::json& value) {
+            if (value.is_string()) return read_hex_color(value.get<std::string>());
+            if (value.is_array() && value.size() >= 4) {
+                bl::color c;
+                c.r = value[0].get<uint8_t>();
+                c.g = value[1].get<uint8_t>();
+                c.b = value[2].get<uint8_t>();
+                c.a = value[3].get<uint8_t>();
+                return c;
+            }
+            LOG_F(ERROR, "Invalid block color entry: %s", value.dump().c_str());
+            return {};
         }
 
         /// Tint colors are what the map's brightness is applied to. A tinted block stores a gray
@@ -208,12 +251,7 @@ namespace bl {
             for (const auto& [blockname, value] : j.items()) {
                 vec.clear();
                 for (const auto& [tag, color] : value.items()) {
-                    bl::color c;
-                    c.r = color[0].get<uint8_t>();
-                    c.g = color[1].get<uint8_t>();
-                    c.b = color[2].get<uint8_t>();
-                    c.a = color[3].get<uint8_t>();
-                    vec.emplace_back(tag, c);
+                    vec.emplace_back(tag, read_block_color(color));
                 }
                 if (vec.size() == 1) {
                     single_block_color_map[blockname] = vec.begin()->second;

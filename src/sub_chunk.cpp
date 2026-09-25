@@ -275,13 +275,20 @@ namespace bl {
         if (!entry) return {};
 
         using bl::nbt::string_tag, bl::nbt::compound_tag;
+        // Block states that pick a sub-entry of a multi-color block, most specific first.
+        // flower_type covers the flower blocks (red_flower) that have no color state.
+        static constexpr const char* STATE_KEYS[] = {"color", "flower_type"};
+
         std::string extra_tag;
-        // states/color may be absent on simple blocks, guard each level
+        // states may be absent on simple blocks, guard each level
         if (auto* stat_tag = entry->tag->get("states"); stat_tag) {
             if (auto* st = stat_tag->as<compound_tag*>(); st) {
-                if (auto* color_tag = st->get("color"); color_tag) {
-                    if (auto* ct = color_tag->as<string_tag*>(); ct) {
-                        extra_tag = ct->value;
+                for (auto* key : STATE_KEYS) {
+                    auto* state_value = st->get(key);
+                    if (!state_value) continue;
+                    if (auto* sv = state_value->as<string_tag*>(); sv && !sv->value.empty()) {
+                        extra_tag = sv->value;
+                        break;
                     }
                 }
             }
