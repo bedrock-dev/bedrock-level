@@ -4,11 +4,13 @@
 
 #ifndef BEDROCK_LEVEL_COLOR_H
 #define BEDROCK_LEVEL_COLOR_H
+#include <cstdint>
 #include <string>
 #include <unordered_map>
 
 #include "data_3d.h"
 namespace bl {
+    enum class biome_tint_kind : uint8_t { none, water, leaves, grass };
     struct color {
         uint8_t r{0};
         uint8_t g{0};
@@ -37,7 +39,14 @@ namespace bl {
 
     // color calculation
     color get_biome_color(biome b);
+    // Raw block colour lookup, without any biome tinting.
+    color get_block_color(const std::string& name, const std::string& tag = {});
     color get_block_by_name_tag(const std::string& name, const std::string& tag = {});
+    [[nodiscard]] biome_tint_kind block_biome_tint_kind(const std::string& name);
+    [[nodiscard]] bool is_water_block(const std::string& name);
+    [[nodiscard]] bool is_leaves_block(const std::string& name);
+    [[nodiscard]] bool is_grass_block(const std::string& name);
+    [[nodiscard]] color get_biome_tint_color(biome b, biome_tint_kind kind);
     bl::color blend_color_with_biome(const std::string& name, bl::color color, bl::biome b);
     // if true, the block missing color will be print to console
 

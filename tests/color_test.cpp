@@ -63,3 +63,15 @@ TEST(Color, BlendMemoizationStable) {
     (void)b;
     (void)c;
 }
+
+TEST(Color, BiomeTintQueries) {
+    using namespace bl;
+    EXPECT_EQ(block_biome_tint_kind("minecraft:water"), biome_tint_kind::water);
+    EXPECT_EQ(block_biome_tint_kind("minecraft:leaves"), biome_tint_kind::leaves);
+    EXPECT_EQ(block_biome_tint_kind("minecraft:grass_block"), biome_tint_kind::grass);
+    EXPECT_EQ(block_biome_tint_kind("minecraft:stone"), biome_tint_kind::none);
+    EXPECT_TRUE(is_water_block("minecraft:water"));
+    EXPECT_TRUE(is_leaves_block("minecraft:leaves"));
+    EXPECT_TRUE(is_grass_block("minecraft:grass_block"));
+    EXPECT_FALSE(is_water_block("minecraft:stone"));
+}

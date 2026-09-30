@@ -4,7 +4,6 @@
 
 #include "color.h"
 
-#include <algorithm>
 #include <cstdint>
 #include <fstream>
 #include <string>
@@ -26,9 +25,9 @@ namespace bl {
         const std::vector<std::string> leaves_block_names{"leave"};
         const std::vector<std::string> grass_block_names{"grass"};
 
-        // which biome tint applies to a block name
-        enum class tint_kind : uint8_t { none, water, leaves, grass };
+        using tint_kind = biome_tint_kind;
 
+        // which biome tint applies to a block name
         tint_kind classify_tint(std::string_view name) {
             for (const auto& s : water_block_names) {
                 if (name.find(s) != std::string_view::npos) return tint_kind::water;
@@ -90,24 +89,15 @@ namespace bl {
             return gray;
         }
 
-        // Multiplies a color by the configured brightness. Alpha carries blending information
-        // (a grass overlay, say) instead of brightness, so it is left alone.
-        bl::color apply_color_brightness(bl::color c) {
-            const float factor = bl::config::color_brightness();
-            if (factor == 1.0f) return c;
-            const auto scale = [factor](uint8_t v) { return static_cast<uint8_t>(std::clamp(v * factor, 0.0f, 255.0f)); };
-            c.r = scale(c.r);
-            c.g = scale(c.g);
-            c.b = scale(c.b);
-            return c;
-        }
+        bl::color read_hex_color(const std::string& text);
 
-        bl::color read_rgb_color(const nlohmann::json& arr) {
+        bl::color read_rgb_color(const nlohmann::json& value) {
             bl::color c;
-            if (arr.size() < 3) return c;
-            c.r = static_cast<uint8_t>(arr[0].get<int>());
-            c.g = static_cast<uint8_t>(arr[1].get<int>());
-            c.b = static_cast<uint8_t>(arr[2].get<int>());
+            if (value.is_string()) return read_hex_color(value.get<std::string>());
+            if (!value.is_array() || value.size() < 3) return c;
+            c.r = static_cast<uint8_t>(value[0].get<int>());
+            c.g = static_cast<uint8_t>(value[1].get<int>());
+            c.b = static_cast<uint8_t>(value[2].get<int>());
             return c;
         }
 
@@ -118,15 +108,16 @@ namespace bl {
             return -1;
         }
 
-        /// "#rrggbbaa" with the leading '#' optional; opaque black on a malformed value.
+        /// "#rrggbb" or "#rrggbbaa" with the leading '#' optional; RGB values default opaque.
         bl::color read_hex_color(const std::string& text) {
             const std::string digits = (!text.empty() && text.front() == '#') ? text.substr(1) : text;
-            if (digits.size() != 8) {
+            if (digits.size() != 6 && digits.size() != 8) {
                 LOG_F(ERROR, "Invalid color string '%s'", text.c_str());
                 return {};
             }
-            uint8_t channels[4]{};
-            for (size_t i = 0; i < 4; i++) {
+            uint8_t channels[4] = {0, 0, 0, 255};
+            const size_t channel_count = digits.size() / 2;
+            for (size_t i = 0; i < channel_count; i++) {
                 const int hi = hex_digit(digits[i * 2]);
                 const int lo = hex_digit(digits[i * 2 + 1]);
                 if (hi < 0 || lo < 0) {
@@ -154,11 +145,7 @@ namespace bl {
             return {};
         }
 
-        /// Tint colors are what the map's brightness is applied to. A tinted block stores a gray
-        /// value in the block table and gets its color from `gray / 255 * tint`, so scaling the
-        /// tint here scales every grass / leaf / water pixel exactly once. Scaling the block table
-        /// instead would hit untinted blocks too, which already match the reference renderer.
-        bl::color read_tint_color(const nlohmann::json& arr) { return apply_color_brightness(read_rgb_color(arr)); }
+        bl::color read_tint_color(const nlohmann::json& arr) { return read_rgb_color(arr); }
 
     }  // namespace
 
@@ -189,6 +176,41 @@ namespace bl {
             }
         }
         return {};
+    }
+
+    color get_block_color(const std::string& name, const std::string& tag) { return get_block_by_name_tag(name, tag); }
+
+    biome_tint_kind block_biome_tint_kind(const std::string& name) {
+        switch (get_tint_kind(name)) {
+            case tint_kind::water: return biome_tint_kind::water;
+            case tint_kind::leaves: return biome_tint_kind::leaves;
+            case tint_kind::grass: return biome_tint_kind::grass;
+            default: return biome_tint_kind::none;
+        }
+    }
+
+    bool is_water_block(const std::string& name) { return block_biome_tint_kind(name) == biome_tint_kind::water; }
+
+    bool is_leaves_block(const std::string& name) { return block_biome_tint_kind(name) == biome_tint_kind::leaves; }
+
+    bool is_grass_block(const std::string& name) { return block_biome_tint_kind(name) == biome_tint_kind::grass; }
+
+    color get_biome_tint_color(biome b, biome_tint_kind kind) {
+        switch (kind) {
+            case biome_tint_kind::water: {
+                auto it = biome_water_map.find(b);
+                return it == biome_water_map.end() ? default_water_color : it->second;
+            }
+            case biome_tint_kind::leaves: {
+                auto it = biome_leave_map.find(b);
+                return it == biome_leave_map.end() ? default_leave_color : it->second;
+            }
+            case biome_tint_kind::grass: {
+                auto it = biome_grass_map.find(b);
+                return it == biome_grass_map.end() ? default_grass_color : it->second;
+            }
+            default: return {255, 255, 255, 255};
+        }
     }
 
     std::string get_biome_name(biome b) {
