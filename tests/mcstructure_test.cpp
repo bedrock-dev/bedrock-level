@@ -249,7 +249,7 @@ TEST(McStructureBuilder, WritesVersion2IntArraysAndOmitsEmptyLayer) {
     auto* root = bl::nbt::read_one_palette(reinterpret_cast<const byte_t*>(raw.data()), raw.size(), read);
     ASSERT_NE(root, nullptr);
 
-    auto* block_indices_tag = root->getByPath("structure.block_indices");
+    auto* block_indices_tag = root->get_by_path("structure.block_indices");
     auto* block_indices = block_indices_tag ? block_indices_tag->as<bl::nbt::list_tag*>() : nullptr;
     ASSERT_NE(block_indices, nullptr);
     ASSERT_EQ(block_indices->value.size(), 1u);

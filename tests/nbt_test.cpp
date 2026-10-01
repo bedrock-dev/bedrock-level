@@ -29,16 +29,16 @@ namespace {
 TEST(NbtGetByPath, FindsNestedNodes) {
     auto* root = make_tree();
 
-    auto* c1 = root->getByPath("A.B[1].C");
+    auto* c1 = root->get_by_path("A.B[1].C");
     ASSERT_NE(c1, nullptr);
     EXPECT_EQ(c1->as<bl::nbt::int_tag*>()->value, 43);
 
-    auto* c0 = root->getByPath("A.B[0].C");
+    auto* c0 = root->get_by_path("A.B[0].C");
     ASSERT_NE(c0, nullptr);
     EXPECT_EQ(c0->as<bl::nbt::int_tag*>()->value, 42);
 
     // direct compound->compound path without a list
-    EXPECT_EQ(root->getByPath("A"), root->get("A"));
+    EXPECT_EQ(root->get_by_path("A"), root->get("A"));
 
     delete root;
 }
@@ -46,12 +46,12 @@ TEST(NbtGetByPath, FindsNestedNodes) {
 TEST(NbtGetByPath, ReturnsNullOnAnyMiss) {
     auto* root = make_tree();
 
-    EXPECT_EQ(root->getByPath("A.X"), nullptr);       // missing key
-    EXPECT_EQ(root->getByPath("A.B[5].C"), nullptr);  // index out of range
-    EXPECT_EQ(root->getByPath("A.B.C"), nullptr);     // B is a list, not a compound
-    EXPECT_EQ(root->getByPath("A.B[x]"), nullptr);    // malformed index
-    EXPECT_EQ(root->getByPath("A.B[]"), nullptr);     // empty index
-    EXPECT_EQ(root->getByPath(""), root);             // empty path returns the node itself
+    EXPECT_EQ(root->get_by_path("A.X"), nullptr);       // missing key
+    EXPECT_EQ(root->get_by_path("A.B[5].C"), nullptr);  // index out of range
+    EXPECT_EQ(root->get_by_path("A.B.C"), nullptr);     // B is a list, not a compound
+    EXPECT_EQ(root->get_by_path("A.B[x]"), nullptr);    // malformed index
+    EXPECT_EQ(root->get_by_path("A.B[]"), nullptr);     // empty index
+    EXPECT_EQ(root->get_by_path(""), root);             // empty path returns the node itself
 
     delete root;
 }

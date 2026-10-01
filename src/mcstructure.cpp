@@ -376,11 +376,11 @@ namespace bl {
             return pos;
         };
         auto get_list = [&](const char* path) -> bl::nbt::list_tag* {
-            auto* tag = root->getByPath(path);
+        auto* tag = root->get_by_path(path);
             return tag ? tag->as<bl::nbt::list_tag*>() : nullptr;
         };
         auto get_compound = [&](const char* path) -> bl::nbt::compound_tag* {
-            auto* tag = root->getByPath(path);
+        auto* tag = root->get_by_path(path);
             return tag ? tag->as<bl::nbt::compound_tag*>() : nullptr;
         };
 

@@ -154,7 +154,7 @@ namespace bl::nbt {
             return dynamic_cast<T>(const_cast<abstract_tag*>(this));
         }
 
-        abstract_tag* getByPath(const std::string& path);
+        abstract_tag* get_by_path(const std::string& path);
 
        public:
         virtual void write(std::ostream& o, int indent) const {

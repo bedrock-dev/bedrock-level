@@ -215,7 +215,7 @@ namespace bl::nbt {
         }
     }
 
-    abstract_tag* abstract_tag::getByPath(const std::string& path) {
+    abstract_tag* abstract_tag::get_by_path(const std::string& path) {
         abstract_tag* cur = this;
         size_t i = 0;
         while (cur && i < path.size()) {
