@@ -1,7 +1,3 @@
-//
-// Created by xhy on 2023/3/31.
-//
-
 #ifndef BEDROCK_LEVEL_ACRTOR_H
 #define BEDROCK_LEVEL_ACRTOR_H
 #include <cstdint>
@@ -67,11 +63,7 @@ namespace bl {
         ~actor();
     };
 
-    /* 实体摘要信息
-     * key - "dige" + chunk_pos.to_raw()
-     * value = key*
-     * key = "actorprefix" + uid
-     */
+    // Actor digest entries map a chunk digest key to actorprefix + uid keys.
 
     struct actor_digest_list {
         bool load(const std::string& raw) {

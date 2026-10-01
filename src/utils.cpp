@@ -1,7 +1,3 @@
-//
-// Created by xhy on 2023/3/29.
-//
-
 #include "utils.h"
 
 #include <cctype>
@@ -50,8 +46,6 @@ namespace bl::utils {
         output.close();
         return output.good();
     }
-    //    https :  // www.jianshu.com/p/baf75216f883
-
 #ifdef _WIN32
 #include <windows.h>
     std::string UTF8ToGBEx(const char* utf8) {
@@ -105,8 +99,8 @@ namespace bl::utils {
         size_t len = bytes.size();
         if (len == 0) return result;
         result.reserve(len * 3);
-        int group_in_line = 0;  // which 8-byte group within current line (0..n-1)
-        int byte_in_group = 0;  // which byte within current 8-byte group (0..7)
+        int group_in_line = 0;
+        int byte_in_group = 0;
         for (size_t i = 0; i < len; i++) {
             auto uc = static_cast<unsigned char>(bytes[i]);
             result.push_back(hex_chars[uc >> 4]);

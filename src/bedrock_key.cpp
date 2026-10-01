@@ -1,7 +1,3 @@
-//
-// Created by xhy on 2023/3/30.
-//
-
 #include "bedrock_key.h"
 
 #include <cstring>
@@ -31,7 +27,6 @@ namespace bl {
                 return INVALID_CHUNK_KEY;
             }
 
-            // sub chunk terrain
             int8_t y_index = 0;
             if (key.size() == 10 || key.size() == 14) {
                 if (type != SubChunkTerrain) {
@@ -117,7 +112,7 @@ namespace bl {
     }
     std::string village_key::to_raw() const {
         if (!this->valid()) return {};
-        // keep the dimension segment so parse(to_raw(k)) == k; 3-segment form is kept for dim 0
+        // Preserve the dimension segment so parse(to_raw(k)) round-trips.
         if (this->dim == 1 || this->dim == 2) {
             return "VILLAGE_" + std::string(this->dim == 1 ? "Nether" : "TheEnd") + "_" + this->uuid + "_" +
                    village_key_type_to_str(this->type);
@@ -168,7 +163,7 @@ namespace bl {
 
     std::string village_key::to_string() const { return this->uuid + "," + village_key_type_to_str(this->type); }
 
-    // 25 bytes per area: min(x,y,z) + max(x,y,z) as int32s + 1 type byte
+    // Each area uses 25 bytes: six int32 coordinates and one type byte.
     static constexpr size_t HSA_AREA_SIZE = 24 + 1;
 
     bool hardcoded_spawn_area_list::from_raw(const std::string& raw) {

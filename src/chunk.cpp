@@ -1,7 +1,3 @@
-//
-// Created by xhy on 2023/3/30.
-//
-
 #include "chunk.h"
 
 #include <float.h>
@@ -37,14 +33,6 @@ namespace bl {
         const std::string FINALIZED_STATE_PAYLOAD{'\x02', '\0', '\0', '\0'};
     }  // namespace
 
-    /**
-     * Overworld [-64 ~-1]+[0~319]
-     * [-64,-49][-48,-33][-32,-17][-16,-1]
-     * NEther  [0~127]
-     * The End [0~255]
-     */
-
-    // chunk
     void chunk::map_y_to_subchunk(int y, int& index, int& offset) {
         index = y < 0 ? (y - 15) / 16 : y / 16;
         offset = y % 16;
@@ -93,7 +81,6 @@ namespace bl {
         map_y_to_subchunk(y, index, offset);
         if (auto it = this->sub_chunks_.find(index); it != this->sub_chunks_.end()) return it->second;
 
-        // A built sub-chunk has no version byte of its own, so inherit the chunk's format.
         auto* created = new bl::sub_chunk();
         created->set_version(is_new_chunk_format(this->chunk_format_) ? SubChunkVersion::V9 : SubChunkVersion::V8);
         created->set_y_index(static_cast<int8_t>(index));
@@ -124,15 +111,12 @@ namespace bl {
 
         auto* copy = static_cast<nbt::compound_tag*>(tag->copy());
         auto* added = new actor();
-        // Takes ownership of copy on success, which is what keeps the clone outlived by added.
         if (!added->load_from_nbt_owned(copy)) {
             delete added;
             delete copy;
             return false;
         }
 
-        // The tag carries the id of the actor it was exported from, which is still in the level:
-        // a fresh one keeps the two apart and rewrites the storage key to match.
         added->reassign_uid(static_cast<int64_t>(level.generate_actor_uid()));
         added->set_pos(world_pos.x, world_pos.y, world_pos.z);
 
@@ -144,7 +128,6 @@ namespace bl {
         if (!tag) return;
         const auto area = box.normalized();
 
-        // x/z are chunk-local, so clip them; the Y span is world and gets split per sub-chunk.
         const int x0 = std::max(0, area.min_pos.x);
         const int x1 = std::min(16, area.max_pos.x);
         const int z0 = std::max(0, area.min_pos.z);
@@ -155,7 +138,6 @@ namespace bl {
             int index = 0;
             int offset = 0;
             map_y_to_subchunk(y, index, offset);
-            // How many of the remaining Y values still belong to this sub-chunk.
             const int count = std::min(16 - offset, area.max_pos.y - y);
             const bl::block_box local{{x0, offset, z0}, {x1, offset + count, z1}};
 
@@ -164,7 +146,7 @@ namespace bl {
             if (it != this->sub_chunks_.end()) {
                 target = it->second;
             } else if (layer >= 0) {
-                target = this->ensure_sub_chunk(y);  // layer < 0 never creates terrain
+                target = this->ensure_sub_chunk(y);
             }
             if (target) target->fill_blocks(local, tag, layer);
             y += count;
@@ -176,8 +158,6 @@ namespace bl {
             if (sub) sub->compact();
         }
 
-        // Several writes to one position leave several entities behind; the last one is the live
-        // one, so scan backwards and keep the first entry seen for each position.
         std::set<std::tuple<int, int, int>> occupied;
         std::vector<nbt::compound_tag*> unique;
         unique.reserve(this->block_entities_.size());
@@ -200,8 +180,7 @@ namespace bl {
     }
 
     void chunk::refresh_height_map() {
-        // Without terrain there is nothing to derive heights from; keeping the payload as it
-        // is avoids turning an unloaded chunk into an all-void one.
+        // Do not replace an unloaded height payload with an all-void map.
         if (this->sub_chunks_.empty()) return;
 
         const auto [min_y, max_y] = this->get_y_range();
@@ -218,12 +197,10 @@ namespace bl {
     }
 
     raw_chunk chunk::to_raw_chunk() {
-        // Compacting first keeps the written sub-chunks small; see the header comment.
         this->compact();
         raw_chunk out(this->pos_);
         out.set_chunk_format(this->chunk_format_);
-        // Without a version marker the game does not see the chunk at all, and the format it
-        // reads back is the marker's single-byte payload.
+        // The version marker is required and stores a single-byte format value.
         out.set_normal(is_new_chunk_format(this->chunk_format_) ? chunk_key::VersionNew : chunk_key::VersionOld,
                        std::string(1, static_cast<char>(this->chunk_format_)));
         out.set_normal(chunk_key::FinalizedState, FINALIZED_STATE_PAYLOAD);
@@ -231,8 +208,7 @@ namespace bl {
             if (!sub) continue;
             out.set_sub_chunk(static_cast<int8_t>(index), sub->to_raw());
         }
-        // The key has to match the layout the payload is in: Data3D and Data2D are not
-        // interchangeable, so it follows what the parsed biome data was read as.
+        // Keep the biome key consistent with the stored payload layout.
         out.set_normal(this->d3d_.is_3d() ? chunk_key::Data3D : chunk_key::Data2D, this->d3d_.to_raw());
         if (this->block_entities_loaded_) out.set_block_entities(this->block_entities_);
         if (this->entities_loaded_) out.set_entities(this->entities_);
@@ -272,13 +248,11 @@ namespace bl {
     }
 
     void chunk::load_entities(const bl::raw_chunk& rc) {
-        // try read old version actors
         auto raw = rc.get_normal_key(chunk_key::Entity);
         if (!raw.empty()) {
             auto actors = nbt::read_palette_to_end(raw.data(), raw.size());
             for (auto& a : actors) {
                 auto* ac = new actor;
-                // takes ownership of a on success, avoiding a deep copy per actor
                 if (ac->load_from_nbt_owned(a)) {
                     this->entities_.push_back(ac);
                 } else {
@@ -287,7 +261,6 @@ namespace bl {
                 }
             }
         }
-        // new version actors from raw_chunk
         const auto& digest_raw = rc.get_actor_digest();
         if (!digest_raw.empty()) {
             bl::actor_digest_list list;
@@ -358,7 +331,6 @@ namespace bl {
 
     std::pair<int, int> chunk::get_y_range() const {
         if (this->sub_chunks_.empty()) return {0, -1};
-        // sub_chunks_ is indexed by sub-chunk number and kept sorted, so the ends are the range.
         const int first = this->sub_chunks_.begin()->first;
         const int last = this->sub_chunks_.rbegin()->first;
         return {first * 16, last * 16 + 15};
@@ -377,7 +349,6 @@ namespace bl {
             if (top_y < min_y && name != "minecraft:air") {
                 top_y = y;
             }
-            // solid_y is the highest non-air, non-water block at or below top_y
             if (name != "minecraft:air" && name != "minecraft:water" && solid_y < min_y) {
                 solid_y = y;
             }

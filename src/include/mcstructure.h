@@ -1,7 +1,3 @@
-//
-// Created by xhy on 2023/3/29.
-//
-
 #ifndef BEDROCK_LEVEL_MCSTRUCTURE_H
 #define BEDROCK_LEVEL_MCSTRUCTURE_H
 
@@ -17,7 +13,7 @@
 #include "palette.h"
 
 namespace bl {
-    // Parsed .mcstructure file (Bedrock structure block export). Owns all extracted NBT tags.
+    // Parsed .mcstructure data; owns extracted NBT tags.
     class mcstructure {
        public:
         using layer_type = std::vector<int32_t>;
@@ -48,13 +44,8 @@ namespace bl {
         [[nodiscard]] const std::vector<bl::nbt::compound_tag*>& entities() const noexcept { return entities_; }
         [[nodiscard]] size_t entity_count() const noexcept { return entities_.size(); }
 
-        /// Block entities are two parallel arrays: block_entities()[i] pairs with
-        /// block_entity_local_position(i). That position is structure-local and comes from the
-        /// block_position_data key, while the tag's own x/y/z are the same point in world space
-        /// (origin() + local position); x/y/z of a chest's pairx/pairz partner are offset the
-        /// same way. When a file's key and x/y/z disagree the key wins -- read positions through
-        /// block_entity_local_position(i), never from the NBT. Use these coordinates to index the
-        /// structure's own blocks; add origin() to reach the world.
+        /// Positions come from block_position_data; the key wins over tag coordinates.
+        /// They are local to the structure; add origin() for world coordinates.
         [[nodiscard]] const std::vector<bl::nbt::compound_tag*>& block_entities() const noexcept { return block_entities_; }
         [[nodiscard]] size_t block_entity_count() const noexcept { return block_entities_.size(); }
         [[nodiscard]] block_pos block_entity_local_position(size_t index) const noexcept;
@@ -67,7 +58,6 @@ namespace bl {
         [[nodiscard]] std::string to_raw() const;
         [[nodiscard]] bool save_to_file(const std::string& file_name) const;
 
-        // readable summary of the parsed structure
         std::string dump() const;
 
        private:
@@ -76,11 +66,10 @@ namespace bl {
 
         int size_x_{0}, size_y_{0}, size_z_{0};
         int32_t version_{0};
-        std::vector<palette_entry> palette_;  // block states from the "default" palette; owns tags
+        std::vector<palette_entry> palette_;  // Default palette; owns tags.
         layer_type layers_[2];                // block index per layer (ZYX order); -1 = void
         block_pos origin_;
-        std::vector<bl::nbt::compound_tag*> entities_;  // owned
-        // paired by index with block_entities_; local to the structure, see block_entity_local_position()
+        std::vector<bl::nbt::compound_tag*> entities_;        // owned
         std::vector<bl::nbt::compound_tag*> block_entities_;  // owned
         std::vector<block_pos> block_entity_local_positions_;
     };
@@ -90,7 +79,7 @@ namespace bl {
 
     class mcstructure_builder {
        public:
-        // origin is the structure_world_origin metadata used when the structure is loaded back into a world.
+        // origin is the structure_world_origin used when loading the structure into a world.
         mcstructure_builder(const block_pos& size, const block_pos& origin, int32_t version = 1);
 
         mcstructure_builder& set_block(const block_pos& pos, const bl::nbt::compound_tag* tag);

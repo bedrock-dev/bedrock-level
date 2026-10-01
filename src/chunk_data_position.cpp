@@ -1,7 +1,3 @@
-//
-// Created by xhy on 2026/9/17.
-//
-
 #include "chunk_data_position.h"
 
 #include "nbt.h"

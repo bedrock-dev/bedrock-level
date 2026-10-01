@@ -1,7 +1,3 @@
-//
-// Created by xhy on 2023/6/21.
-//
-
 #include "level_dat.h"
 
 #include <cctype>
@@ -42,12 +38,10 @@ namespace bl {
     LevelChunkFormat client_version_to_chunk_format(const ClientVersion& version) {
         const std::array<int, 3> client{version.version[0], version.version[1], version.version[2]};
         const auto formats = magic_enum::enum_values<LevelChunkFormat>();
-        // Formats are listed in the order they were introduced, so the newest one the client can
-        // read is the last entry that is not newer than the client.
+        // Select the newest format no newer than the client.
         for (auto it = formats.rbegin(); it != formats.rend(); ++it) {
             if (*it == LevelChunkFormat::Count) continue;  // upper bound of the enum, not a format
-            // "V1_16_300CavesCliffsPart1" -> 1.16.300, "V9_00" -> 0.9.0. Digits inside a trailing
-            // label name a revision, so only the first three number groups are read.
+                                                           // Read only the first three numeric groups; later digits are revision labels.
             std::array<int, 3> format{0, 0, 0};
             const std::string_view name = magic_enum::enum_name(*it);
             size_t groups = 0;
@@ -63,8 +57,7 @@ namespace bl {
                 }
                 format[groups++] = value;
             }
-            // Formats from before 1.0 drop the leading major ("V17_0" is 0.17.0), so a name that
-            // holds only two number groups is a 0.<major>.<minor> version.
+            // Two numeric groups denote a pre-1.0 version: V17_0 means 0.17.0.
             if (groups == 2) format = {0, format[0], format[1]};
             if (format <= client) return *it;
         }

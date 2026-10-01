@@ -1,7 +1,3 @@
-//
-// Created by xhy on 2023/3/30.
-//
-
 #include "data_3d.h"
 
 #include <cstdio>
@@ -30,8 +26,7 @@ namespace bl {
 
                 for (int wordi = 0; wordi < word_count; wordi++) {
                     auto word = *reinterpret_cast<const int*>(data + read + wordi * 4);
-                    // word_count * bpw can exceed 4096 when bits does not divide 32
-                    // (e.g. bits 3/5/6); stop decoding once all entries are filled.
+                    // word_count * bpw can exceed 4096 for widths such as 3, 5, and 6.
                     for (int block = 0; block < bpw && position < BLOCK_NUM; block++) {
                         int state = (word >> ((position % bpw) * bits)) & ((1 << bits) - 1);
                         index[position] = state;
@@ -69,8 +64,7 @@ namespace bl {
             out.push_back(static_cast<char>((v >> 24) & 0xff));
         }
 
-        // Reverse of load_subchunk_biome(): packs one biome sub-chunk. values is indexed
-        // x * 256 + z * 16 + y, the order the on-disk array uses.
+        // Packs one biome sub-chunk in the on-disk x * 256 + z * 16 + y order.
         void append_packed_biome_sub_chunk(std::string& out, const std::vector<biome>& values) {
             std::array<int32_t, 256> slot;
             slot.fill(-1);
@@ -86,8 +80,7 @@ namespace bl {
             }
 
             if (palette.size() <= 1) {
-                // 0xff is what the reader (and the game) uses for a sub-chunk that holds no
-                // biome record at all; a single biome needs no index array either.
+                // 0xff marks an empty sub-chunk; a single biome needs no index array.
                 if (palette.empty() || palette[0] == biome::none) {
                     out.push_back(static_cast<char>(0xff));
                     return;
@@ -149,7 +142,6 @@ namespace bl {
         }
         y -= dimension_min_y(this->pos_.dim);
 
-        //        printf("y = %d\n", y);
         if (y >= static_cast<int>(this->biomes_.size()) || y < 0) {
             return biome::none;
         }
@@ -189,7 +181,7 @@ namespace bl {
         return y < 0 ? biome::none : this->biomes_[y][cx * 16 + cz];
     }
     bool biome3d::load_from_d2d(const byte_t* data, size_t len) {
-        if (len != 768) {  // height map: 512bytes biome: 256 bytes
+        if (len != 768) {  // 512-byte height map plus 256-byte biome map
             LOG_F(ERROR, "Invalid Data2d format (%zu)", len);
             return false;
         }
@@ -229,7 +221,7 @@ namespace bl {
     }
 
     void biome3d::set_height(int x, int z, int world_y) {
-        // Inverse of height(): Data2D carries no Y anchor, so its rows stay world-space.
+        // Data2D has no Y anchor, so its rows remain in world-space.
         const int my = this->use_3d_biome_maps_ ? dimension_min_y(this->pos_.dim) : 0;
         this->height_map_[x + z * 16] = static_cast<int16_t>(world_y - my);
     }

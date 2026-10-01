@@ -830,24 +830,6 @@
     "concrete_powder_red": "#a83632ff",
     "concrete_powder_black": "#191a1fff"
   },
-  "minecraft:concrete_powder": {
-    "concrete_powder_white": "#e1e3e3ff",
-    "concrete_powder_orange": "#e3831fff",
-    "concrete_powder_magenta": "#c053b8ff",
-    "concrete_powder_light_blue": "#4ab4d5ff",
-    "concrete_powder_yellow": "#e8c736ff",
-    "concrete_powder_lime": "#7dbd29ff",
-    "concrete_powder_pink": "#e499b5ff",
-    "concrete_powder_gray": "#4c5154ff",
-    "concrete_powder_silver": "#9a9a94ff",
-    "concrete_powder_cyan": "#24939dff",
-    "concrete_powder_purple": "#8337b1ff",
-    "concrete_powder_blue": "#4649a6ff",
-    "concrete_powder_brown": "#7d5435ff",
-    "concrete_powder_green": "#61772cff",
-    "concrete_powder_red": "#a83632ff",
-    "concrete_powder_black": "#191a1fff"
-  },
   "minecraft:conduit": {
     "conduit_base": "#a08c72bf"
   },
@@ -1394,27 +1376,7 @@
     "quartz_block_top": "#ebe5deff",
     "nether_brick": "#2c151aff"
   },
-  "minecraft:double_stone_block_slab": {
-    "stone_slab_top": "#9e9e9eff",
-    "sandstone_top": "#dfd6aaff",
-    "planks_oak": "#a2824eff",
-    "cobblestone": "#7f7f7fff",
-    "brick": "#966153ff",
-    "stonebrick": "#7a797aff",
-    "quartz_block_top": "#ebe5deff",
-    "nether_brick": "#2c151aff"
-  },
   "minecraft:double_stone_slab2": {
-    "red_sandstone_top": "#b5611fff",
-    "purpur_block": "#a97da9ff",
-    "prismarine_rough": "#639c97ff",
-    "prismarine_dark": "#335b4bff",
-    "prismarine_bricks": "#63ab9eff",
-    "cobblestone_mossy": "#6e765eff",
-    "sandstone_top": "#dfd6aaff",
-    "red_nether_brick": "#450709ff"
-  },
-  "minecraft:double_stone_block_slab2": {
     "red_sandstone_top": "#b5611fff",
     "purpur_block": "#a97da9ff",
     "prismarine_rough": "#639c97ff",
@@ -1434,24 +1396,7 @@
     "stone_granite": "#956755ff",
     "stone_granite_smooth": "#9a6a59ff"
   },
-  "minecraft:double_stone_block_slab3": {
-    "end_bricks": "#dae0a2ff",
-    "red_sandstone_top": "#b5611fff",
-    "stone_andesite_smooth": "#848685ff",
-    "stone_andesite": "#888888ff",
-    "stone_diorite": "#bcbcbcff",
-    "stone_diorite_smooth": "#c0c1c2ff",
-    "stone_granite": "#956755ff",
-    "stone_granite_smooth": "#9a6a59ff"
-  },
   "minecraft:double_stone_slab4": {
-    "stonebrick_mossy": "#737969ff",
-    "quartz_block_bottom": "#ece6dfff",
-    "stone": "#7d7d7dff",
-    "sandstone_top": "#dfd6aaff",
-    "red_sandstone_top": "#b5611fff"
-  },
-  "minecraft:double_stone_block_slab4": {
     "stonebrick_mossy": "#737969ff",
     "quartz_block_bottom": "#ece6dfff",
     "stone": "#7d7d7dff",
@@ -1697,9 +1642,6 @@
     "stone_granite": "#956755ff"
   },
   "minecraft:grass": {
-    "grass_top": "#939393ff"
-  },
-  "minecraft:grass_block": {
     "grass_top": "#939393ff"
   },
   "minecraft:grass_path": {
@@ -3360,9 +3302,6 @@
   "minecraft:redstone_block": {
     "redstone_block": "#af1805ff"
   },
-  "minecraft:redstone_wire": {
-    "redstone_block": "#af1805ff"
-  },
   "minecraft:redstone_lamp": {
     "redstone_lamp_off": "#5f361eff"
   },
@@ -3458,9 +3397,6 @@
     "sculk_vein": "#073039b0"
   },
   "minecraft:seaLantern": {
-    "sea_lantern": "#acc7beff"
-  },
-  "minecraft:sea_lantern": {
     "sea_lantern": "#acc7beff"
   },
   "minecraft:sea_pickle": {
@@ -3785,27 +3721,7 @@
     "quartz_block_top": "#ebe5deff",
     "nether_brick": "#2c151aff"
   },
-  "minecraft:stone_block_slab": {
-    "stone_slab_top": "#9e9e9eff",
-    "sandstone_top": "#dfd6aaff",
-    "planks_oak": "#a2824eff",
-    "cobblestone": "#7f7f7fff",
-    "brick": "#966153ff",
-    "stonebrick": "#7a797aff",
-    "quartz_block_top": "#ebe5deff",
-    "nether_brick": "#2c151aff"
-  },
   "minecraft:stone_slab2": {
-    "red_sandstone_top": "#b5611fff",
-    "purpur_block": "#a97da9ff",
-    "prismarine_rough": "#639c97ff",
-    "prismarine_dark": "#335b4bff",
-    "prismarine_bricks": "#63ab9eff",
-    "cobblestone_mossy": "#6e765eff",
-    "sandstone_top": "#dfd6aaff",
-    "red_nether_brick": "#450709ff"
-  },
-  "minecraft:stone_block_slab2": {
     "red_sandstone_top": "#b5611fff",
     "purpur_block": "#a97da9ff",
     "prismarine_rough": "#639c97ff",
@@ -3825,24 +3741,7 @@
     "stone_granite": "#956755ff",
     "stone_granite_smooth": "#9a6a59ff"
   },
-  "minecraft:stone_block_slab3": {
-    "end_bricks": "#dae0a2ff",
-    "red_sandstone_top": "#b5611fff",
-    "stone_andesite_smooth": "#848685ff",
-    "stone_andesite": "#888888ff",
-    "stone_diorite": "#bcbcbcff",
-    "stone_diorite_smooth": "#c0c1c2ff",
-    "stone_granite": "#956755ff",
-    "stone_granite_smooth": "#9a6a59ff"
-  },
   "minecraft:stone_slab4": {
-    "stonebrick_mossy": "#737969ff",
-    "quartz_block_bottom": "#ece6dfff",
-    "stone": "#7d7d7dff",
-    "sandstone_top": "#dfd6aaff",
-    "red_sandstone_top": "#b5611fff"
-  },
-  "minecraft:stone_block_slab4": {
     "stonebrick_mossy": "#737969ff",
     "quartz_block_bottom": "#ece6dfff",
     "stone": "#7d7d7dff",
@@ -4046,9 +3945,6 @@
     "trial_spawner_top_ejecting_reward_ominous": "#213745ff"
   },
   "minecraft:tripWire": {
-    "trip_wire": "#81818129"
-  },
-  "minecraft:trip_wire": {
     "trip_wire": "#81818129"
   },
   "minecraft:tripwire_hook": {
@@ -4676,5 +4572,112 @@
   },
   "minecraft:zombie_head": {
     "soul_sand": "#513e32ff"
+  },
+  "minecraft:grass_block": {
+    "grass_top": "#939393ff"
+  },
+  "minecraft:stone_block_slab": {
+    "stone_slab_top": "#9e9e9eff",
+    "sandstone_top": "#dfd6aaff",
+    "planks_oak": "#a2824eff",
+    "cobblestone": "#7f7f7fff",
+    "brick": "#966153ff",
+    "stonebrick": "#7a797aff",
+    "quartz_block_top": "#ebe5deff",
+    "nether_brick": "#2c151aff"
+  },
+  "minecraft:stone_block_slab2": {
+    "red_sandstone_top": "#b5611fff",
+    "purpur_block": "#a97da9ff",
+    "prismarine_rough": "#639c97ff",
+    "prismarine_dark": "#335b4bff",
+    "prismarine_bricks": "#63ab9eff",
+    "cobblestone_mossy": "#6e765eff",
+    "sandstone_top": "#dfd6aaff",
+    "red_nether_brick": "#450709ff"
+  },
+  "minecraft:stone_block_slab3": {
+    "end_bricks": "#dae0a2ff",
+    "red_sandstone_top": "#b5611fff",
+    "stone_andesite_smooth": "#848685ff",
+    "stone_andesite": "#888888ff",
+    "stone_diorite": "#bcbcbcff",
+    "stone_diorite_smooth": "#c0c1c2ff",
+    "stone_granite": "#956755ff",
+    "stone_granite_smooth": "#9a6a59ff"
+  },
+  "minecraft:stone_block_slab4": {
+    "stonebrick_mossy": "#737969ff",
+    "quartz_block_bottom": "#ece6dfff",
+    "stone": "#7d7d7dff",
+    "sandstone_top": "#dfd6aaff",
+    "red_sandstone_top": "#b5611fff"
+  },
+  "minecraft:double_stone_block_slab": {
+    "stone_slab_top": "#9e9e9eff",
+    "sandstone_top": "#dfd6aaff",
+    "planks_oak": "#a2824eff",
+    "cobblestone": "#7f7f7fff",
+    "brick": "#966153ff",
+    "stonebrick": "#7a797aff",
+    "quartz_block_top": "#ebe5deff",
+    "nether_brick": "#2c151aff"
+  },
+  "minecraft:double_stone_block_slab2": {
+    "red_sandstone_top": "#b5611fff",
+    "purpur_block": "#a97da9ff",
+    "prismarine_rough": "#639c97ff",
+    "prismarine_dark": "#335b4bff",
+    "prismarine_bricks": "#63ab9eff",
+    "cobblestone_mossy": "#6e765eff",
+    "sandstone_top": "#dfd6aaff",
+    "red_nether_brick": "#450709ff"
+  },
+  "minecraft:double_stone_block_slab3": {
+    "end_bricks": "#dae0a2ff",
+    "red_sandstone_top": "#b5611fff",
+    "stone_andesite_smooth": "#848685ff",
+    "stone_andesite": "#888888ff",
+    "stone_diorite": "#bcbcbcff",
+    "stone_diorite_smooth": "#c0c1c2ff",
+    "stone_granite": "#956755ff",
+    "stone_granite_smooth": "#9a6a59ff"
+  },
+  "minecraft:double_stone_block_slab4": {
+    "stonebrick_mossy": "#737969ff",
+    "quartz_block_bottom": "#ece6dfff",
+    "stone": "#7d7d7dff",
+    "sandstone_top": "#dfd6aaff",
+    "red_sandstone_top": "#b5611fff"
+  },
+  "minecraft:sea_lantern": {
+    "sea_lantern": "#acc7beff"
+  },
+  "minecraft:trip_wire": {
+    "trip_wire": "#81818129"
+  },
+  "minecraft:concrete_powder": {
+    "concrete_powder_white": "#e1e3e3ff",
+    "concrete_powder_orange": "#e3831fff",
+    "concrete_powder_magenta": "#c053b8ff",
+    "concrete_powder_light_blue": "#4ab4d5ff",
+    "concrete_powder_yellow": "#e8c736ff",
+    "concrete_powder_lime": "#7dbd29ff",
+    "concrete_powder_pink": "#e499b5ff",
+    "concrete_powder_gray": "#4c5154ff",
+    "concrete_powder_silver": "#9a9a94ff",
+    "concrete_powder_cyan": "#24939dff",
+    "concrete_powder_purple": "#8337b1ff",
+    "concrete_powder_blue": "#4649a6ff",
+    "concrete_powder_brown": "#7d5435ff",
+    "concrete_powder_green": "#61772cff",
+    "concrete_powder_red": "#a83632ff",
+    "concrete_powder_black": "#191a1fff"
+  },
+  "minecraft:redstone_wire": {
+    "redstone_block": "#af1805ff"
+  },
+  "minecraft:poppy": {
+    "flower_rose": "#80402522"
   }
 }

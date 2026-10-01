@@ -1,7 +1,3 @@
-//
-// Created by xhy on 2023/3/30.
-//
-
 #ifndef BEDROCK_LEVEL_DATA_3D_H
 #define BEDROCK_LEVEL_DATA_3D_H
 
@@ -107,7 +103,7 @@ namespace bl {
         deep_dark                        = 190,
         mangrove_swamp                   = 191,
         cherry_groves                    = 192,
-        //1.21
+// 1.21
         pale_garden                      = 193,
         none                             = 255,
     };
@@ -127,11 +123,10 @@ namespace bl {
 
     class biome3d {
        public:
-        // Height map entry for a position with no height/biome record. height()
-        // shifts the raw value by the dimension's min_y, so this stays unshifted.
+        // Missing height/biome entries stay unshifted before height() applies min_y.
         static constexpr int16_t INVALID_HEIGHT = 0xFFFF;
 
-        // Raw height map value the game stores for a column that holds no block at all.
+        // Raw value used for a column with no blocks.
         static constexpr int16_t VOID_HEIGHT = -128;
 
         bool load_from_d3d(const byte_t* data, size_t len);
@@ -139,7 +134,7 @@ namespace bl {
         bool load_from_d2d(const byte_t* data, size_t len);
 
         inline int height(int x, int z) {
-            // Data2D stores no Y anchor (single layer); only the Data3D path shifts.
+            // Only Data3D applies the dimension Y offset.
             const int my = this->use_3d_biome_maps_ ? dimension_min_y(this->pos_.dim) : 0;
             return this->height_map_[x + z * 16] + my;
         }
@@ -176,17 +171,15 @@ namespace bl {
         }
 
         std::array<int16_t, 256> height_map_ = make_invalid_height_map();
-        // one 16x16 biome layer per y slice, indexed [layer][x*16+z]
+        // One 16x16 biome layer per Y slice, indexed [layer][x * 16 + z].
         std::vector<std::array<biome, 256>> biomes_;
         bl::chunk_pos pos_;
-        // Which layout the payload uses, set by load_from_d3d / load_from_d2d. This is a
-        // property of the payload itself: a 1.18+ chunk can still carry legacy Data2D biomes.
+        // True for Data3D and false for legacy Data2D, regardless of chunk version.
         bool use_3d_biome_maps_{true};
     };
 
-    /// Replaces every biome of chunk's stored biome payload, keeping the encoding it was read
-    /// with: Data3D and Data2D are different layouts and the payload has to match its key.
-    /// Returns false when the chunk holds neither key.
+    /// Replaces every stored biome while preserving the payload's Data3D/Data2D encoding.
+    /// Returns false when neither biome key is present.
     bool set_raw_chunk_biome(raw_chunk& chunk, biome b);
 }  // namespace bl
 

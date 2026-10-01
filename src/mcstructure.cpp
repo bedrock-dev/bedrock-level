@@ -1,7 +1,3 @@
-//
-// Created by xhy on 2023/3/29.
-//
-
 #include "mcstructure.h"
 
 #include <algorithm>
@@ -104,7 +100,7 @@ namespace bl {
 
         auto* block_indices = new bl::nbt::list_tag("block_indices");
         for (int layer = 0; layer < 2; ++layer) {
-            // Version 2 stores each layer as an IntArrayTag and omits an empty extra layer.
+            // Version 2 stores layers as IntArrayTag and omits an empty extra layer.
             const bool zero_is_empty = palette_.empty() || !is_visible_block_name(palette_.front().name);
             const bool extra_layer_empty = std::all_of(layers_[layer].begin(), layers_[layer].end(), [zero_is_empty](int32_t index) {
                 return index < 0 || (zero_is_empty && index == 0);
@@ -399,7 +395,7 @@ namespace bl {
         result.layers_[0].assign(volume, -1);
         result.layers_[1].assign(volume, -1);
 
-        // Version 1 uses ListTag<IntTag> layers; version 2 uses ListTag<IntArrayTag> layers.
+        // Version 1 uses ListTag<IntTag>; version 2 uses ListTag<IntArrayTag>.
         if (auto* bi = get_list("structure.block_indices")) {
             for (int layer = 0; layer < 2 && layer < static_cast<int>(bi->value.size()); layer++) {
                 if (auto* layer_array = bi->value[layer]->as<bl::nbt::int_array_tag*>(); layer_array) {
@@ -418,7 +414,6 @@ namespace bl {
             }
         }
 
-        // entities: list of entity NBT compounds
         if (auto* e_list = get_list("structure.entities")) {
             result.entities_.reserve(e_list->value.size());
             for (auto* child : e_list->value) {
@@ -428,7 +423,6 @@ namespace bl {
             }
         }
 
-        // palette -> default -> block_palette
         if (auto* bp_list = get_list("structure.palette.default.block_palette")) {
             result.palette_.reserve(bp_list->value.size());
             for (auto* child : bp_list->value) {
@@ -438,7 +432,6 @@ namespace bl {
             }
         }
 
-        // block_position_data: key = flat index, value -> block_entity_data
         if (auto* bpd = get_compound("structure.palette.default.block_position_data")) {
             for (auto& kv : bpd->value) {
                 size_t flat = 0;

@@ -1,7 +1,3 @@
-//
-// Created by xhy on 2023/3/31.
-//
-
 #ifndef BEDROCK_LEVEL_GLOBAL_H
 #define BEDROCK_LEVEL_GLOBAL_H
 #include <array>

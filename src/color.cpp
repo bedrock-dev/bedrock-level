@@ -1,7 +1,3 @@
-//
-// Created by xhy on 2023/6/18.
-//
-
 #include "color.h"
 
 #include <cstdint>
@@ -20,14 +16,12 @@
 namespace bl {
     namespace {
 
-        // biome id -> water
         const std::vector<std::string> water_block_names{"water"};
-        const std::vector<std::string> leaves_block_names{"leave"};
+        const std::vector<std::string> leaves_block_names{"leave", "leaf_litter"};
         const std::vector<std::string> grass_block_names{"grass"};
 
         using tint_kind = biome_tint_kind;
 
-        // which biome tint applies to a block name
         tint_kind classify_tint(std::string_view name) {
             for (const auto& s : water_block_names) {
                 if (name.find(s) != std::string_view::npos) return tint_kind::water;
@@ -41,9 +35,7 @@ namespace bl {
             return tint_kind::none;
         }
 
-        // Block names repeat heavily in a world, so classify each unique name once.
-        // Section rendering calls this from several worker threads, so the cache is
-        // per-thread rather than shared.
+        // Cache block classification per thread because section rendering is concurrent.
         tint_kind get_tint_kind(const std::string& name) {
             static thread_local std::unordered_map<std::string, tint_kind> cache;
             auto it = cache.find(name);
@@ -61,13 +53,11 @@ namespace bl {
         bl::color default_leave_color{113, 167, 77};
         bl::color default_grass_color{142, 185, 113};
 
-        // biome id -> biome color
         std::unordered_map<biome, bl::color> biome_color_map;
 
         std::unordered_map<std::string, bl::color> single_block_color_map;
         std::unordered_map<std::string, std::unordered_map<std::string, bl::color>> multi_block_color_map;
 
-        // block id -> name (without "minecraft:" prefix), built from the block color table
         std::vector<std::string> block_id_to_names;
         std::unordered_map<std::string, int> block_name_to_ids;
 
@@ -129,8 +119,7 @@ namespace bl {
             return {channels[0], channels[1], channels[2], channels[3]};
         }
 
-        /// Block color entry as either "#rrggbbaa" or a 4-element [r, g, b, a] array, so tables
-        /// written before the hex format keep loading.
+        /// Accept hex colors and legacy four-element RGBA arrays.
         bl::color read_block_color(const nlohmann::json& value) {
             if (value.is_string()) return read_hex_color(value.get<std::string>());
             if (value.is_array() && value.size() >= 4) {
@@ -182,10 +171,14 @@ namespace bl {
 
     biome_tint_kind block_biome_tint_kind(const std::string& name) {
         switch (get_tint_kind(name)) {
-            case tint_kind::water: return biome_tint_kind::water;
-            case tint_kind::leaves: return biome_tint_kind::leaves;
-            case tint_kind::grass: return biome_tint_kind::grass;
-            default: return biome_tint_kind::none;
+            case tint_kind::water:
+                return biome_tint_kind::water;
+            case tint_kind::leaves:
+                return biome_tint_kind::leaves;
+            case tint_kind::grass:
+                return biome_tint_kind::grass;
+            default:
+                return biome_tint_kind::none;
         }
     }
 
@@ -209,7 +202,8 @@ namespace bl {
                 auto it = biome_grass_map.find(b);
                 return it == biome_grass_map.end() ? default_grass_color : it->second;
             }
-            default: return {255, 255, 255, 255};
+            default:
+                return {255, 255, 255, 255};
         }
     }
 
@@ -234,7 +228,6 @@ namespace bl {
                     biome_color_map[static_cast<biome>(id)] = read_rgb_color(value["rgb"]);
                 }
 
-                // water
                 if (value.contains("water")) {
                     auto c = read_tint_color(value["water"]);
                     biome_water_map[static_cast<biome>(id)] = c;
@@ -284,7 +277,6 @@ namespace bl {
                 }
             }
 
-            // build a stable block id -> name table (names stored without the "minecraft:" prefix)
             block_id_to_names.clear();
             block_name_to_ids.clear();
             for (const auto& [blockname, value] : j.items()) {

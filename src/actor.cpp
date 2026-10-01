@@ -1,7 +1,3 @@
-//
-// Created by xhy on 2023/3/31.
-//
-
 #include "actor.h"
 
 #include <cstdint>
@@ -92,7 +88,6 @@ namespace bl {
         this->uid_ = uid;
         if (!root_) return;
 
-        // update UniqueID
         auto it = root_->value.find("UniqueID");
         if (it != root_->value.end()) {
             auto* lt = dynamic_cast<bl::nbt::long_tag*>(it->second);
@@ -101,7 +96,6 @@ namespace bl {
             }
         }
 
-        // update internalComponents -> EntityStorageKeyComponent -> StorageKey
         auto storage_key = this->storage_key_raw();
         auto* ic = dynamic_cast<bl::nbt::compound_tag*>(root_->get("internalComponents"));
         if (!ic) {

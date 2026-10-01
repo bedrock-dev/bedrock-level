@@ -1,7 +1,3 @@
-//
-// Created by xhy on 2023/3/29.
-//
-
 #ifndef BEDROCK_LEVEL_SUB_CHUNK_H
 #define BEDROCK_LEVEL_SUB_CHUNK_H
 
@@ -14,8 +10,7 @@
 #include "palette.h"
 
 namespace bl {
-    // On-disk layout version of a SubChunkTerrain payload, stored as its first byte.
-    // read_header() rejects everything outside this set.
+    // On-disk SubChunkTerrain version byte.
     enum class SubChunkVersion : uint8_t {
         V8 = 8,  // 1.2~1.17: header is version + layer count
         V9 = 9   // 1.18+: header also carries a Y index
@@ -44,26 +39,16 @@ namespace bl {
             std::vector<uint16_t> blocks{};
             std::vector<palette_entry> palette;
 
-            /// Writes one block using the same (rx, ry, rz) convention as get_block_name.
-            /// An untouched layer is seeded with air first, so positions that are never written
-            /// read back as air rather than as whichever block happened to be written first.
-            /// Palette entries are appended and NOT deduplicated -- call compact() before writing.
+            /// Write a block; untouched positions remain air.
             void set_block(int rx, int ry, int rz, const nbt::compound_tag* tag);
 
-            /// Fills the whole layer with one block, discarding the previous palette. The
-            /// result is a uniform layer (bits == 0) once compact() has run.
+            /// Fill the entire layer with one block.
             void fill_blocks(const nbt::compound_tag* tag);
 
-            /// Fills the part of the layer inside box (sub-chunk-local coordinates, clipped to
-            /// 0..15) with one block. Unlike the whole-layer overload this APPENDS a palette
-            /// entry and leaves the rest of the layer alone, matching set_block. compact() drops
-            /// whatever the overwrite made unreferenced.
+            /// Fill a clipped sub-chunk-local box with one block.
             void fill_blocks(const block_box& box, const nbt::compound_tag* tag);
 
-            /// Rebuilds the palette from the entries the blocks actually reference, dropping
-            /// duplicates and entries nothing points at. This is the write-prep step: afterwards
-            /// the palette describes exactly what the layer holds, so a layer that was cleared
-            /// down to one block serializes as uniform (bits == 0).
+            /// Remove unused palette entries and rebuild indices.
             void compact();
 
             ~layer();
@@ -74,8 +59,7 @@ namespace bl {
 
         bool load(const byte_t* data, size_t len);
 
-        /// Serialize back into a SubChunkTerrain payload. The cached bits / palette_len layer
-        /// fields are ignored; both are recomputed from the palette while writing.
+        /// Serialize to a SubChunkTerrain payload.
         [[nodiscard]] std::string to_raw() const;
 
         void set_version(SubChunkVersion version) { this->version_ = static_cast<uint8_t>(version); }
@@ -92,24 +76,16 @@ namespace bl {
 
         block_appearance get_block_with_color(int rx, int ry, int rz, int layer);
 
-        /// Writes one block, creating the target layer (and any layers below it) when needed.
-        /// Same append-only rule as layer::set_block: deduplicate with compact() afterwards.
+        /// Write a block, creating missing layers as needed.
         void set_block(int rx, int ry, int rz, const nbt::compound_tag* tag, int layer_index = 0);
 
-        /// Fills whole layers with one block, discarding their previous palettes.
-        /// layer_index < 0 fills every existing layer and does nothing when there are none;
-        /// otherwise the target layer is created as uniform air if it does not exist yet.
+        /// Fill whole layers with one block.
         void fill_layer(const nbt::compound_tag* tag, int layer_index = -1);
 
-        /// Fills the part of the given layers inside box (sub-chunk-local, left-closed
-        /// right-open) with one block, leaving everything outside the box alone.
-        /// layer_index behaves as in fill_layer.
+        /// Fill a left-closed/right-open box in the selected layers.
         void fill_blocks(const block_box& box, const nbt::compound_tag* tag, int layer_index = -1);
 
-        /// Rebuilds every layer so its palette holds exactly the blocks in use. Editing appends
-        /// palette entries, so this is what restores the compact on-disk form before writing;
-        /// without it the output stays valid but can be orders of magnitude larger.
-        /// Invalidates any nbt::compound_tag* previously returned by get_block_raw().
+        /// Compact every layer before writing.
         void compact();
 
        private:

@@ -1,7 +1,3 @@
-//
-// Created by xhy on 2023/3/30.
-//
-
 #include "bedrock_level.h"
 
 #include <atomic>
@@ -48,16 +44,13 @@ namespace bl {
         options_.block_cache = leveldb::NewLRUCache(20 * 1024 * 1024);
         options_.write_buffer_size = 4 * 1024 * 1024;
         options_.block_size = 163840;
-        // Slot 0 is the reader for the raw-deflate block tables the world is stored with,
-        // slot 1 for zlib-wrapped data. Both codecs share the serialize ids, so swapping
-        // the slot 0 object changes the speed of every block read and nothing else.
+        // Slot 0 reads raw-deflate tables; slot 1 reads zlib-wrapped data.
         if (libdeflate) {
             options_.compressors[0] = new leveldb::LibdeflateCompressorRaw(6);
         } else {
             options_.compressors[0] = new leveldb::ZlibCompressorRaw(-1);
         }
         options_.compressors[1] = new leveldb::ZlibCompressor();
-        // read option
         read_option_.decompress_allocator = new leveldb::DecompressAllocator();
     };
 
@@ -157,11 +150,7 @@ namespace bl {
     }
 
     void bedrock_level::roll_actor_uid_tag() {
-        // The game's own counter walks down from the top of the 32-bit space (worldStartCount
-        // counts down from there, one step per world open), so a tag at or below it is either in
-        // use or about to be. Drawing from the lower half stays clear of that path -- the game
-        // would need billions of world opens to reach it -- and a fresh draw per open keeps two
-        // runs of this tool from producing the same ids.
+        // Avoid the game's descending counter range and choose a fresh ID range per open.
         std::random_device device;
         std::uniform_int_distribution<uint32_t> distribution(1, 0x7FFFFFFFu);
         this->actor_uid_tag_ = distribution(device);
@@ -170,7 +159,6 @@ namespace bl {
 
     uint64_t bedrock_level::generate_actor_uid() { return (static_cast<uint64_t>(this->actor_uid_tag_) << 32) | this->actor_uid_index++; }
 
-    // private
     chunk* bedrock_level::load_chunk(const chunk_pos& cp, chunk_load_policy policy) {
         auto* chunk = new bl::chunk(cp);
         if (!chunk->load_data(*this, policy)) {

@@ -1,7 +1,3 @@
-//
-// Created by xhy on 2023/3/30.
-//
-
 #ifndef BEDROCK_LEVEL_BEDROCK_KEY_H
 #define BEDROCK_LEVEL_BEDROCK_KEY_H
 
@@ -63,11 +59,10 @@ namespace bl {
         Count = 43,
     };
 
-    /// Chunks saved from this format on use the 1.18+ layout (negative-Y sub-chunks, 3D biomes).
+    /// Whether the format uses negative-Y sub-chunks and 3D biomes.
     [[nodiscard]] constexpr bool is_new_chunk_format(LevelChunkFormat format) noexcept { return format >= LevelChunkFormat::V1_16_210; }
 
-    /// Chunks saved from this format on store each actor under its own "actorprefix" key instead
-    /// of concatenating the tags into the Entity key.
+    /// Whether actors use individual `actorprefix` keys.
     [[nodiscard]] constexpr bool uses_individual_actor_storage(LevelChunkFormat format) noexcept {
         return format >= LevelChunkFormat::V1_18_3IndividualActorStorage;
     }
@@ -109,8 +104,7 @@ namespace bl {
 
         static std::string chunk_key_to_str(chunk_key::key_type key);
 
-        /// Classification only reads the key, so it takes a view: a scan that
-        /// walks the database can pass iterator keys without copying each one.
+        /// Parse a key without copying its bytes.
         static chunk_key parse(std::string_view key);
 
         [[maybe_unused]] const static chunk_key INVALID_CHUNK_KEY;
@@ -169,7 +163,7 @@ namespace bl {
         block_pos max_pos{0, 0, 0};
     };
 
-    // hardcoded spawn areas of a chunk, with (de)serialization for the HardCodedSpawnAreas key
+    // Hardcoded spawn areas with HardCodedSpawnAreas serialization.
     class hardcoded_spawn_area_list {
        public:
         using iterator = std::vector<hardcoded_spawn_area>::iterator;

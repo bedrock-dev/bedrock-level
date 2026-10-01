@@ -33,11 +33,7 @@ namespace bl {
         [[nodiscard]] bool is_slime() const;
     };
 
-    /// World Y that a Data3D biome payload starts at. The payload does not record where it
-    /// begins, so this is a property of the dimension rather than of any particular chunk: it is
-    /// the bottom of the dimension. Unrelated to how a chunk is serialized -- Data3D only exists
-    /// in worlds whose height is the 1.18+ one. Dimensions without a built-in convention read the
-    /// floor from bl::config.
+    /// World Y where Data3D biome payloads start; custom dimensions use bl::config.
     [[nodiscard]] int32_t dimension_min_y(int32_t dim) noexcept;
 
     struct block_pos {

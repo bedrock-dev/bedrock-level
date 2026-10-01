@@ -1,7 +1,3 @@
-//
-// Created by xhy on 2023/3/29.
-//
-
 #include "nbt.h"
 
 #include <cstdlib>
@@ -21,7 +17,6 @@ namespace bl::nbt {
         return name.empty() ? "UNKNOWN" : std::string(name);
     }
 
-    // used by all key and string value
     int read_string(const byte_t* data, size_t data_len, std::string& val) {
         if (!data || data_len < 2) return 0;
         const uint16_t len = detail::read_u16_le(data);
@@ -184,10 +179,7 @@ namespace bl::nbt {
         return {tag, read + len};
     }
 
-    compound_tag* read_one_palette(const byte_t* data, int& read) {
-        // legacy overload: no bounds, caller must ensure enough data
-        return read_one_palette(data, SIZE_MAX, read);
-    }
+    compound_tag* read_one_palette(const byte_t* data, int& read) { return read_one_palette(data, SIZE_MAX, read); }
 
     compound_tag* read_one_palette(const byte_t* data, size_t data_len, int& read) {
         read = 0;
@@ -231,7 +223,6 @@ namespace bl::nbt {
                 i++;
                 continue;
             }
-            // optional name segment: descend into a compound
             if (path[i] != '[') {
                 auto end = path.find_first_of(".[", i);
                 auto name = path.substr(i, end == std::string::npos ? std::string::npos : end - i);
@@ -240,7 +231,6 @@ namespace bl::nbt {
                 if (!comp) return nullptr;
                 cur = comp->get(name);
             }
-            // optional list index segments: [n] (0-based)
             while (cur && i < path.size() && path[i] == '[') {
                 auto close = path.find(']', i);
                 if (close == std::string::npos) return nullptr;

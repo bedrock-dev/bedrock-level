@@ -1,7 +1,3 @@
-//
-// Created by xhy on 2023/3/29.
-//
-
 #ifndef BEDROCK_LEVEL_NBT_H
 #define BEDROCK_LEVEL_NBT_H
 
@@ -140,14 +136,12 @@ namespace bl::nbt {
         [[nodiscard]] const std::string& key() const { return this->key_; }
         void set_key(const std::string& key) { this->key_ = key; }
 
-        // append type + key + payload into out, avoids intermediate strings
         void write_raw(std::string& out) const {
             out.push_back(static_cast<char>(this->type()));
             this->write_key(out);
             this->write_payload(out);
         }
 
-        // append payload only (list elements carry no type/key)
         virtual void write_payload(std::string& out) const = 0;
 
         template <typename T>
@@ -160,7 +154,6 @@ namespace bl::nbt {
             return dynamic_cast<T>(const_cast<abstract_tag*>(this));
         }
 
-        // traverse compound/list children by path, e.g. "A.B[1].C"; nullptr on any miss
         abstract_tag* getByPath(const std::string& path);
 
        public:
@@ -187,7 +180,6 @@ namespace bl::nbt {
         std::string key_;
     };
 
-    // flat sorted map: faster and more compact than std::map for small child counts
     class tag_map {
        public:
         using value_type = std::pair<std::string, abstract_tag*>;
@@ -219,7 +211,6 @@ namespace bl::nbt {
             return vec_.emplace(it, key, nullptr)->second;
         }
 
-        // replace-or-insert: deletes the previous child on duplicate key (single lookup)
         void assign(abstract_tag* tag) {
             auto it = lower_bound(tag->key());
             if (it != vec_.end() && it->first == tag->key()) {
@@ -414,7 +405,6 @@ namespace bl::nbt {
         void write_payload(std::string& out) const override {
             auto child_type = End;
             if (!value.empty()) {
-                // assume on nullptr in list
                 child_type = value[0]->type();
             }
             out.push_back(static_cast<char>(child_type));

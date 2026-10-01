@@ -1,7 +1,3 @@
-//
-// Created by xhy on 2023/3/30.
-//
-
 #ifndef BEDROCK_LEVEL_RAW_CHUNK_H
 #define BEDROCK_LEVEL_RAW_CHUNK_H
 
@@ -23,10 +19,9 @@ namespace bl {
         class compound_tag;
     }  // namespace nbt
 
-    // Only ever held by pointer here, so the full definition is not needed.
     class actor;
 
-    // bitmask of chunk data to read/parse; combine with | (default All)
+    // Bitmask of chunk data to read and parse.
     enum chunk_load_policy : uint8_t {
         Terrain = 1 << 0,      // subchunks + biome/height map
         PendingTick = 1 << 1,  // pending ticks key
@@ -44,10 +39,10 @@ namespace bl {
         return (static_cast<uint8_t>(value) & static_cast<uint8_t>(flag)) != 0;
     }
 
-    // all keys-values from level, without parse
+    // Raw chunk key/value data.
     class raw_chunk {
        public:
-        // version/terrain marker keys that always gate chunk validity, oldest format first
+        // Marker keys that gate chunk validity, oldest format first.
         inline static const chunk_key::key_type MARKER_KEYS[] = {chunk_key::LegacyTerrain, chunk_key::VersionOld, chunk_key::VersionNew};
 
         explicit raw_chunk(const chunk_pos& pos) : pos_(pos) {}
@@ -58,24 +53,19 @@ namespace bl {
         /// Format the chunk was saved in, taken from the version marker payload.
         [[nodiscard]] LevelChunkFormat chunk_format() const { return this->chunk_format_; }
 
-        /// Declares the format of a raw_chunk that was built from scratch instead of read from the
-        /// level; read()/from_raw() overwrite it from the marker key.
+        /// Set the format for a raw chunk built from scratch.
         void set_chunk_format(LevelChunkFormat format) { this->chunk_format_ = format; }
 
         void clear_terrain();
         void clear_entities();
 
-        // read raw chunk from leveldb
         bool read(bedrock_level& level, chunk_load_policy policy = chunk_load_policy::All);
 
-        // write raw chunk to leveldb
         bool write(leveldb::WriteBatch& batch, bool clear);
 
-        // seri and deseri (custom format)
         std::vector<byte_t> to_raw();
         bool from_raw(const std::vector<byte_t>& data);
 
-        // getter
         std::string get_normal_key(chunk_key::key_type key) const;
         std::string get_sub_chunk(int8_t yindex) const;
         const std::map<chunk_key::key_type, std::string>& get_normal_data() const { return data_; }
@@ -84,27 +74,18 @@ namespace bl {
         const std::map<std::string, std::string>& get_entities() const { return entities_; }
         const chunk_pos& pos() const { return pos_; }
 
-        /// World Y range covered by the SubChunkTerrain payloads this chunk holds. Derived from
-        /// the stored keys, so it reflects the real data instead of a version convention.
-        /// Returns {0, -1} (empty/inverted) when no terrain has been read.
+        /// Return the stored terrain's world Y range, or {0, -1} when empty.
         [[nodiscard]] std::pair<int, int> get_y_range() const;
 
-        // setter
-        /// Moves the whole chunk to another position: every stored world coordinate is shifted
-        /// by the chunk delta -- block entities, pending ticks, hardcoded spawn areas and actors
-        /// (which also get fresh unique ids, since their old ones may already exist in the
-        /// target area).
+        /// Move stored world coordinates to another chunk position.
         void move_to(const bl::chunk_pos& pos, bedrock_level* level);
         void set_normal(chunk_key::key_type key, const std::string& data) { data_[key] = data; }
         /// Replaces the SubChunkTerrain payload at yindex (empty data deletes the key on write).
         void set_sub_chunk(int8_t yindex, std::string data) { sub_chunk_data_[yindex] = std::move(data); }
-        /// Replaces the entity payload. The layout follows this chunk's own format: the old one
-        /// concatenates the tags into the Entity key, the new one writes one "actorprefix<key>"
-        /// entry per actor plus the digest.
+        /// Replace the entity payload using this chunk's storage format.
         void set_entities(const std::vector<bl::actor*> actors);
 
-        /// Replaces the BlockEntity payload with the raw NBT of each tag, concatenated the way
-        /// the chunk stores them. An empty list clears the payload, which removes the key.
+        /// Replace the concatenated BlockEntity payload; empty clears it.
         void set_block_entities(const std::vector<nbt::compound_tag*>& entities);
 
        private:

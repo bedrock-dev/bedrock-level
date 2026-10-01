@@ -1,7 +1,3 @@
-//
-// Created by xhy on 2023/6/21.
-//
-
 #ifndef BEDROCK_LEVEL_LEVEL_DAT_H
 #define BEDROCK_LEVEL_LEVEL_DAT_H
 #include <array>

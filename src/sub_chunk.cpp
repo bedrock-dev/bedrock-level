@@ -1,20 +1,12 @@
-//
-// Created by xhy on 2023/3/29.
-//
-
 #include "sub_chunk.h"
 
 #include <cstdio>
 #include <unordered_map>
 
-#include "utils.h"
-
-// #include "nbt.hpp"
-#include <cstdio>
-
 #include "color.h"
 #include "nbt.h"
 #include "palette.h"
+#include "utils.h"
 
 namespace bl {
 
@@ -22,34 +14,27 @@ namespace bl {
 
         constexpr auto BLOCK_NUM = 16 * 16 * 16;
 
-        // Minimal block state compound: {"name": <name>}. Caller owns the result.
         [[nodiscard]] nbt::compound_tag* make_block_state(const std::string& name) {
             auto* tag = new nbt::compound_tag("");
             tag->put(new nbt::string_tag("name", name));
             return tag;
         }
 
-        // Gives an untouched layer a valid body: palette index 0 is air, and every block starts
-        // there. Without this the first written block would occupy index 0 and silently become
-        // the background for all the positions that were never set.
+        // Untouched layers use air at palette index 0.
         void seed_layer_with_air(sub_chunk::layer& target) {
             if (!target.palette.empty()) return;
             target.palette.push_back(bl::make_palette_entry(make_block_state("minecraft:air")));
             target.blocks.assign(BLOCK_NUM, 0);
         }
 
-        // Shared bounds check for the in-chunk accessors: a sub-chunk is always 16x16x16.
         [[nodiscard]] bool is_valid_in_chunk_pos(int rx, int ry, int rz) {
             if (rx >= 0 && rx <= 15 && ry >= 0 && ry <= 15 && rz >= 0 && rz <= 15) return true;
             LOG_F(ERROR, "Invalid in chunk position %d %d %d", rx, ry, rz);
             return false;
         }
 
-        // sub chunk layout
-        // https://user-images.githubusercontent.com/13713600/148380033-6223ac76-54b7-472c-a355-5923b87cb7c5.png
         bool read_header(sub_chunk* sub_chunk, const byte_t* stream, int& read, uint8_t& layers_num) {
             if (!sub_chunk || !stream) return false;
-            // assert that stream is long enough
             const auto raw_version = static_cast<uint8_t>(stream[0]);
             if (!is_supported_sub_chunk_version(raw_version)) {
                 LOG_F(INFO, "Unsupported sub chunk version: %u", raw_version);
@@ -57,10 +42,8 @@ namespace bl {
             }
             const auto version = static_cast<SubChunkVersion>(raw_version);
             sub_chunk->set_version(version);
-            // Only load() needs the count, and only until the layers are read.
             layers_num = static_cast<uint8_t>(stream[1]);
             read = 2;
-            // y-index for version 9
             if (version == SubChunkVersion::V9) {
                 int8_t y_index = stream[2];
                 if (y_index != sub_chunk->y_index()) {
@@ -101,9 +84,6 @@ namespace bl {
     }
 
     std::string sub_chunk::to_raw() const {
-        // A sub_chunk that was built instead of loaded still carries the unset marker, which is
-        // not a valid on-disk value; fall back to the modern layout. Bit packing below is
-        // identical for both versions, so only the header bytes depend on this.
         uint8_t version = this->version_;
         if (!is_supported_sub_chunk_version(version)) {
             LOG_F(WARNING, "Sub chunk version %u is not a valid on-disk value, writing v9", version);
@@ -112,8 +92,6 @@ namespace bl {
 
         std::string out;
         out.push_back(static_cast<char>(version));
-        // The header count has to describe the layers actually held, so it comes from the
-        // vector rather than from a separately tracked count.
         out.push_back(static_cast<char>(this->layers_.size()));
         if (version == static_cast<uint8_t>(SubChunkVersion::V9)) {
             out.push_back(static_cast<char>(this->y_index_));
@@ -130,7 +108,6 @@ namespace bl {
         if (!tag) return;
         seed_layer_with_air(*this);
 
-        // Append unconditionally; compact() is what makes the palette unique.
         auto* clone = static_cast<nbt::compound_tag*>(tag->copy());
         this->palette.push_back(bl::make_palette_entry(clone));
         this->blocks[ry + rz * 16 + rx * 256] = static_cast<uint16_t>(this->palette.size() - 1);
@@ -150,7 +127,6 @@ namespace bl {
         if (!area.is_valid()) return;
         seed_layer_with_air(*this);
 
-        // Append rather than replace: the cells outside the box keep what they held.
         const auto index = static_cast<uint16_t>(this->palette.size());
         this->palette.push_back(bl::make_palette_entry(static_cast<nbt::compound_tag*>(tag->copy())));
 
@@ -165,8 +141,6 @@ namespace bl {
 
     void sub_chunk::layer::compact() {
         if (this->palette.empty()) return;
-        // A layer that was never populated is written as 4096 zeros, so it really only uses
-        // entry 0; normalize first so pruning sees the same thing the writer will.
         if (this->blocks.size() != BLOCK_NUM) this->blocks.assign(BLOCK_NUM, 0);
 
         std::vector<bool> referenced(this->palette.size(), false);
@@ -178,8 +152,6 @@ namespace bl {
             referenced[index] = true;
         }
 
-        // Tags reaching this point already went through make_palette_entry, so their
-        // serialized form is stable and safe to use as the identity key.
         std::unordered_map<std::string, uint16_t> first_index_by_raw;
         first_index_by_raw.reserve(this->palette.size());
 
@@ -190,7 +162,7 @@ namespace bl {
         for (size_t i = 0; i < this->palette.size(); i++) {
             auto& entry = this->palette[i];
             if (!referenced[i]) {
-                delete entry.tag;  // nothing points here any more
+                delete entry.tag;
                 entry.tag = nullptr;
                 continue;
             }
@@ -198,7 +170,7 @@ namespace bl {
             const auto it = first_index_by_raw.find(raw);
             if (it != first_index_by_raw.end()) {
                 remap[i] = it->second;
-                delete entry.tag;  // duplicate: the survivor keeps ownership
+                delete entry.tag;
                 entry.tag = nullptr;
             } else {
                 const auto index = static_cast<uint16_t>(rebuilt.size());
@@ -210,14 +182,12 @@ namespace bl {
 
         this->palette = std::move(rebuilt);
         for (auto& index : this->blocks) index = remap[index];
-        // bits / palette_len are derived while writing, so there is nothing to refresh here.
     }
 
     sub_chunk::layer* sub_chunk::ensure_layer(int index) {
         if (index < 0) return nullptr;
         while (static_cast<int>(this->layers_.size()) <= index) {
-            // Padding layers are seeded as air because they may never receive a set_block call,
-            // and a layer with an empty palette has no valid on-disk form.
+            // Empty padding layers have no valid on-disk form, so seed them with air.
             auto* created = new layer();
             seed_layer_with_air(*created);
             this->push_back_layer(created);
@@ -275,12 +245,10 @@ namespace bl {
         if (!entry) return {};
 
         using bl::nbt::string_tag, bl::nbt::compound_tag;
-        // Block states that pick a sub-entry of a multi-color block, most specific first.
-        // flower_type covers the flower blocks (red_flower) that have no color state.
+        // Prefer color, then flower_type for legacy multi-color blocks.
         static constexpr const char* STATE_KEYS[] = {"color", "flower_type"};
 
         std::string extra_tag;
-        // states may be absent on simple blocks, guard each level
         if (auto* stat_tag = entry->tag->get("states"); stat_tag) {
             if (auto* st = stat_tag->as<compound_tag*>(); st) {
                 for (auto* key : STATE_KEYS) {
@@ -299,7 +267,7 @@ namespace bl {
     const palette_entry* sub_chunk::palette_entry_at(int rx, int ry, int rz, int layer) const {
         if (!is_valid_in_chunk_pos(rx, ry, rz)) return nullptr;
         if (layer < 0 || layer >= static_cast<int>(this->layers_.size())) {
-            return nullptr;  // requested layer not present
+            return nullptr;
         }
         auto& ly = *this->layers_[layer];
         auto idx = ry + rz * 16 + rx * 256;

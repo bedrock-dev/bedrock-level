@@ -1,7 +1,3 @@
-//
-// Created by xhy on 2023/3/30.
-//
-
 #include "raw_chunk.h"
 
 #include <cstddef>
@@ -46,7 +42,6 @@ namespace bl {
             return s;
         }
 
-        // A version marker key holds a single byte, the format the chunk was saved in.
         bool parse_chunk_format(const std::string& payload, LevelChunkFormat& out) {
             if (payload.empty()) return false;
             const auto value = static_cast<unsigned char>(payload[0]);
@@ -56,7 +51,6 @@ namespace bl {
         }
     }  // namespace
 
-    // do not remove entities
     void raw_chunk::clear_terrain() {
         for (auto& kv : this->sub_chunk_data_) kv.second.clear();
     }
@@ -67,8 +61,7 @@ namespace bl {
     }
 
     bool raw_chunk::read(bedrock_level& level, chunk_load_policy policy) {
-        // Version/terrain marker keys are always read regardless of policy.
-        // The chunk is valid if any of them exists.
+        // Marker keys are always read; any present marker makes the chunk valid.
         bool valid = false;
         for (auto kt : MARKER_KEYS) {
             bl::chunk_key key{kt, this->pos_};
@@ -126,10 +119,7 @@ namespace bl {
             }
         }
 
-        // read sub chunks
         if (has_flag(policy, chunk_load_policy::Terrain)) {
-            // The window is configurable: dimensions whose terrain lies outside the default
-            // -4..19 (y -64..319) need it widened or their sub-chunks never load.
             const auto [min_index, max_index] = bl::config::subchunk_index_range();
             for (int sub_index = min_index; sub_index <= max_index; sub_index++) {
                 bl::chunk_key key{chunk_key::SubChunkTerrain, this->pos_, static_cast<int8_t>(sub_index)};
@@ -139,7 +129,6 @@ namespace bl {
             }
         }
 
-        // read actor digest and entities
         if (has_flag(policy, chunk_load_policy::Actor)) {
             bl::actor_digest_key digest_key{this->pos_};
             std::string raw;
@@ -162,7 +151,6 @@ namespace bl {
     }
 
     bool raw_chunk::write(leveldb::WriteBatch& batch, bool clear) {
-        // nothing to write unless some normal key holds data
         bool has_data = false;
         for (const auto& [kt, raw] : this->data_) {
             if (!raw.empty()) {
@@ -207,7 +195,6 @@ namespace bl {
     }
 
     std::vector<byte_t> raw_chunk::to_raw() {
-        // pre-compute exact size so the buffer is only reallocated once
         size_t size = 4 /*magic*/ + 3 * 4 /*pos*/ + 4 /*data count*/;
         for (auto& [kt, raw] : data_) {
             size += 4 /*kt*/ + 4 /*len*/ + raw.size();
@@ -224,31 +211,25 @@ namespace bl {
 
         std::vector<byte_t> buf;
         buf.reserve(size);
-        // magic
         buf.insert(buf.end(), {'B', 'C', 'H', 'K'});
-        // pos
         write_i32(buf, pos_.x);
         write_i32(buf, pos_.z);
         write_i32(buf, pos_.dim);
 
-        // normal keys
         write_i32(buf, static_cast<int32_t>(data_.size()));
         for (auto& [kt, raw] : data_) {
             write_i32(buf, static_cast<int32_t>(kt));
             write_bytes(buf, raw);
         }
 
-        // sub chunks
         write_i32(buf, static_cast<int32_t>(sub_chunk_data_.size()));
         for (auto& [index, raw] : sub_chunk_data_) {
             buf.push_back(static_cast<byte_t>(index));
             write_bytes(buf, raw);
         }
 
-        // actor digest
         write_bytes(buf, actor_digest_);
 
-        // entities
         write_i32(buf, static_cast<int32_t>(entities_.size()));
         for (auto& [uid, raw] : entities_) {
             write_bytes(buf, uid);
@@ -262,18 +243,15 @@ namespace bl {
         const byte_t* p = data.data();
         const byte_t* end = data.data() + data.size();
 
-        // magic
         if (static_cast<size_t>(end - p) < 4 || p[0] != 'B' || p[1] != 'C' || p[2] != 'H' || p[3] != 'K') {
             return false;
         }
         p += 4;
 
-        // pos
         pos_.x = read_i32(p);
         pos_.z = read_i32(p);
         pos_.dim = read_i32(p);
 
-        // normal keys
         int32_t data_count = read_i32(p);
         for (int32_t i = 0; i < data_count; i++) {
             auto kt = static_cast<chunk_key::key_type>(read_i32(p));
@@ -285,17 +263,14 @@ namespace bl {
             if (it != data_.end()) parse_chunk_format(it->second, chunk_format_);
         }
 
-        // sub chunks
         int32_t sub_count = read_i32(p);
         for (int32_t i = 0; i < sub_count; i++) {
             int8_t index = static_cast<int8_t>(*p++);
             sub_chunk_data_[index] = read_bytes(p);
         }
 
-        // actor digest
         actor_digest_ = read_bytes(p);
 
-        // entities
         int32_t entity_count = read_i32(p);
         for (int32_t i = 0; i < entity_count; i++) {
             std::string uid = read_bytes(p);
@@ -317,9 +292,7 @@ namespace bl {
     }
 
     std::pair<int, int> raw_chunk::get_y_range() const {
-        // Keys are inserted for every index in the read window, absent ones included, so skip
-        // the empty payloads -- otherwise the range would cover sub-chunks that hold nothing.
-        // sub_chunk_data_ is a map, so iteration already goes in ascending index order.
+        // Skip empty entries; the map keeps indices in ascending order.
         bool found = false;
         int first = 0;
         int last = 0;
@@ -339,7 +312,6 @@ namespace bl {
         int dx = (pos.x - this->pos_.x) * 16;
         int dz = (pos.z - this->pos_.z) * 16;
         this->pos_ = pos;
-        // block entities
         if (auto it = data_.find(chunk_key::BlockEntity); it != data_.end()) {
             auto& data = it->second;
             auto palette = nbt::read_palette_to_end(data.data(), data.size());
@@ -353,7 +325,6 @@ namespace bl {
             for (auto* p : palette) delete p;
         }
 
-        // pending ticks
         if (auto it = data_.find(chunk_key::PendingTicks); it != data_.end()) {
             auto& data = it->second;
             auto palette = nbt::read_palette_to_end(data.data(), data.size());
@@ -363,7 +334,6 @@ namespace bl {
             for (auto* p : palette) delete p;
         }
 
-        // hardcoded spawn areas
         if (auto it = data_.find(chunk_key::HardCodedSpawnAreas); it != data_.end()) {
             auto& data = it->second;
             bl::hardcoded_spawn_area_list list;
@@ -373,7 +343,6 @@ namespace bl {
             }
         }
 
-        // entities (old version: concatenated in Entity key)
         if (auto it = data_.find(chunk_key::Entity); it != data_.end()) {
             auto& data = it->second;
             auto palette = nbt::read_palette_to_end(data.data(), data.size());
@@ -393,7 +362,6 @@ namespace bl {
             }
         }
 
-        // entities (new version: actorprefix+uid)
         std::map<std::string, std::string> new_entities;
         for (auto& [uid, raw] : entities_) {
             actor ac;
@@ -406,7 +374,6 @@ namespace bl {
                 LOG_F(ERROR, "load actor (uid len=%zu) failed when reset raw chunk position", uid.size());
             }
         }
-        // rebuild actor digest and nbts from updated entities_
         entities_ = std::move(new_entities);
         actor_digest_.clear();
         for (auto& [uid, raw] : entities_) {
