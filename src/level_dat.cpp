@@ -40,8 +40,9 @@ namespace bl {
         const auto formats = magic_enum::enum_values<LevelChunkFormat>();
         // Select the newest format no newer than the client.
         for (auto it = formats.rbegin(); it != formats.rend(); ++it) {
-            if (*it == LevelChunkFormat::Count) continue;  // upper bound of the enum, not a format
-                                                           // Read only the first three numeric groups; later digits are revision labels.
+            if (*it == LevelChunkFormat::Count)
+                continue;  // upper bound of the enum, not a format
+                           // Read only the first three numeric groups; later digits are revision labels.
             std::array<int, 3> format{0, 0, 0};
             const std::string_view name = magic_enum::enum_name(*it);
             size_t groups = 0;
