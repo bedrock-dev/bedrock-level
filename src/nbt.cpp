@@ -152,7 +152,7 @@ namespace bl::nbt {
             case List:
                 return read_list_tag_value(data, data_len, key);
             default:
-                throw std::runtime_error("unsupported tag type " + std::to_string((int)type));
+                return {nullptr, 0};
         }
     }
 
@@ -163,6 +163,7 @@ namespace bl::nbt {
         {
             int r = read_tag_type(data, data_len, type);
             if (r == 0) return {nullptr, 0};
+            if (static_cast<unsigned char>(data[0]) > static_cast<unsigned char>(LongArray)) return {nullptr, 0};
             read += r;
         }
         if (type == End) {
@@ -197,15 +198,26 @@ namespace bl::nbt {
     std::vector<compound_tag*> read_palette_to_end(const byte_t* data, size_t len) {
         size_t ptr = 0;
         std::vector<compound_tag*> res;
-        while (ptr < len) {
-            int read;
-            auto* tag = read_one_palette(data + ptr, len - ptr, read);
-            if (read == 0) break;
-            ptr += read;
-            if (tag) res.push_back(tag);
+        try {
+            while (ptr < len) {
+                int read = 0;
+                auto* tag = read_one_palette(data + ptr, len - ptr, read);
+                if (read <= 0 || static_cast<size_t>(read) > len - ptr) {
+                    delete tag;
+                    for (auto* parsed : res) delete parsed;
+                    return {};
+                }
+                ptr += static_cast<size_t>(read);
+                if (tag) res.push_back(tag);
+            }
+        } catch (...) {
+            for (auto* parsed : res) delete parsed;
+            return {};
         }
         if (ptr != len) {
             LOG_F(ERROR, "Remain bytes found (%d).", (int)len - (int)ptr);
+            for (auto* parsed : res) delete parsed;
+            return {};
         }
         return res;
     }

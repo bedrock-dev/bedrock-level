@@ -1,7 +1,21 @@
 #include "global.h"
 
+#include <algorithm>
 #include <array>
 namespace bl {
+    namespace global_key {
+        namespace {
+            constexpr key_list OTHER_KEYS{"portals", "scoreboard", "AutonomousEntities", "BiomeData", "Nether", "Overworld",
+                                          "TheEnd", "schedulerWT", "mobevents", "WorldClocks", "LevelChunkMetaDataDictionary"};
+        }
+
+        const key_list& other_keys() noexcept { return OTHER_KEYS; }
+
+        bool is_other_key(std::string_view key) noexcept {
+            return std::find(OTHER_KEYS.begin(), OTHER_KEYS.end(), key) != OTHER_KEYS.end();
+        }
+    }  // namespace global_key
+
     void village_data::reset(const village_table_type& data) {
         this->clear_data();
         this->data_ = data;

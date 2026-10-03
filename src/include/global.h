@@ -1,12 +1,21 @@
 #ifndef BEDROCK_LEVEL_GLOBAL_H
 #define BEDROCK_LEVEL_GLOBAL_H
 #include <array>
+#include <string_view>
 
 #include "bedrock_key.h"
 #include "memory"
 #include "nbt.h"
 
 namespace bl {
+
+    namespace global_key {
+        using key_list = std::array<std::string_view, 11>;
+
+        /// Known global LevelDB keys that are stored as miscellaneous data.
+        [[nodiscard]] const key_list& other_keys() noexcept;
+        [[nodiscard]] bool is_other_key(std::string_view key) noexcept;
+    }  // namespace global_key
 
     class village_data {
        public:
