@@ -97,10 +97,10 @@ class PaletteBenchmark : public ::testing::Test {
 
 // parse all actor/pending-tick palettes into tag trees
 TEST_F(PaletteBenchmark, ParseAllPalettes) {
-    constexpr int kRounds = 5;
+    constexpr int ROUNDS = 5;
     auto start = steady_clock_t::now();
     size_t tags = 0;
-    for (int round = 0; round < kRounds; round++) {
+    for (int round = 0; round < ROUNDS; round++) {
         tags = 0;
         for (auto& raw : raw_palettes_) {
             auto palettes = bl::nbt::read_palette_to_end(reinterpret_cast<const byte_t*>(raw.data()), raw.size());
@@ -110,17 +110,17 @@ TEST_F(PaletteBenchmark, ParseAllPalettes) {
     }
     auto elapsed_ms = std::chrono::duration<double, std::milli>(steady_clock_t::now() - start).count();
 
-    std::cout << "parse " << raw_palettes_.size() << " palettes -> " << tags << " tags in " << elapsed_ms << " ms (" << elapsed_ms / kRounds
+    std::cout << "parse " << raw_palettes_.size() << " palettes -> " << tags << " tags in " << elapsed_ms << " ms (" << elapsed_ms / ROUNDS
               << " ms/round)\n";
     EXPECT_GT(tags, 0u);
 }
 
 // serialize all parsed palettes back to raw bytes
 TEST_F(PaletteBenchmark, SerializeAllPalettes) {
-    constexpr int kRounds = 5;
+    constexpr int ROUNDS = 5;
     auto start = steady_clock_t::now();
     size_t total_bytes = 0;
-    for (int round = 0; round < kRounds; round++) {
+    for (int round = 0; round < ROUNDS; round++) {
         total_bytes = 0;
         for (auto& raw : raw_palettes_) {
             auto palettes = bl::nbt::read_palette_to_end(reinterpret_cast<const byte_t*>(raw.data()), raw.size());
@@ -132,7 +132,7 @@ TEST_F(PaletteBenchmark, SerializeAllPalettes) {
     }
     auto elapsed_ms = std::chrono::duration<double, std::milli>(steady_clock_t::now() - start).count();
     std::cout << "serialize " << raw_palettes_.size() << " palettes -> " << total_bytes << " bytes in " << elapsed_ms << " ms ("
-              << elapsed_ms / kRounds << " ms/round)\n";
+              << elapsed_ms / ROUNDS << " ms/round)\n";
     EXPECT_GT(total_bytes, 0u);
 }
 

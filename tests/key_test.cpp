@@ -100,7 +100,12 @@ TEST(LevelChunkFormat, NeverReturnsCount) {
 TEST(ChunkKey, RoundTripAll) {
     using namespace bl;
     for (int dim : {0, 1, 2}) {
-        for (auto type : {chunk_key::RandomTicks, chunk_key::Data3D, chunk_key::BlockEntity, chunk_key::VersionNew}) {
+        for (auto type : {chunk_key::RandomTicks,
+                          chunk_key::Data3D,
+                          chunk_key::BlockEntity,
+                          chunk_key::VersionNew,
+                          chunk_key::AabbVolumes,
+                          chunk_key::JigsawStructureBlueprint}) {
             chunk_key key{type, chunk_pos{10, -7, dim}, 0};
             auto parsed = chunk_key::parse(key.to_raw());
             EXPECT_TRUE(parsed.cp == key.cp) << "dim=" << dim << " type=" << (int)type;
@@ -114,6 +119,12 @@ TEST(ChunkKey, RoundTripAll) {
         EXPECT_EQ(parsed_sub.type, sub.type);
         EXPECT_EQ(parsed_sub.y_index, 13);
     }
+}
+
+TEST(ChunkKey, NewKeyNames) {
+    using namespace bl;
+    EXPECT_EQ(chunk_key::chunk_key_to_str(chunk_key::AabbVolumes), "AabbVolumes");
+    EXPECT_EQ(chunk_key::chunk_key_to_str(chunk_key::JigsawStructureBlueprint), "JigsawStructureBlueprint");
 }
 
 TEST(ChunkKey, ParseInvalid) {

@@ -79,10 +79,10 @@ class ChunkBenchmark : public ::testing::Test {
 
 // BCHK deserialize: bytes -> raw_chunk
 TEST_F(ChunkBenchmark, FromRawAll) {
-    constexpr int kRounds = 5;
+    constexpr int ROUNDS = 5;
     auto start = steady_clock_t::now();
     size_t total_bytes = 0;
-    for (int round = 0; round < kRounds; round++) {
+    for (int round = 0; round < ROUNDS; round++) {
         total_bytes = 0;
         for (auto& raw : raw_bytes_) {
             bl::raw_chunk rc;
@@ -92,16 +92,16 @@ TEST_F(ChunkBenchmark, FromRawAll) {
     }
     auto elapsed_ms = std::chrono::duration<double, std::milli>(steady_clock_t::now() - start).count();
     std::cout << "from_raw " << raw_bytes_.size() << " chunks -> " << total_bytes << " bytes in " << elapsed_ms << " ms ("
-              << elapsed_ms / kRounds << " ms/round)\n";
+              << elapsed_ms / ROUNDS << " ms/round)\n";
     EXPECT_GT(total_bytes, 0u);
 }
 
 // BCHK serialize: raw_chunk -> bytes
 TEST_F(ChunkBenchmark, ToRawAll) {
-    constexpr int kRounds = 5;
+    constexpr int ROUNDS = 5;
     auto start = steady_clock_t::now();
     size_t total_bytes = 0;
-    for (int round = 0; round < kRounds; round++) {
+    for (int round = 0; round < ROUNDS; round++) {
         total_bytes = 0;
         for (auto& rc : chunks_) {
             total_bytes += rc.to_raw().size();
@@ -109,7 +109,7 @@ TEST_F(ChunkBenchmark, ToRawAll) {
     }
     auto elapsed_ms = std::chrono::duration<double, std::milli>(steady_clock_t::now() - start).count();
     std::cout << "to_raw " << chunks_.size() << " chunks -> " << total_bytes << " bytes in " << elapsed_ms << " ms ("
-              << elapsed_ms / kRounds << " ms/round)\n";
+              << elapsed_ms / ROUNDS << " ms/round)\n";
     EXPECT_GT(total_bytes, 0u);
 }
 
@@ -128,10 +128,10 @@ TEST_F(ChunkBenchmark, RoundTripBytes) {
 
 // deep parse: raw_chunk -> chunk (subchunks, biomes, entities, NBT palettes)
 TEST_F(ChunkBenchmark, LoadFromRawAll) {
-    constexpr int kRounds = 5;
+    constexpr int ROUNDS = 5;
     auto start = steady_clock_t::now();
     size_t loaded = 0;
-    for (int round = 0; round < kRounds; round++) {
+    for (int round = 0; round < ROUNDS; round++) {
         loaded = 0;
         for (auto& rc : chunks_) {
             auto* c = new bl::chunk(rc.pos());
@@ -141,7 +141,7 @@ TEST_F(ChunkBenchmark, LoadFromRawAll) {
     }
     auto elapsed_ms = std::chrono::duration<double, std::milli>(steady_clock_t::now() - start).count();
     std::cout << "load_from_raw_chunk " << chunks_.size() << " chunks -> " << loaded << " loaded in " << elapsed_ms << " ms ("
-              << elapsed_ms / kRounds << " ms/round)\n";
+              << elapsed_ms / ROUNDS << " ms/round)\n";
     EXPECT_GT(loaded, 0u);
 }
 
@@ -158,10 +158,10 @@ TEST_F(ChunkBenchmark, ScanBlocksFast) {
     }
     ASSERT_FALSE(loaded.empty());
 
-    constexpr int kRounds = 3;
+    constexpr int ROUNDS = 3;
     auto start = steady_clock_t::now();
     size_t total = 0;
-    for (int round = 0; round < kRounds; round++) {
+    for (int round = 0; round < ROUNDS; round++) {
         total = 0;
         for (auto* c : loaded) {
             for (int cx = 0; cx < 16; cx++) {
@@ -176,7 +176,7 @@ TEST_F(ChunkBenchmark, ScanBlocksFast) {
         }
     }
     auto elapsed_ms = std::chrono::duration<double, std::milli>(steady_clock_t::now() - start).count();
-    std::cout << "scan blocks " << loaded.size() << " chunks in " << elapsed_ms << " ms (" << elapsed_ms / kRounds << " ms/round, ~"
+    std::cout << "scan blocks " << loaded.size() << " chunks in " << elapsed_ms << " ms (" << elapsed_ms / ROUNDS << " ms/round, ~"
               << total / 16u << " blocks scanned)\n";
     EXPECT_GT(total, 0u);
     for (auto* c : loaded) delete c;

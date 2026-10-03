@@ -59,10 +59,10 @@ class Data3dBenchmark : public ::testing::Test {
 
 // parse every Data3D payload into biome3d
 TEST_F(Data3dBenchmark, LoadD3dAll) {
-    constexpr int kRounds = 5;
+    constexpr int ROUNDS = 5;
     auto start = steady_clock_t::now();
     size_t bytes = 0;
-    for (int round = 0; round < kRounds; round++) {
+    for (int round = 0; round < ROUNDS; round++) {
         bytes = 0;
         for (auto& p : payloads_) {
             bl::biome3d d3d;
@@ -73,16 +73,16 @@ TEST_F(Data3dBenchmark, LoadD3dAll) {
     }
     auto elapsed_ms = std::chrono::duration<double, std::milli>(steady_clock_t::now() - start).count();
     std::cout << "load_from_d3d " << payloads_.size() << " chunks -> " << bytes << " bytes in " << elapsed_ms << " ms ("
-              << elapsed_ms / kRounds << " ms/round)\n";
+              << elapsed_ms / ROUNDS << " ms/round)\n";
     EXPECT_GT(bytes, 0u);
 }
 
 // serialize parsed biome3d back to bytes
 TEST_F(Data3dBenchmark, ToRawAll) {
-    constexpr int kRounds = 5;
+    constexpr int ROUNDS = 5;
     auto start = steady_clock_t::now();
     size_t bytes = 0;
-    for (int round = 0; round < kRounds; round++) {
+    for (int round = 0; round < ROUNDS; round++) {
         bytes = 0;
         for (auto& p : payloads_) {
             bl::biome3d d3d;
@@ -91,7 +91,7 @@ TEST_F(Data3dBenchmark, ToRawAll) {
         }
     }
     auto elapsed_ms = std::chrono::duration<double, std::milli>(steady_clock_t::now() - start).count();
-    std::cout << "to_raw " << payloads_.size() << " chunks -> " << bytes << " bytes in " << elapsed_ms << " ms (" << elapsed_ms / kRounds
+    std::cout << "to_raw " << payloads_.size() << " chunks -> " << bytes << " bytes in " << elapsed_ms << " ms (" << elapsed_ms / ROUNDS
               << " ms/round)\n";
     EXPECT_GT(bytes, 0u);
 }

@@ -97,6 +97,8 @@ namespace bl {
             BlendingData = 64,
             ActorDigestVersion = 65,
             VersionOld = 118,  // 0x76 (v)
+            AabbVolumes = 119,  // 0x77
+            JigsawStructureBlueprint = 120,  // 0x78
             Unknown = -1
         };
 

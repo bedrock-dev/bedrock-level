@@ -45,6 +45,8 @@ LevelDB 中的每条记录由一个键和对应的值组成。键的类型决定
 | 64  | `BlendingData`                       | 混合数据                       |
 | 65  | `ActorDigestVersion`                 | 实体摘要版本                   |
 | 118 | `VersionOld` (0x76)                  | 旧版区块版本号（`v` 字符）     |
+| 119 | `AabbVolumes` (0x77)                | 结构包围盒数据（非 NBT）       |
+| 120 | `JigsawStructureBlueprint` (0x78)   | Jigsaw 结构蓝图数据（非 NBT）  |
 
 区块键的序列化格式（二进制）：
 
@@ -52,6 +54,10 @@ LevelDB 中的每条记录由一个键和对应的值组成。键的类型决定
 [4字节: 区块X坐标] [4字节: 区块Z坐标] [1字节: 键类型] [1字节: 维度]
 // 对于 SubChunkTerrain，额外有 [1字节: Y索引]
 ```
+
+`AabbVolumes`（`0x77`）的 value 格式单独记录在
+[structure_feature.md](./structure_feature.md) 中。它包含结构名称、结构片段包围盒
+以及额外的引用/状态数据，不能交给 NBT 解析器处理。
 
 ### 1.2 实体键 (`actor_key`)
 

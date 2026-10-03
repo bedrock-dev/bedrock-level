@@ -21,11 +21,16 @@ namespace bl {
                 key_type_idx = 12;
             }
 
-            auto type = static_cast<chunk_key::key_type>(key[key_type_idx]);
-
-            if ((type < 43 || type > 65) && type != 118) {
+            const auto type_value = static_cast<unsigned char>(key[key_type_idx]);
+            const bool is_known_type = (type_value >= static_cast<unsigned char>(chunk_key::Data3D) &&
+                                        type_value <= static_cast<unsigned char>(chunk_key::ActorDigestVersion)) ||
+                                       type_value == static_cast<unsigned char>(chunk_key::VersionOld) ||
+                                       type_value == static_cast<unsigned char>(chunk_key::AabbVolumes) ||
+                                       type_value == static_cast<unsigned char>(chunk_key::JigsawStructureBlueprint);
+            if (!is_known_type) {
                 return INVALID_CHUNK_KEY;
             }
+            auto type = static_cast<chunk_key::key_type>(type_value);
 
             int8_t y_index = 0;
             if (key.size() == 10 || key.size() == 14) {

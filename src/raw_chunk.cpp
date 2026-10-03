@@ -93,7 +93,9 @@ namespace bl {
                                                    chunk_key::BlendingBiomeHeight,
                                                    chunk_key::MetaDataHash,
                                                    chunk_key::BlendingData,
-                                                   chunk_key::ActorDigestVersion};
+                                                   chunk_key::ActorDigestVersion,
+                                                   chunk_key::AabbVolumes,
+                                                   chunk_key::JigsawStructureBlueprint};
         auto flagFor = [](chunk_key::key_type kt) -> chunk_load_policy {
             switch (kt) {
                 case chunk_key::Data3D:

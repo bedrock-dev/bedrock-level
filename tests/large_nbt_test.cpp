@@ -23,8 +23,8 @@ namespace fs = std::filesystem;
 using steady_clock_t = std::chrono::steady_clock;
 
 namespace {
-    const fs::path kLargeNbt = fs::path(TEST_DATA_DIR) / "nbts" / "large.nbt";
-    constexpr int kRounds = 3;
+    const fs::path LARGE_NBT = fs::path(TEST_DATA_DIR) / "nbts" / "large.nbt";
+    constexpr int ROUNDS = 3;
 
     // in-memory footprint of the parsed tag tree (64-bit, libstdc++)
     struct TreeStats {
@@ -86,19 +86,19 @@ namespace {
 }  // namespace
 
 TEST(LargeNbt, DeserializeTime) {
-    if (!fs::exists(kLargeNbt)) GTEST_SKIP() << "large.nbt not present: " << kLargeNbt.string();
-    auto data = bl::utils::read_file(kLargeNbt.string());
+    if (!fs::exists(LARGE_NBT)) GTEST_SKIP() << "large.nbt not present: " << LARGE_NBT.string();
+    auto data = bl::utils::read_file(LARGE_NBT.string());
     ASSERT_FALSE(data.empty());
 
     size_t tags = 0;
     auto start = steady_clock_t::now();
-    for (int r = 0; r < kRounds; r++) {
+    for (int r = 0; r < ROUNDS; r++) {
         auto palettes = bl::nbt::read_palette_to_end(data.data(), data.size());
         tags = palettes.size();
         for (auto* p : palettes) delete p;
     }
     auto ms = std::chrono::duration<double, std::milli>(steady_clock_t::now() - start).count();
-    std::cout << "deserialize " << data.size() << " bytes -> " << tags << " tag(s) in " << ms << " ms (" << (ms / kRounds)
+    std::cout << "deserialize " << data.size() << " bytes -> " << tags << " tag(s) in " << ms << " ms (" << (ms / ROUNDS)
               << " ms/round)\n";
     EXPECT_GT(tags, 0u);
 
@@ -114,8 +114,8 @@ TEST(LargeNbt, DeserializeTime) {
 }
 
 TEST(LargeNbt, SerializeTime) {
-    if (!fs::exists(kLargeNbt)) GTEST_SKIP() << "large.nbt not present: " << kLargeNbt.string();
-    auto data = bl::utils::read_file(kLargeNbt.string());
+    if (!fs::exists(LARGE_NBT)) GTEST_SKIP() << "large.nbt not present: " << LARGE_NBT.string();
+    auto data = bl::utils::read_file(LARGE_NBT.string());
     ASSERT_FALSE(data.empty());
 
     auto palettes = bl::nbt::read_palette_to_end(data.data(), data.size());
@@ -123,12 +123,12 @@ TEST(LargeNbt, SerializeTime) {
 
     size_t total_bytes = 0;
     auto start = steady_clock_t::now();
-    for (int r = 0; r < kRounds; r++) {
+    for (int r = 0; r < ROUNDS; r++) {
         total_bytes = 0;
         for (auto* p : palettes) total_bytes += p->to_raw().size();
     }
     auto ms = std::chrono::duration<double, std::milli>(steady_clock_t::now() - start).count();
-    std::cout << "serialize " << palettes.size() << " tag(s) -> " << total_bytes << " bytes in " << ms << " ms (" << (ms / kRounds)
+    std::cout << "serialize " << palettes.size() << " tag(s) -> " << total_bytes << " bytes in " << ms << " ms (" << (ms / ROUNDS)
               << " ms/round)\n";
     EXPECT_GT(total_bytes, 0u);
     for (auto* p : palettes) delete p;
