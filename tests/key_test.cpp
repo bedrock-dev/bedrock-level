@@ -100,17 +100,15 @@ TEST(LevelChunkFormat, NeverReturnsCount) {
 TEST(ChunkKey, RoundTripAll) {
     using namespace bl;
     for (int dim : {0, 1, 2}) {
-        for (auto type : {chunk_key::RandomTicks,
-                          chunk_key::Data3D,
-                          chunk_key::BlockEntity,
-                          chunk_key::VersionNew,
-                          chunk_key::AabbVolumes,
+        for (auto type : {chunk_key::RandomTicks, chunk_key::Data3D, chunk_key::BlockEntity, chunk_key::VersionNew, chunk_key::AabbVolumes,
                           chunk_key::JigsawStructureBlueprint}) {
             chunk_key key{type, chunk_pos{10, -7, dim}, 0};
+            if (type == chunk_key::JigsawStructureBlueprint) key.identifier_hash = 0x1889c1b5d69bd600ULL;
             auto parsed = chunk_key::parse(key.to_raw());
             EXPECT_TRUE(parsed.cp == key.cp) << "dim=" << dim << " type=" << (int)type;
             EXPECT_EQ(parsed.type, key.type);
             EXPECT_EQ(parsed.y_index, key.y_index);
+            EXPECT_EQ(parsed.identifier_hash, key.identifier_hash);
         }
         // sub chunk terrain carries a y index
         chunk_key sub{chunk_key::SubChunkTerrain, chunk_pos{10, -7, dim}, 13};

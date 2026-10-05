@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "loguru/loguru.hpp"
@@ -51,25 +52,26 @@ namespace bl::utils {
     std::string UTF8ToGBEx(const char* utf8);
 
     template <typename T>
-    std::string numberVecToString(const std::vector<T>& vec, const std::string& sep = " ") {
+    std::string numberVecToString(const std::vector<T>& vec, std::string_view sep = " ") {
         std::string res;
         if (vec.empty()) return res;
         res.reserve(vec.size() * 4);
         for (auto i = 0ul; i < vec.size() - 1; i++) {
-            res += std::to_string(vec[i]) + sep;
+            res += std::to_string(vec[i]);
+            res.append(sep.data(), sep.size());
         }
         res += std::to_string(vec.back());
         return res;
     }
 
     // Split a string using a single character delimiter
-    std::vector<std::string> splitStr(const std::string& str, char delimiter);
+    std::vector<std::string> splitStr(std::string_view str, char delimiter);
 
-    void printReadableBytes(const std::string& bytes);
+    void printReadableBytes(std::string_view bytes);
 
-    void printByteArray(const std::string& bytes);
+    void printByteArray(std::string_view bytes);
 
-    std::string toHexStr(const std::string& bytes, int n = 2);
+    std::string toHexStr(std::string_view bytes, int n = 2);
 }  // namespace bl::utils
 
 #endif  // BEDROCK_LEVEL_UTILS_H

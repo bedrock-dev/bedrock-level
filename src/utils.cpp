@@ -68,17 +68,20 @@ namespace bl::utils {
     std::string UTF8ToGBEx(const char* utf8) { return std::string(utf8); }
 #endif
 
-    std::vector<std::string> splitStr(const std::string& str, char delimiter) {
+    std::vector<std::string> splitStr(std::string_view str, char delimiter) {
         std::vector<std::string> tokens;
-        std::string token;
-        std::istringstream tokenStream(str);
-        while (std::getline(tokenStream, token, delimiter)) {
-            tokens.push_back(token);
+        if (str.empty()) return tokens;
+        size_t start = 0;
+        while (start < str.size()) {
+            const auto end = str.find(delimiter, start);
+            tokens.emplace_back(str.substr(start, end == std::string_view::npos ? std::string_view::npos : end - start));
+            if (end == std::string_view::npos) break;
+            start = end + 1;
         }
         return tokens;
     }
 
-    void printReadableBytes(const std::string& bytes) {
+    void printReadableBytes(std::string_view bytes) {
         for (const auto& c : bytes) {
             if (std::isprint(c)) {
                 printf("%c", c);
@@ -86,14 +89,14 @@ namespace bl::utils {
         }
     }
 
-    void printByteArray(const std::string& bytes) {
+    void printByteArray(std::string_view bytes) {
         for (const auto& c : bytes) {
             printf("%02X ", static_cast<unsigned char>(c));
         }
         printf("\n");
     }
 
-    std::string toHexStr(const std::string& bytes, int n) {
+    std::string toHexStr(std::string_view bytes, int n) {
         static const char hex_chars[] = "0123456789ABCDEF";
         std::string result;
         size_t len = bytes.size();

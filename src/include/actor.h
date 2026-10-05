@@ -1,6 +1,7 @@
 #ifndef BEDROCK_LEVEL_ACRTOR_H
 #define BEDROCK_LEVEL_ACRTOR_H
 #include <cstdint>
+#include <string_view>
 
 #include "bedrock_key.h"
 #include "nbt.h"
@@ -46,7 +47,7 @@ namespace bl {
 
         void dump();
         [[nodiscard]] vec3 pos() const { return this->pos_; };
-        [[nodiscard]] std::string identifier() const { return this->identifier_; };
+        [[nodiscard]] std::string_view identifier() const noexcept { return this->identifier_; };
         [[nodiscard]] bl::nbt::compound_tag* root() const { return this->root_; }
         actor() = default;
 
@@ -66,7 +67,7 @@ namespace bl {
     // Actor digest entries map a chunk digest key to actorprefix + uid keys.
 
     struct actor_digest_list {
-        bool load(const std::string& raw) {
+        bool load(std::string_view raw) {
             if (raw.size() % 8 != 0) return false;
             const size_t actor_num = raw.size() / 8;
             if (actor_num == 0) return true;

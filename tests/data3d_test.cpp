@@ -47,7 +47,7 @@ class Data3dBenchmark : public ::testing::Test {
             if (rc.from_raw(raw)) {
                 auto d3d = rc.get_normal_key(bl::chunk_key::Data3D);
                 if (!d3d.empty()) {
-                    payloads_.push_back(std::move(d3d));
+                    payloads_.emplace_back(d3d);
                 }
             }
         }

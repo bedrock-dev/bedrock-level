@@ -98,8 +98,7 @@ TEST(LargeNbt, DeserializeTime) {
         for (auto* p : palettes) delete p;
     }
     auto ms = std::chrono::duration<double, std::milli>(steady_clock_t::now() - start).count();
-    std::cout << "deserialize " << data.size() << " bytes -> " << tags << " tag(s) in " << ms << " ms (" << (ms / ROUNDS)
-              << " ms/round)\n";
+    std::cout << "deserialize " << data.size() << " bytes -> " << tags << " tag(s) in " << ms << " ms (" << (ms / ROUNDS) << " ms/round)\n";
     EXPECT_GT(tags, 0u);
 
     // one extra parse to estimate the in-memory footprint of the tag tree

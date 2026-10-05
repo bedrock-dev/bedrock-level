@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <map>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -28,7 +29,8 @@ namespace bl {
         Actor = 1 << 2,        // entities (actors) + digest
         BlockActor = 1 << 3,   // block entities key
         Others = 1 << 4,       // version keys, HSA and remaining normal keys
-        All = Terrain | PendingTick | Actor | BlockActor | Others
+        Jigsaw = 1 << 5,       // JigsawStructureBlueprint values
+        All = Terrain | PendingTick | Actor | BlockActor | Others | Jigsaw
     };
 
     constexpr chunk_load_policy operator|(chunk_load_policy a, chunk_load_policy b) {
@@ -66,9 +68,11 @@ namespace bl {
         std::vector<byte_t> to_raw();
         bool from_raw(const std::vector<byte_t>& data);
 
-        std::string get_normal_key(chunk_key::key_type key) const;
-        std::string get_sub_chunk(int8_t yindex) const;
+        [[nodiscard]] std::string_view get_normal_key(chunk_key::key_type key) const noexcept;
+        [[nodiscard]] std::string_view get_sub_chunk(int8_t yindex) const noexcept;
         const std::map<chunk_key::key_type, std::string>& get_normal_data() const { return data_; }
+        /// Raw JigsawStructureBlueprint values keyed by their identifier hash.
+        const std::map<std::uint64_t, std::string>& get_jigsaw_data() const { return jigsaw_data_; }
         const std::map<int8_t, std::string>& get_sub_chunks() const { return sub_chunk_data_; }
         const std::string& get_actor_digest() const { return actor_digest_; }
         const std::map<std::string, std::string>& get_entities() const { return entities_; }
@@ -79,7 +83,7 @@ namespace bl {
 
         /// Move stored world coordinates to another chunk position.
         void move_to(const bl::chunk_pos& pos, bedrock_level* level);
-        void set_normal(chunk_key::key_type key, const std::string& data) { data_[key] = data; }
+        void set_normal(chunk_key::key_type key, std::string_view data) { data_[key] = data; }
         /// Replaces the SubChunkTerrain payload at yindex (empty data deletes the key on write).
         void set_sub_chunk(int8_t yindex, std::string data) { sub_chunk_data_[yindex] = std::move(data); }
         /// Replace the entity payload using this chunk's storage format.
@@ -91,6 +95,7 @@ namespace bl {
        private:
         chunk_pos pos_;
         std::map<chunk_key::key_type, std::string> data_;
+        std::map<std::uint64_t, std::string> jigsaw_data_;
         std::map<int8_t, std::string> sub_chunk_data_;
         std::string actor_digest_;
         std::map<std::string, std::string> entities_;

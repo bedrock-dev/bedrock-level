@@ -35,15 +35,22 @@ namespace bl {
             return tint_kind::none;
         }
 
-        // Cache block classification per thread because section rendering is concurrent.
-        tint_kind get_tint_kind(const std::string& name) {
-            static thread_local std::unordered_map<std::string, tint_kind> cache;
-            auto it = cache.find(name);
-            if (it != cache.end()) return it->second;
-            auto kind = classify_tint(name);
-            cache.emplace(name, kind);
-            return kind;
-        }
+        struct string_hash {
+            using is_transparent = void;
+
+            size_t operator()(std::string_view value) const noexcept { return std::hash<std::string_view>{}(value); }
+            size_t operator()(const std::string& value) const noexcept { return (*this)(std::string_view(value)); }
+        };
+
+        struct string_equal {
+            using is_transparent = void;
+
+            bool operator()(std::string_view lhs, std::string_view rhs) const noexcept { return lhs == rhs; }
+        };
+
+        using string_color_map = std::unordered_map<std::string, bl::color, string_hash, string_equal>;
+        using string_color_variant_map = std::unordered_map<std::string, string_color_map, string_hash, string_equal>;
+        using string_id_map = std::unordered_map<std::string, int, string_hash, string_equal>;
 
         std::unordered_map<biome, bl::color> biome_water_map;
         std::unordered_map<biome, bl::color> biome_leave_map;
@@ -55,11 +62,11 @@ namespace bl {
 
         std::unordered_map<biome, bl::color> biome_color_map;
 
-        std::unordered_map<std::string, bl::color> single_block_color_map;
-        std::unordered_map<std::string, std::unordered_map<std::string, bl::color>> multi_block_color_map;
+        string_color_map single_block_color_map;
+        string_color_variant_map multi_block_color_map;
 
         std::vector<std::string> block_id_to_names;
-        std::unordered_map<std::string, int> block_name_to_ids;
+        string_id_map block_name_to_ids;
 
         std::string_view strip_minecraft_prefix(std::string_view name) {
             constexpr std::string_view prefix = "minecraft:";
@@ -79,7 +86,7 @@ namespace bl {
             return gray;
         }
 
-        bl::color read_hex_color(const std::string& text);
+        bl::color read_hex_color(std::string_view text);
 
         bl::color read_rgb_color(const nlohmann::json& value) {
             bl::color c;
@@ -99,10 +106,10 @@ namespace bl {
         }
 
         /// "#rrggbb" or "#rrggbbaa" with the leading '#' optional; RGB values default opaque.
-        bl::color read_hex_color(const std::string& text) {
-            const std::string digits = (!text.empty() && text.front() == '#') ? text.substr(1) : text;
+        bl::color read_hex_color(std::string_view text) {
+            const auto digits = (!text.empty() && text.front() == '#') ? text.substr(1) : text;
             if (digits.size() != 6 && digits.size() != 8) {
-                LOG_F(ERROR, "Invalid color string '%s'", text.c_str());
+                LOG_F(ERROR, "Invalid color string '%.*s'", static_cast<int>(text.size()), text.data());
                 return {};
             }
             uint8_t channels[4] = {0, 0, 0, 255};
@@ -111,7 +118,7 @@ namespace bl {
                 const int hi = hex_digit(digits[i * 2]);
                 const int lo = hex_digit(digits[i * 2 + 1]);
                 if (hi < 0 || lo < 0) {
-                    LOG_F(ERROR, "Invalid color string '%s'", text.c_str());
+                    LOG_F(ERROR, "Invalid color string '%.*s'", static_cast<int>(text.size()), text.data());
                     return {};
                 }
                 channels[i] = static_cast<uint8_t>(hi * 16 + lo);
@@ -143,7 +150,7 @@ namespace bl {
         return it == biome_color_map.end() ? bl::color() : it->second;
     }
 
-    color get_block_by_name_tag(const std::string& name, const std::string& tag) {
+    color get_block_by_name_tag(std::string_view name, std::string_view tag) {
         auto it1 = single_block_color_map.find(name);
         if (it1 != single_block_color_map.end()) {
             return it1->second;
@@ -161,16 +168,17 @@ namespace bl {
         }
         if (config::log_missing_block_color()) {
             if (name.find("element") == std::string::npos) {
-                LOG_F(ERROR, "Can not found color for block %s-%s", name.c_str(), tag.c_str());
+                LOG_F(ERROR, "Can not found color for block %.*s-%.*s", static_cast<int>(name.size()), name.data(),
+                      static_cast<int>(tag.size()), tag.data());
             }
         }
         return {};
     }
 
-    color get_block_color(const std::string& name, const std::string& tag) { return get_block_by_name_tag(name, tag); }
+    color get_block_color(std::string_view name, std::string_view tag) { return get_block_by_name_tag(name, tag); }
 
-    biome_tint_kind block_biome_tint_kind(const std::string& name) {
-        switch (get_tint_kind(name)) {
+    biome_tint_kind block_biome_tint_kind(std::string_view name) {
+        switch (classify_tint(name)) {
             case tint_kind::water:
                 return biome_tint_kind::water;
             case tint_kind::leaves:
@@ -182,11 +190,11 @@ namespace bl {
         }
     }
 
-    bool is_water_block(const std::string& name) { return block_biome_tint_kind(name) == biome_tint_kind::water; }
+    bool is_water_block(std::string_view name) { return block_biome_tint_kind(name) == biome_tint_kind::water; }
 
-    bool is_leaves_block(const std::string& name) { return block_biome_tint_kind(name) == biome_tint_kind::leaves; }
+    bool is_leaves_block(std::string_view name) { return block_biome_tint_kind(name) == biome_tint_kind::leaves; }
 
-    bool is_grass_block(const std::string& name) { return block_biome_tint_kind(name) == biome_tint_kind::grass; }
+    bool is_grass_block(std::string_view name) { return block_biome_tint_kind(name) == biome_tint_kind::grass; }
 
     color get_biome_tint_color(biome b, biome_tint_kind kind) {
         switch (kind) {
@@ -292,8 +300,8 @@ namespace bl {
         return true;
     }
 
-    int block_name_to_runtime_id(const std::string& name) {
-        std::string key(strip_minecraft_prefix(name));
+    int block_name_to_runtime_id(std::string_view name) {
+        const auto key = strip_minecraft_prefix(name);
         auto it = block_name_to_ids.find(key);
         return it == block_name_to_ids.end() ? -1 : it->second;
     }
@@ -330,8 +338,8 @@ namespace bl {
         stbi_write_png(name.c_str(), w, h, c, data.data(), 0);
     }
 
-    bl::color blend_color_with_biome(const std::string& name, bl::color color, bl::biome b) {
-        switch (get_tint_kind(name)) {
+    bl::color blend_color_with_biome(std::string_view name, bl::color color, bl::biome b) {
+        switch (classify_tint(name)) {
             case tint_kind::water:
                 return blend_with_biome(biome_water_map, color, default_water_color, b);
             case tint_kind::leaves:

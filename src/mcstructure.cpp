@@ -27,12 +27,12 @@ namespace bl {
             return {x, y, z};
         }
 
-        [[nodiscard]] bool is_visible_block_name(const std::string& name) {
+        [[nodiscard]] bool is_visible_block_name(std::string_view name) {
             // "minecraft:unknown" means "no usable palette entry here", which must not render.
             return name != "minecraft:air" && name != "minecraft:unknown";
         }
 
-        bl::nbt::list_tag* make_int_list(const std::string& key, int a, int b, int c) {
+        bl::nbt::list_tag* make_int_list(std::string_view key, int a, int b, int c) {
             auto* list = new bl::nbt::list_tag(key);
             list->append(new bl::nbt::int_tag("", a));
             list->append(new bl::nbt::int_tag("", b));
@@ -376,11 +376,11 @@ namespace bl {
             return pos;
         };
         auto get_list = [&](const char* path) -> bl::nbt::list_tag* {
-        auto* tag = root->get_by_path(path);
+            auto* tag = root->get_by_path(path);
             return tag ? tag->as<bl::nbt::list_tag*>() : nullptr;
         };
         auto get_compound = [&](const char* path) -> bl::nbt::compound_tag* {
-        auto* tag = root->get_by_path(path);
+            auto* tag = root->get_by_path(path);
             return tag ? tag->as<bl::nbt::compound_tag*>() : nullptr;
         };
 

@@ -2,6 +2,7 @@
 #define BEDROCK_LEVEL_COLOR_H
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 
 #include "data_3d.h"
@@ -23,20 +24,20 @@ namespace bl {
     bool init_block_color_from_file(const std::string& filename);
 
     // Block name/runtime ID tables are initialized once and then read-only.
-    int block_name_to_runtime_id(const std::string& name);
+    int block_name_to_runtime_id(std::string_view name);
     const std::string& block_runtime_id_to_name(int id);
     std::string block_runtime_id_to_full_name(int id);
 
     color get_biome_color(biome b);
     // Raw block colour lookup, without any biome tinting.
-    color get_block_color(const std::string& name, const std::string& tag = {});
-    color get_block_by_name_tag(const std::string& name, const std::string& tag = {});
-    [[nodiscard]] biome_tint_kind block_biome_tint_kind(const std::string& name);
-    [[nodiscard]] bool is_water_block(const std::string& name);
-    [[nodiscard]] bool is_leaves_block(const std::string& name);
-    [[nodiscard]] bool is_grass_block(const std::string& name);
+    color get_block_color(std::string_view name, std::string_view tag = {});
+    color get_block_by_name_tag(std::string_view name, std::string_view tag = {});
+    [[nodiscard]] biome_tint_kind block_biome_tint_kind(std::string_view name);
+    [[nodiscard]] bool is_water_block(std::string_view name);
+    [[nodiscard]] bool is_leaves_block(std::string_view name);
+    [[nodiscard]] bool is_grass_block(std::string_view name);
     [[nodiscard]] color get_biome_tint_color(biome b, biome_tint_kind kind);
-    bl::color blend_color_with_biome(const std::string& name, bl::color color, bl::biome b);
+    bl::color blend_color_with_biome(std::string_view name, bl::color color, bl::biome b);
 
     void export_image(const std::vector<std::vector<color>>& c, int ppi, const std::string& name);
 

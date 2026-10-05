@@ -11,6 +11,14 @@
 
 namespace bl {
 
+    // Fixed prefixes used by Bedrock LevelDB keys. Dynamic category prefixes
+    // such as player/map keys intentionally stay in their classification code.
+    namespace storage_key {
+        inline constexpr std::string_view actor = "actorprefix";
+        inline constexpr std::string_view actor_digest = "digp";
+        inline constexpr std::string_view village = "VILLAGE_";
+    }  // namespace storage_key
+
     // From Levilamina
     enum class LevelChunkFormat : signed char {
         V9_00 = 0,
@@ -96,8 +104,8 @@ namespace bl {
             MetaDataHash = 63,
             BlendingData = 64,
             ActorDigestVersion = 65,
-            VersionOld = 118,  // 0x76 (v)
-            AabbVolumes = 119,  // 0x77
+            VersionOld = 118,                // 0x76 (v)
+            AabbVolumes = 119,               // 0x77
             JigsawStructureBlueprint = 120,  // 0x78
             Unknown = -1
         };
@@ -116,6 +124,9 @@ namespace bl {
         key_type type{Unknown};
         chunk_pos cp;
         int8_t y_index{};
+        // JigsawStructureBlueprint keys append the FNV-1a hash of the
+        // structure identifier after the key type byte.
+        std::uint64_t identifier_hash{};
     };
 
     struct actor_key {
@@ -131,7 +142,7 @@ namespace bl {
     struct actor_digest_key {
         chunk_pos cp;
 
-        static actor_digest_key parse(const std::string& key);
+        static actor_digest_key parse(std::string_view key);
 
         [[nodiscard]] inline bool valid() const { return this->cp.valid(); }
 
@@ -149,7 +160,7 @@ namespace bl {
 
         [[nodiscard]] std::string to_string() const;
 
-        static village_key parse(const std::string& key);
+        static village_key parse(std::string_view key);
 
         [[nodiscard]] std::string to_raw() const;
 
@@ -190,7 +201,7 @@ namespace bl {
         }
 
         // payload layout: int32 count, then count * (min x/y/z, max x/y/z int32s + 1 type byte)
-        bool from_raw(const std::string& raw);
+        bool from_raw(std::string_view raw);
         [[nodiscard]] std::string to_raw() const;
 
        private:

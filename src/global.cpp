@@ -5,8 +5,9 @@
 namespace bl {
     namespace global_key {
         namespace {
-            constexpr key_list OTHER_KEYS{"portals", "scoreboard", "AutonomousEntities", "BiomeData", "Nether", "Overworld",
-                                          "TheEnd", "schedulerWT", "mobevents", "WorldClocks", "LevelChunkMetaDataDictionary"};
+            constexpr key_list OTHER_KEYS{
+                "portals",   "scoreboard",  "AutonomousEntities",          "BiomeData", "Nether", "Overworld", "TheEnd", "schedulerWT",
+                "mobevents", "WorldClocks", "LevelChunkMetaDataDictionary"};
         }
 
         const key_list& other_keys() noexcept { return OTHER_KEYS; }
@@ -20,7 +21,7 @@ namespace bl {
         this->clear_data();
         this->data_ = data;
     }
-    void village_data::append_village(const village_key& key, const std::string& value) {
+    void village_data::append_village(const village_key& key, std::string_view value) {
         int read = 0;
         auto* nbt = bl::nbt::read_one_palette(value.data(), read);
         if (static_cast<size_t>(read) == value.size() && nbt && key.dim >= 0 && key.dim <= 2) {
@@ -43,11 +44,11 @@ namespace bl {
         this->clear_data();
         this->data_ = data;
     }
-    void general_kv_nbts::append_nbt(const std::string& key, const std::string& value) {
+    void general_kv_nbts::append_nbt(std::string_view key, std::string_view value) {
         int read = 0;
         auto* nbt = bl::nbt::read_one_palette(value.data(), read);
         if (static_cast<size_t>(read) == value.size() && nbt) {
-            this->data_[key] = nbt;
+            this->data_[std::string(key)] = nbt;
         }
     }
     general_kv_nbts::~general_kv_nbts() {

@@ -108,8 +108,8 @@ TEST_F(ChunkBenchmark, ToRawAll) {
         }
     }
     auto elapsed_ms = std::chrono::duration<double, std::milli>(steady_clock_t::now() - start).count();
-    std::cout << "to_raw " << chunks_.size() << " chunks -> " << total_bytes << " bytes in " << elapsed_ms << " ms ("
-              << elapsed_ms / ROUNDS << " ms/round)\n";
+    std::cout << "to_raw " << chunks_.size() << " chunks -> " << total_bytes << " bytes in " << elapsed_ms << " ms (" << elapsed_ms / ROUNDS
+              << " ms/round)\n";
     EXPECT_GT(total_bytes, 0u);
 }
 

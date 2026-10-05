@@ -1,5 +1,6 @@
 #include "palette.h"
 
+#include "binary_io.h"
 #include "loguru/loguru.hpp"
 
 namespace bl {
@@ -20,7 +21,7 @@ namespace bl {
             if (BLOCK_NUM % block_per_word != 0) wordCount++;
             int position = 0;
             for (int wordi = 0; wordi < wordCount; wordi++) {
-                auto word = *reinterpret_cast<const int*>(stream + read + wordi * 4);
+                const auto word = binary::read_u32_le(stream + read + wordi * 4);
                 for (int block = 0; block < block_per_word; block++) {
                     int state = (word >> ((position % block_per_word) * bits)) & ((1 << bits) - 1);
                     if (position < static_cast<int>(blocks.size())) {
@@ -30,7 +31,7 @@ namespace bl {
                 }
             }
             read += wordCount << 2;
-            palette_len = *reinterpret_cast<const int*>(stream + read);
+            palette_len = binary::read_u32_le(stream + read);
             read += 4;
         } else {  // uniform
             blocks = std::vector<uint16_t>(BLOCK_NUM, 0);
@@ -75,10 +76,10 @@ namespace bl {
                     const uint32_t index = position < static_cast<int>(blocks.size()) ? blocks[position] : 0;
                     word |= index << (slot * bits);
                 }
-                for (int byte = 0; byte < 4; byte++) out.push_back(static_cast<char>((word >> (byte * 8)) & 0xff));
+                binary::append_u32_le(out, word);
             }
             const int32_t palette_len = static_cast<int32_t>(palette.size());
-            for (int byte = 0; byte < 4; byte++) out.push_back(static_cast<char>((palette_len >> (byte * 8)) & 0xff));
+            binary::append_i32_le(out, palette_len);
         }
 
         for (const auto& entry : palette) {

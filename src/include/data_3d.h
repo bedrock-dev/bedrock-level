@@ -4,6 +4,7 @@
 #include <array>
 #include <cstdint>
 #include <cstdio>
+#include <span>
 #include <string>
 
 #include "bedrock_key.h"
@@ -139,7 +140,7 @@ namespace bl {
             return this->height_map_[x + z * 16] + my;
         }
 
-        [[nodiscard]] inline std::array<int16_t, 256> height_map() const { return this->height_map_; }
+        [[nodiscard]] inline std::span<const int16_t, 256> height_map() const noexcept { return this->height_map_; }
 
         biome get_biome(int cx, int y, int cz);
 

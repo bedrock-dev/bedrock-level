@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <functional>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 
 #include "bedrock_key.h"
@@ -26,7 +27,7 @@ namespace bl {
 
         bool is_open() const { return this->is_open_; }
         leveldb::DB*& db() { return this->db_; }
-        std::string root_path() const { return this->root_name_; }
+        [[nodiscard]] const std::string& root_path() const noexcept { return this->root_name_; }
 
         general_kv_nbts& player_data() { return this->player_data_; }
         bl::village_data& village_data() { return this->village_data_; }
@@ -44,14 +45,14 @@ namespace bl {
         const std::unordered_map<std::string, int>& custom_dimension_table() const { return custom_dimension_table_; }
         chunk* get_chunk(const chunk_pos& cp, chunk_load_policy policy = chunk_load_policy::All);
 
-        bool load_raw(const std::string& key, std::string& value);
+        bool load_raw(std::string_view key, std::string& value);
         void load_global_data();
 
         /// Read options for large database traversals.
         [[nodiscard]] leveldb::ReadOptions bulk_read_options() const;
 
-        void foreach_global_keys(const std::function<void(const std::string&, const std::string&)>& f);
-        void foreach_key_with_prefix(const std::string& prefix, const std::function<void(const std::string&, const std::string&)>& f,
+        void foreach_global_keys(const std::function<void(std::string_view, std::string_view)>& f);
+        void foreach_key_with_prefix(std::string_view prefix, const std::function<void(std::string_view, std::string_view)>& f,
                                      std::atomic_bool& stop, int max = -1);
 
         /// Generate a non-persistent actor ID unique to this process instance.

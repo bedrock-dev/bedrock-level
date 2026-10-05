@@ -64,10 +64,10 @@ namespace {
         }
         // actors (old version): concatenated compounds in Entity key
         auto entity_raw = rc.get_normal_key(bl::chunk_key::Entity);
-        if (!entity_raw.empty()) out.push_back(entity_raw);
+        if (!entity_raw.empty()) out.emplace_back(entity_raw);
         // pending ticks
         auto tick_raw = rc.get_normal_key(bl::chunk_key::PendingTicks);
-        if (!tick_raw.empty()) out.push_back(tick_raw);
+        if (!tick_raw.empty()) out.emplace_back(tick_raw);
     }
 
     using steady_clock_t = std::chrono::steady_clock;

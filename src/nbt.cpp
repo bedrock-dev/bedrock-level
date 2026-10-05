@@ -9,8 +9,8 @@
 namespace bl::nbt {
 
     std::tuple<abstract_tag*, size_t> read_nbt(const byte_t* data, size_t data_len);
-    std::tuple<compound_tag*, size_t> read_compound_value(const byte_t* data, size_t data_len, const std::string& key);
-    std::tuple<abstract_tag*, size_t> read_value_by_type(tag_type type, const byte_t* data, size_t data_len, const std::string& key);
+    std::tuple<compound_tag*, size_t> read_compound_value(const byte_t* data, size_t data_len, std::string_view key);
+    std::tuple<abstract_tag*, size_t> read_value_by_type(tag_type type, const byte_t* data, size_t data_len, std::string_view key);
 
     std::string tag_type_to_str(tag_type type) {
         auto name = magic_enum::enum_name(type);
@@ -36,7 +36,7 @@ namespace bl::nbt {
     }
 
     template <typename TagType>
-    std::tuple<TagType*, size_t> read_scalar_value(const byte_t* data, size_t data_len, const std::string& key) {
+    std::tuple<TagType*, size_t> read_scalar_value(const byte_t* data, size_t data_len, std::string_view key) {
         using value_type = decltype(TagType::value);
         constexpr size_t value_size = sizeof(value_type);
         if (!data || data_len < value_size) return {nullptr, 0};
@@ -46,7 +46,7 @@ namespace bl::nbt {
     }
 
     template <typename TagType>
-    std::tuple<TagType*, size_t> read_array_value(const byte_t* data, size_t data_len, const std::string& key) {
+    std::tuple<TagType*, size_t> read_array_value(const byte_t* data, size_t data_len, std::string_view key) {
         using elem_type = typename decltype(TagType::value)::value_type;
         if (!data || data_len < 4) return {nullptr, 0};
         const int32_t len = detail::read_scalar_le<int32_t>(data);
@@ -66,7 +66,7 @@ namespace bl::nbt {
         return {tag.release(), consumed};
     }
 
-    std::tuple<string_tag*, size_t> read_string_value(const byte_t* data, size_t data_len, const std::string& key) {
+    std::tuple<string_tag*, size_t> read_string_value(const byte_t* data, size_t data_len, std::string_view key) {
         auto tag = std::make_unique<string_tag>(key);
         int r = read_string(data, data_len, tag->value);
         if (r == 0) {
@@ -75,7 +75,7 @@ namespace bl::nbt {
         return {tag.release(), static_cast<size_t>(r)};
     }
 
-    std::tuple<list_tag*, size_t> read_list_tag_value(const byte_t* data, size_t data_len, const std::string& key) {
+    std::tuple<list_tag*, size_t> read_list_tag_value(const byte_t* data, size_t data_len, std::string_view key) {
         if (!data) return {nullptr, 0};
         size_t read = 0;
         auto tag = std::make_unique<list_tag>(key);
@@ -105,7 +105,7 @@ namespace bl::nbt {
         return {tag.release(), read};
     }
 
-    std::tuple<compound_tag*, size_t> read_compound_value(const byte_t* data, size_t data_len, const std::string& key) {
+    std::tuple<compound_tag*, size_t> read_compound_value(const byte_t* data, size_t data_len, std::string_view key) {
         if (!data) return {nullptr, 0};
         auto tag = std::make_unique<compound_tag>(key);
         size_t total = 0;
@@ -125,7 +125,7 @@ namespace bl::nbt {
         return {nullptr, 0};
     }
 
-    std::tuple<abstract_tag*, size_t> read_value_by_type(tag_type type, const byte_t* data, size_t data_len, const std::string& key) {
+    std::tuple<abstract_tag*, size_t> read_value_by_type(tag_type type, const byte_t* data, size_t data_len, std::string_view key) {
         switch (type) {
             case Compound:
                 return read_compound_value(data, data_len, key);
@@ -227,7 +227,7 @@ namespace bl::nbt {
         }
     }
 
-    abstract_tag* abstract_tag::get_by_path(const std::string& path) {
+    abstract_tag* abstract_tag::get_by_path(std::string_view path) {
         abstract_tag* cur = this;
         size_t i = 0;
         while (cur && i < path.size()) {
@@ -237,15 +237,15 @@ namespace bl::nbt {
             }
             if (path[i] != '[') {
                 auto end = path.find_first_of(".[", i);
-                auto name = path.substr(i, end == std::string::npos ? std::string::npos : end - i);
-                i = (end == std::string::npos) ? path.size() : end;
+                auto name = path.substr(i, end == std::string_view::npos ? std::string_view::npos : end - i);
+                i = (end == std::string_view::npos) ? path.size() : end;
                 auto* comp = cur->as<compound_tag*>();
                 if (!comp) return nullptr;
                 cur = comp->get(name);
             }
             while (cur && i < path.size() && path[i] == '[') {
                 auto close = path.find(']', i);
-                if (close == std::string::npos) return nullptr;
+                if (close == std::string_view::npos) return nullptr;
                 int idx = 0;
                 bool valid = close > i + 1;
                 for (auto k = i + 1; k < close && valid; k++) {

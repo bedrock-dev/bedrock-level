@@ -3,6 +3,7 @@
 #include <cstdio>
 
 #include "bedrock_key.h"
+#include "binary_io.h"
 #include "raw_chunk.h"
 #include "utils.h"
 
@@ -25,7 +26,7 @@ namespace bl {
                 int position = 0;
 
                 for (int wordi = 0; wordi < word_count; wordi++) {
-                    auto word = *reinterpret_cast<const int*>(data + read + wordi * 4);
+                    const auto word = binary::read_u32_le(data + read + wordi * 4);
                     // word_count * bpw can exceed 4096 for widths such as 3, 5, and 6.
                     for (int block = 0; block < bpw && position < BLOCK_NUM; block++) {
                         int state = (word >> ((position % bpw) * bits)) & ((1 << bits) - 1);
@@ -35,7 +36,7 @@ namespace bl {
                 }
 
                 read += word_count << 2;
-                palette_len = *reinterpret_cast<const int*>(data + read);
+                palette_len = static_cast<int>(binary::read_i32_le(data + read));
                 read += 4;
             }
 
@@ -43,7 +44,7 @@ namespace bl {
             std::vector<biome> biomes_palettes;
 
             for (int i = 0; i < palette_len; i++) {
-                auto biomeId = *reinterpret_cast<const int*>(data + read);
+                auto biomeId = binary::read_i32_le(data + read);
                 read += 4;
                 biomes_palettes.push_back(static_cast<biome>(biomeId));
             }
@@ -55,13 +56,6 @@ namespace bl {
             }
 
             return res;
-        }
-
-        void append_i32(std::string& out, int32_t v) {
-            out.push_back(static_cast<char>(v & 0xff));
-            out.push_back(static_cast<char>((v >> 8) & 0xff));
-            out.push_back(static_cast<char>((v >> 16) & 0xff));
-            out.push_back(static_cast<char>((v >> 24) & 0xff));
         }
 
         // Packs one biome sub-chunk in the on-disk x * 256 + z * 16 + y order.
@@ -86,7 +80,7 @@ namespace bl {
                     return;
                 }
                 out.push_back('\0');
-                append_i32(out, static_cast<int32_t>(palette[0]));
+                binary::append_i32_le(out, static_cast<int32_t>(palette[0]));
                 return;
             }
 
@@ -103,10 +97,20 @@ namespace bl {
                     if (pos >= total) break;
                     packed |= static_cast<uint32_t>(index[pos]) << (s * bits);
                 }
-                append_i32(out, static_cast<int32_t>(packed));
+                binary::append_u32_le(out, packed);
             }
-            append_i32(out, static_cast<int32_t>(palette.size()));
-            for (const auto b : palette) append_i32(out, static_cast<int32_t>(b));
+            binary::append_i32_le(out, static_cast<int32_t>(palette.size()));
+            for (const auto b : palette) binary::append_i32_le(out, static_cast<int32_t>(b));
+        }
+
+        void read_height_map(std::array<int16_t, 256>& height_map, const byte_t* data) {
+            for (size_t i = 0; i < height_map.size(); ++i) {
+                height_map[i] = binary::read_i16_le(data + i * sizeof(int16_t));
+            }
+        }
+
+        void append_height_map(std::string& out, const std::array<int16_t, 256>& height_map) {
+            for (const auto height : height_map) binary::append_i16_le(out, height);
         }
     }  // namespace
 
@@ -117,7 +121,7 @@ namespace bl {
             return false;
         }
         this->use_3d_biome_maps_ = true;
-        memcpy(this->height_map_.data(), data, 512);
+        read_height_map(this->height_map_, data);
         index += 512;
         while (index < static_cast<int>(len)) {
             int read = 0;
@@ -185,7 +189,7 @@ namespace bl {
             LOG_F(ERROR, "Invalid Data2d format (%zu)", len);
             return false;
         }
-        memcpy(this->height_map_.data(), data, 512);
+        read_height_map(this->height_map_, data);
         this->use_3d_biome_maps_ = false;
         std::array<biome, 256> layer{};
         for (int x = 0; x < 16; x++) {
@@ -228,8 +232,10 @@ namespace bl {
 
     std::string biome3d::to_raw() const {
         if (!this->use_3d_biome_maps_) {
-            std::string result(512 + 256, '\0');
-            memcpy(result.data(), height_map_.data(), 512);
+            std::string result;
+            result.reserve(512 + 256);
+            append_height_map(result, height_map_);
+            result.resize(512 + 256, '\0');
             if (!biomes_.empty()) {
                 for (int x = 0; x < 16; x++) {
                     for (int z = 0; z < 16; z++) {
@@ -242,7 +248,7 @@ namespace bl {
 
         std::string result;
         result.reserve(512 + biomes_.size() * 5);
-        result.append(reinterpret_cast<const char*>(height_map_.data()), 512);
+        append_height_map(result, height_map_);
 
         const size_t layer_count = biomes_.size();
         for (size_t sc = 0; sc * 16 < layer_count; ++sc) {

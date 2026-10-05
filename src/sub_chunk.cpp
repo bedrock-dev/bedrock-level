@@ -1,6 +1,7 @@
 #include "sub_chunk.h"
 
 #include <cstdio>
+#include <string_view>
 #include <unordered_map>
 
 #include "color.h"
@@ -14,9 +15,9 @@ namespace bl {
 
         constexpr auto BLOCK_NUM = 16 * 16 * 16;
 
-        [[nodiscard]] nbt::compound_tag* make_block_state(const std::string& name) {
+        [[nodiscard]] nbt::compound_tag* make_block_state(std::string_view name) {
             auto* tag = new nbt::compound_tag("");
-            tag->put(new nbt::string_tag("name", name));
+            tag->put(new nbt::string_tag("name", std::string(name)));
             return tag;
         }
 

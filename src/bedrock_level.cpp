@@ -94,9 +94,9 @@ namespace bl {
         return this->load_chunk(cp, policy);
     }
 
-    bool bedrock_level::load_raw(const std::string& key, std::string& value) {
+    bool bedrock_level::load_raw(std::string_view key, std::string& value) {
         if (!this->is_open() || !this->db_) return false;
-        auto r = this->db_->Get(read_option_, key, &value);
+        auto r = this->db_->Get(read_option_, leveldb::Slice(key.data(), key.size()), &value);
         return r.ok();
     }
 
@@ -107,7 +107,7 @@ namespace bl {
     }
 
     void bedrock_level::load_global_data() {
-        this->foreach_global_keys([this](const std::string& key, const std::string& value) {
+        this->foreach_global_keys([this](std::string_view key, std::string_view value) {
             if (key.find("player") != std::string::npos) {
                 this->player_data_.append_nbt(key, value);
             } else if (key.find("map") == 0) {
@@ -120,7 +120,7 @@ namespace bl {
             }
         });
     }
-    void bedrock_level::foreach_global_keys(const std::function<void(const std::string&, const std::string&)>& f) {
+    void bedrock_level::foreach_global_keys(const std::function<void(std::string_view, std::string_view)>& f) {
         auto* it = this->db_->NewIterator(this->read_option_);
         for (it->SeekToFirst(); it->Valid(); it->Next()) {
             const auto key = slice_view(it->key());
@@ -128,18 +128,22 @@ namespace bl {
             if (ck.valid()) continue;
             auto actor_key = bl::actor_key::parse(key);
             if (actor_key.valid()) continue;
-            f(it->key().ToString(), it->value().ToString());
+            const auto db_key = it->key();
+            const auto value = it->value();
+            f(std::string_view(db_key.data(), db_key.size()), std::string_view(value.data(), value.size()));
         }
         delete it;
     }
 
-    void bedrock_level::foreach_key_with_prefix(const std::string& prefix,
-                                                const std::function<void(const std::string&, const std::string&)>& f,
+    void bedrock_level::foreach_key_with_prefix(std::string_view prefix, const std::function<void(std::string_view, std::string_view)>& f,
                                                 std::atomic_bool& stop, int max) {
         auto* it = this->db_->NewIterator(this->read_option_);
         int count = 0;
-        for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
-            f(it->key().ToString(), it->value().ToString());
+        const leveldb::Slice prefix_slice(prefix.data(), prefix.size());
+        for (it->Seek(prefix_slice); it->Valid() && it->key().starts_with(prefix_slice); it->Next()) {
+            const auto key = it->key();
+            const auto value = it->value();
+            f(std::string_view(key.data(), key.size()), std::string_view(value.data(), value.size()));
             count++;
             if ((count >= max && max > 0) || stop) {
                 delete it;

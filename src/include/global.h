@@ -23,7 +23,7 @@ namespace bl {
         using village_table_type = std::array<std::unordered_map<std::string, village_data_type>, 4>;
 
         void reset(const village_table_type& data);
-        void append_village(const bl::village_key& key, const std::string& value);
+        void append_village(const bl::village_key& key, std::string_view value);
 
         inline village_table_type& data() { return this->data_; }
         void clear_data();
@@ -37,7 +37,7 @@ namespace bl {
        public:
         void reset(const std::unordered_map<std::string, bl::nbt::compound_tag*>& data);
 
-        void append_nbt(const std::string& key, const std::string& value);
+        void append_nbt(std::string_view key, std::string_view value);
         inline std::unordered_map<std::string, bl::nbt::compound_tag*>& data() { return this->data_; };
         inline const std::unordered_map<std::string, bl::nbt::compound_tag*>& data() const { return this->data_; };
         ~general_kv_nbts();

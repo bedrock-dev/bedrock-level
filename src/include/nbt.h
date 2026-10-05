@@ -11,33 +11,21 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
+#include "binary_io.h"
 #include "utils.h"
 
 namespace bl::nbt {
 
     // Bedrock NBT stores all multi-byte values in little-endian order.
     namespace detail {
-        inline uint16_t read_u16_le(const byte_t* data) noexcept {
-            return static_cast<uint16_t>(static_cast<uint8_t>(data[0])) | (static_cast<uint16_t>(static_cast<uint8_t>(data[1])) << 8);
-        }
-
-        inline uint32_t read_u32_le(const byte_t* data) noexcept {
-            return static_cast<uint32_t>(static_cast<uint8_t>(data[0])) | (static_cast<uint32_t>(static_cast<uint8_t>(data[1])) << 8) |
-                   (static_cast<uint32_t>(static_cast<uint8_t>(data[2])) << 16) |
-                   (static_cast<uint32_t>(static_cast<uint8_t>(data[3])) << 24);
-        }
-
-        inline uint64_t read_u64_le(const byte_t* data) noexcept {
-            uint64_t value = 0;
-            for (unsigned i = 0; i < 8; ++i) {
-                value |= static_cast<uint64_t>(static_cast<uint8_t>(data[i])) << (i * 8);
-            }
-            return value;
-        }
+        using bl::binary::read_u16_le;
+        using bl::binary::read_u32_le;
+        using bl::binary::read_u64_le;
 
         template <typename T>
         T read_scalar_le(const byte_t* data) noexcept {
@@ -58,18 +46,9 @@ namespace bl::nbt {
             }
         }
 
-        inline void append_u16_le(std::string& out, uint16_t value) {
-            out.push_back(static_cast<char>(value & 0xffu));
-            out.push_back(static_cast<char>((value >> 8) & 0xffu));
-        }
-
-        inline void append_u32_le(std::string& out, uint32_t value) {
-            for (unsigned i = 0; i < 4; ++i) out.push_back(static_cast<char>((value >> (i * 8)) & 0xffu));
-        }
-
-        inline void append_u64_le(std::string& out, uint64_t value) {
-            for (unsigned i = 0; i < 8; ++i) out.push_back(static_cast<char>((value >> (i * 8)) & 0xffu));
-        }
+        using bl::binary::append_u16_le;
+        using bl::binary::append_u32_le;
+        using bl::binary::append_u64_le;
 
         template <typename T>
         void append_scalar_le(std::string& out, T value) {
@@ -110,7 +89,7 @@ namespace bl::nbt {
 
     class abstract_tag {
        public:
-        explicit abstract_tag(std::string key) : key_(std::move(key)) {}
+        explicit abstract_tag(std::string_view key) : key_(key) {}
 
         abstract_tag(const abstract_tag& tag) = default;
 
@@ -134,7 +113,7 @@ namespace bl::nbt {
             return out;
         }
         [[nodiscard]] const std::string& key() const { return this->key_; }
-        void set_key(const std::string& key) { this->key_ = key; }
+        void set_key(std::string_view key) { this->key_ = key; }
 
         void write_raw(std::string& out) const {
             out.push_back(static_cast<char>(this->type()));
@@ -154,7 +133,7 @@ namespace bl::nbt {
             return dynamic_cast<T>(const_cast<abstract_tag*>(this));
         }
 
-        abstract_tag* get_by_path(const std::string& path);
+        abstract_tag* get_by_path(std::string_view path);
 
        public:
         virtual void write(std::ostream& o, int indent) const {
@@ -193,19 +172,19 @@ namespace bl::nbt {
         [[nodiscard]] size_t size() const { return vec_.size(); }
         [[nodiscard]] bool empty() const { return vec_.empty(); }
 
-        [[nodiscard]] iterator find(const std::string& key) {
+        [[nodiscard]] iterator find(std::string_view key) {
             auto it = lower_bound(key);
             return (it != vec_.end() && it->first == key) ? it : vec_.end();
         }
 
-        [[nodiscard]] const_iterator find(const std::string& key) const {
+        [[nodiscard]] const_iterator find(std::string_view key) const {
             auto it = lower_bound(key);
             return (it != vec_.end() && it->first == key) ? it : vec_.end();
         }
 
-        [[nodiscard]] size_t count(const std::string& key) const { return find(key) == end() ? 0 : 1; }
+        [[nodiscard]] size_t count(std::string_view key) const { return find(key) == end() ? 0 : 1; }
 
-        abstract_tag*& operator[](const std::string& key) {
+        abstract_tag*& operator[](std::string_view key) {
             auto it = lower_bound(key);
             if (it != vec_.end() && it->first == key) return it->second;
             return vec_.emplace(it, key, nullptr)->second;
@@ -221,7 +200,7 @@ namespace bl::nbt {
             }
         }
 
-        size_t erase(const std::string& key) {
+        size_t erase(std::string_view key) {
             auto it = find(key);
             if (it == vec_.end()) return 0;
             vec_.erase(it);
@@ -231,19 +210,19 @@ namespace bl::nbt {
         void clear() { vec_.clear(); }
 
        private:
-        [[nodiscard]] iterator lower_bound(const std::string& key) {
-            return std::lower_bound(vec_.begin(), vec_.end(), key, [](const value_type& a, const std::string& k) { return a.first < k; });
+        [[nodiscard]] iterator lower_bound(std::string_view key) {
+            return std::lower_bound(vec_.begin(), vec_.end(), key, [](const value_type& a, std::string_view k) { return a.first < k; });
         }
 
-        [[nodiscard]] const_iterator lower_bound(const std::string& key) const {
-            return std::lower_bound(vec_.begin(), vec_.end(), key, [](const value_type& a, const std::string& k) { return a.first < k; });
+        [[nodiscard]] const_iterator lower_bound(std::string_view key) const {
+            return std::lower_bound(vec_.begin(), vec_.end(), key, [](const value_type& a, std::string_view k) { return a.first < k; });
         }
 
         std::vector<value_type> vec_;
     };
 
     struct compound_tag : public abstract_tag {
-        explicit compound_tag(const std::string& key) : abstract_tag(key) {}
+        explicit compound_tag(std::string_view key) : abstract_tag(key) {}
         compound_tag(const compound_tag& tag) : abstract_tag(tag.key_) {
             this->key_ = tag.key_;
             for (auto& kv : tag.value) {
@@ -281,7 +260,7 @@ namespace bl::nbt {
 
         void put(abstract_tag* tag) { this->value.assign(tag); }
 
-        void remove(const std::string& key) {
+        void remove(std::string_view key) {
             auto it = this->value.find(key);
             if (it != this->value.end()) {
                 delete it->second;
@@ -289,12 +268,12 @@ namespace bl::nbt {
             this->value.erase(key);
         }
 
-        [[nodiscard]] abstract_tag* get(const std::string& key) {
+        [[nodiscard]] abstract_tag* get(std::string_view key) {
             auto it = this->value.find(key);
             return it == this->value.end() ? nullptr : it->second;
         }
 
-        [[nodiscard]] const abstract_tag* get(const std::string& key) const {
+        [[nodiscard]] const abstract_tag* get(std::string_view key) const {
             auto it = this->value.find(key);
             return it == this->value.end() ? nullptr : it->second;
         }
@@ -342,7 +321,7 @@ namespace bl::nbt {
             }
             return *this;
         }
-        explicit list_tag(const std::string& key) : abstract_tag(key) {}
+        explicit list_tag(std::string_view key) : abstract_tag(key) {}
 
         [[nodiscard]] tag_type type() const override { return List; }
 
@@ -420,9 +399,9 @@ namespace bl::nbt {
     };
 
     struct string_tag : public abstract_tag {
-        explicit string_tag(const std::string& key) : abstract_tag(key) {}
+        explicit string_tag(std::string_view key) : abstract_tag(key) {}
 
-        string_tag(const std::string& key, std::string value) : abstract_tag(key), value(std::move(value)) {}
+        string_tag(std::string_view key, std::string value) : abstract_tag(key), value(std::move(value)) {}
 
         [[nodiscard]] tag_type type() const override { return String; }
 
@@ -454,8 +433,8 @@ namespace bl::nbt {
 
     template <typename ValueType, tag_type TT, size_t ValueSize>
     struct scalar_tag : public abstract_tag {
-        explicit scalar_tag(const std::string& key) : abstract_tag(key) {}
-        scalar_tag(const std::string& key, ValueType v) : abstract_tag(key), value(v) {}
+        explicit scalar_tag(std::string_view key) : abstract_tag(key) {}
+        scalar_tag(std::string_view key, ValueType v) : abstract_tag(key), value(v) {}
 
         [[nodiscard]] tag_type type() const override { return TT; }
 
@@ -499,8 +478,8 @@ namespace bl::nbt {
 
     template <typename ElemType, tag_type TT>
     struct array_tag : public abstract_tag {
-        explicit array_tag(const std::string& key) : abstract_tag(key) {}
-        array_tag(const std::string& key, std::vector<ElemType> v) : abstract_tag(key), value(std::move(v)) {}
+        explicit array_tag(std::string_view key) : abstract_tag(key) {}
+        array_tag(std::string_view key, std::vector<ElemType> v) : abstract_tag(key), value(std::move(v)) {}
 
         [[nodiscard]] tag_type type() const override { return TT; }
 

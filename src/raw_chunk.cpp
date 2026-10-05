@@ -8,41 +8,22 @@
 #include "actor.h"
 #include "bedrock_key.h"
 #include "bedrock_level.h"
+#include "binary_io.h"
 #include "chunk_data_position.h"
 #include "config.h"
+#include "leveldb/iterator.h"
 #include "nbt.h"
 #include "utils.h"
 
 namespace bl {
 
     namespace {
-        void write_i32(std::vector<byte_t>& buf, int32_t v) {
-            buf.push_back(static_cast<byte_t>(v & 0xff));
-            buf.push_back(static_cast<byte_t>((v >> 8) & 0xff));
-            buf.push_back(static_cast<byte_t>((v >> 16) & 0xff));
-            buf.push_back(static_cast<byte_t>((v >> 24) & 0xff));
-        }
-
-        int32_t read_i32(const byte_t*& p) {
-            int32_t v = static_cast<int32_t>(static_cast<uint8_t>(p[0])) | (static_cast<int32_t>(static_cast<uint8_t>(p[1])) << 8) |
-                        (static_cast<int32_t>(static_cast<uint8_t>(p[2])) << 16) | (static_cast<int32_t>(static_cast<uint8_t>(p[3])) << 24);
-            p += 4;
-            return v;
-        }
-
-        void write_bytes(std::vector<byte_t>& buf, const std::string& s) {
-            write_i32(buf, static_cast<int32_t>(s.size()));
+        void write_bytes(std::vector<byte_t>& buf, std::string_view s) {
+            binary::append_i32_le(buf, static_cast<int32_t>(s.size()));
             buf.insert(buf.end(), s.begin(), s.end());
         }
 
-        std::string read_bytes(const byte_t*& p) {
-            int32_t size = read_i32(p);
-            std::string s(p, p + size);
-            p += size;
-            return s;
-        }
-
-        bool parse_chunk_format(const std::string& payload, LevelChunkFormat& out) {
+        bool parse_chunk_format(std::string_view payload, LevelChunkFormat& out) {
             if (payload.empty()) return false;
             const auto value = static_cast<unsigned char>(payload[0]);
             if (value >= static_cast<unsigned char>(LevelChunkFormat::Count)) return false;
@@ -94,8 +75,7 @@ namespace bl {
                                                    chunk_key::MetaDataHash,
                                                    chunk_key::BlendingData,
                                                    chunk_key::ActorDigestVersion,
-                                                   chunk_key::AabbVolumes,
-                                                   chunk_key::JigsawStructureBlueprint};
+                                                   chunk_key::AabbVolumes};
         auto flagFor = [](chunk_key::key_type kt) -> chunk_load_policy {
             switch (kt) {
                 case chunk_key::Data3D:
@@ -121,6 +101,20 @@ namespace bl {
             }
         }
 
+        if (has_flag(policy, chunk_load_policy::Jigsaw)) {
+            const auto prefix = bl::chunk_key{chunk_key::JigsawStructureBlueprint, this->pos_}.to_raw().substr(0, 13);
+            auto* iterator = level.db()->NewIterator(level.bulk_read_options());
+            for (iterator->Seek(prefix); iterator->Valid(); iterator->Next()) {
+                const auto& db_key = iterator->key();
+                if (db_key.size() < prefix.size() || std::memcmp(db_key.data(), prefix.data(), prefix.size()) != 0) break;
+                const auto parsed = bl::chunk_key::parse(std::string_view(db_key.data(), db_key.size()));
+                if (parsed.valid() && parsed.type == chunk_key::JigsawStructureBlueprint) {
+                    this->jigsaw_data_[parsed.identifier_hash] = iterator->value().ToString();
+                }
+            }
+            delete iterator;
+        }
+
         if (has_flag(policy, chunk_load_policy::Terrain)) {
             const auto [min_index, max_index] = bl::config::subchunk_index_range();
             for (int sub_index = min_index; sub_index <= max_index; sub_index++) {
@@ -139,7 +133,7 @@ namespace bl {
                 bl::actor_digest_list list;
                 list.load(raw);
                 for (auto& key : list.actor_digests_) {
-                    auto actor_key = "actorprefix" + key;
+                    auto actor_key = std::string(storage_key::actor) + key;
                     std::string raw_actor;
                     if (level.load_raw(actor_key, raw_actor) && !raw_actor.empty()) {
                         this->entities_[key] = std::move(raw_actor);
@@ -171,6 +165,15 @@ namespace bl {
             }
         }
 
+        for (const auto& [identifier_hash, raw] : this->jigsaw_data_) {
+            const bl::chunk_key key{chunk_key::JigsawStructureBlueprint, this->pos_, 0, identifier_hash};
+            if (clear) {
+                batch.Delete(key.to_raw());
+            } else {
+                batch.Put(key.to_raw(), raw);
+            }
+        }
+
         for (auto& [index, raw] : this->sub_chunk_data_) {
             bl::chunk_key key{chunk_key::SubChunkTerrain, this->pos_, index};
             if (clear || raw.empty()) {
@@ -182,7 +185,7 @@ namespace bl {
 
         if (clear || actor_digest_.empty()) {
             for (auto& [uid, raw] : this->entities_) {
-                batch.Delete("actorprefix" + uid);
+                batch.Delete(std::string(storage_key::actor) + uid);
             }
             bl::actor_digest_key digest_key{this->pos_};
             batch.Delete(digest_key.to_raw());
@@ -190,7 +193,7 @@ namespace bl {
             bl::actor_digest_key digest_key{this->pos_};
             batch.Put(digest_key.to_raw(), this->actor_digest_);
             for (auto& [uid, raw] : this->entities_) {
-                batch.Put("actorprefix" + uid, raw);
+                batch.Put(std::string(storage_key::actor) + uid, raw);
             }
         }
         return true;
@@ -210,21 +213,25 @@ namespace bl {
         for (auto& [uid, raw] : entities_) {
             size += 4 + uid.size() + 4 + raw.size();
         }
+        if (!jigsaw_data_.empty()) {
+            size += 4;
+            for (const auto& [identifier_hash, raw] : jigsaw_data_) size += 8 + 4 + raw.size();
+        }
 
         std::vector<byte_t> buf;
         buf.reserve(size);
         buf.insert(buf.end(), {'B', 'C', 'H', 'K'});
-        write_i32(buf, pos_.x);
-        write_i32(buf, pos_.z);
-        write_i32(buf, pos_.dim);
+        binary::append_i32_le(buf, pos_.x);
+        binary::append_i32_le(buf, pos_.z);
+        binary::append_i32_le(buf, pos_.dim);
 
-        write_i32(buf, static_cast<int32_t>(data_.size()));
+        binary::append_i32_le(buf, static_cast<int32_t>(data_.size()));
         for (auto& [kt, raw] : data_) {
-            write_i32(buf, static_cast<int32_t>(kt));
+            binary::append_i32_le(buf, static_cast<int32_t>(kt));
             write_bytes(buf, raw);
         }
 
-        write_i32(buf, static_cast<int32_t>(sub_chunk_data_.size()));
+        binary::append_i32_le(buf, static_cast<int32_t>(sub_chunk_data_.size()));
         for (auto& [index, raw] : sub_chunk_data_) {
             buf.push_back(static_cast<byte_t>(index));
             write_bytes(buf, raw);
@@ -232,32 +239,40 @@ namespace bl {
 
         write_bytes(buf, actor_digest_);
 
-        write_i32(buf, static_cast<int32_t>(entities_.size()));
+        binary::append_i32_le(buf, static_cast<int32_t>(entities_.size()));
         for (auto& [uid, raw] : entities_) {
             write_bytes(buf, uid);
             write_bytes(buf, raw);
+        }
+
+        // Optional trailer keeps old BCHK exports byte-identical when no
+        // Jigsaw records are present, while preserving the full key suffix
+        // for exports that contain them.
+        if (!jigsaw_data_.empty()) {
+            binary::append_i32_le(buf, static_cast<int32_t>(jigsaw_data_.size()));
+            for (const auto& [identifier_hash, raw] : jigsaw_data_) {
+                binary::append_u64_le(buf, identifier_hash);
+                write_bytes(buf, raw);
+            }
         }
 
         return buf;
     }
 
     bool raw_chunk::from_raw(const std::vector<byte_t>& data) {
-        const byte_t* p = data.data();
-        const byte_t* end = data.data() + data.size();
-
-        if (static_cast<size_t>(end - p) < 4 || p[0] != 'B' || p[1] != 'C' || p[2] != 'H' || p[3] != 'K') {
+        if (data.size() < 4 || data[0] != 'B' || data[1] != 'C' || data[2] != 'H' || data[3] != 'K') {
             return false;
         }
-        p += 4;
+        binary::reader reader(data.data(), data.size());
+        if (!reader.skip(4) || !reader.read_i32_le(pos_.x) || !reader.read_i32_le(pos_.z) || !reader.read_i32_le(pos_.dim)) return false;
 
-        pos_.x = read_i32(p);
-        pos_.z = read_i32(p);
-        pos_.dim = read_i32(p);
-
-        int32_t data_count = read_i32(p);
+        int32_t data_count = 0;
+        if (!reader.read_i32_le(data_count) || data_count < 0) return false;
         for (int32_t i = 0; i < data_count; i++) {
-            auto kt = static_cast<chunk_key::key_type>(read_i32(p));
-            data_[kt] = read_bytes(p);
+            int32_t key_type = 0;
+            std::string raw;
+            if (!reader.read_i32_le(key_type) || !reader.read_bytes(raw)) return false;
+            data_[static_cast<chunk_key::key_type>(key_type)] = std::move(raw);
         }
         // Same priority as read(): the marker coming last in MARKER_KEYS wins.
         for (auto kt : MARKER_KEYS) {
@@ -265,29 +280,45 @@ namespace bl {
             if (it != data_.end()) parse_chunk_format(it->second, chunk_format_);
         }
 
-        int32_t sub_count = read_i32(p);
+        int32_t sub_count = 0;
+        if (!reader.read_i32_le(sub_count) || sub_count < 0) return false;
         for (int32_t i = 0; i < sub_count; i++) {
-            int8_t index = static_cast<int8_t>(*p++);
-            sub_chunk_data_[index] = read_bytes(p);
+            uint8_t raw_index = 0;
+            std::string raw;
+            if (!reader.read_u8(raw_index) || !reader.read_bytes(raw)) return false;
+            sub_chunk_data_[static_cast<int8_t>(raw_index)] = std::move(raw);
         }
 
-        actor_digest_ = read_bytes(p);
+        if (!reader.read_bytes(actor_digest_)) return false;
 
-        int32_t entity_count = read_i32(p);
+        int32_t entity_count = 0;
+        if (!reader.read_i32_le(entity_count) || entity_count < 0) return false;
         for (int32_t i = 0; i < entity_count; i++) {
-            std::string uid = read_bytes(p);
-            entities_[std::move(uid)] = read_bytes(p);
+            std::string uid;
+            std::string raw;
+            if (!reader.read_bytes(uid) || !reader.read_bytes(raw)) return false;
+            entities_[std::move(uid)] = std::move(raw);
+        }
+        if (reader.remaining() > 0) {
+            int32_t jigsaw_count = 0;
+            if (!reader.read_i32_le(jigsaw_count) || jigsaw_count < 0) return false;
+            for (int32_t i = 0; i < jigsaw_count; ++i) {
+                uint64_t identifier_hash = 0;
+                std::string raw;
+                if (!reader.read_u64_le(identifier_hash) || !reader.read_bytes(raw)) return false;
+                jigsaw_data_[identifier_hash] = std::move(raw);
+            }
         }
         return true;
     }
 
-    std::string raw_chunk::get_normal_key(chunk_key::key_type key) const {
+    std::string_view raw_chunk::get_normal_key(chunk_key::key_type key) const noexcept {
         auto it = this->data_.find(key);
         if (it != this->data_.end()) return it->second;
         return {};
     }
 
-    std::string raw_chunk::get_sub_chunk(int8_t yindex) const {
+    std::string_view raw_chunk::get_sub_chunk(int8_t yindex) const noexcept {
         auto it = this->sub_chunk_data_.find(yindex);
         if (it != this->sub_chunk_data_.end()) return it->second;
         return {};
