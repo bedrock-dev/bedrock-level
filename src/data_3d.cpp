@@ -186,7 +186,7 @@ namespace bl {
     }
     bool biome3d::load_from_d2d(const byte_t* data, size_t len) {
         if (len != 768) {  // 512-byte height map plus 256-byte biome map
-            LOG_F(ERROR, "Invalid Data2d format (%zu)", len);
+            LOG_F(ERROR, "Invalid Data2d format (%llu)", static_cast<unsigned long long>(len));
             return false;
         }
         read_height_map(this->height_map_, data);

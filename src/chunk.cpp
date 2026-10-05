@@ -221,8 +221,8 @@ namespace bl {
             auto* sb = new bl::sub_chunk();
             sb->set_y_index(sub_index);
             if (!sb->load(raw.data(), raw.size())) {
-                LOG_F(ERROR, "Can not load sub chunk (pos = %s, idx = %d, data size = %zu)", pos_.to_string().c_str(), sub_index,
-                      raw.size());
+                LOG_F(ERROR, "Can not load sub chunk (pos = %s, idx = %d, data size = %llu)", pos_.to_string().c_str(), sub_index,
+                      static_cast<unsigned long long>(raw.size()));
                 delete sb;
                 continue;
             }

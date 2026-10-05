@@ -404,7 +404,7 @@ namespace bl {
                 ac.offset_pos(static_cast<float>(dx), 0.0f, static_cast<float>(dz));
                 new_entities.emplace(ac.storage_key_raw(), ac.root()->to_raw());
             } else {
-                LOG_F(ERROR, "load actor (uid len=%zu) failed when reset raw chunk position", uid.size());
+                LOG_F(ERROR, "load actor (uid len=%llu) failed when reset raw chunk position", static_cast<unsigned long long>(uid.size()));
             }
         }
         entities_ = std::move(new_entities);

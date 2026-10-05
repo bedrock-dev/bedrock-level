@@ -166,7 +166,7 @@ namespace bl {
 
     bool mcstructure::save_to_file(const std::string& file_name) const {
         const auto raw = to_raw();
-        std::ofstream output(std::filesystem::u8path(file_name), std::ios::binary);
+        std::ofstream output(std::filesystem::path(reinterpret_cast<const char8_t*>(file_name.c_str())), std::ios::binary);
         if (!output.is_open()) {
             LOG_F(ERROR, "Can not open file %s", file_name.c_str());
             return false;

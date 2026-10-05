@@ -17,7 +17,7 @@ namespace bl {
     namespace {
 
         const std::vector<std::string> water_block_names{"water"};
-        const std::vector<std::string> leaves_block_names{"leave", "leaf_litter"};
+        const std::vector<std::string> leaves_block_names{"leave", "leaf_litter", "vine"};
         const std::vector<std::string> grass_block_names{"grass"};
 
         using tint_kind = biome_tint_kind;
