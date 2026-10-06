@@ -5,9 +5,8 @@
 namespace bl {
     namespace global_key {
         namespace {
-            constexpr key_list OTHER_KEYS{
-                "portals",   "scoreboard",  "AutonomousEntities",          "BiomeData", "Nether", "Overworld", "TheEnd", "schedulerWT",
-                "mobevents", "WorldClocks", "LevelChunkMetaDataDictionary"};
+            constexpr key_list OTHER_KEYS{"scoreboard", "AutonomousEntities", "BiomeData", "Nether",      "Overworld",
+                                          "TheEnd",     "schedulerWT",        "mobevents", "WorldClocks", "LevelChunkMetaDataDictionary"};
         }
 
         const key_list& other_keys() noexcept { return OTHER_KEYS; }
