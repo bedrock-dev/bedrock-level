@@ -12,6 +12,14 @@ namespace leveldb {
 
 		const int compressionLevel;
 		const bool raw;
+
+		// Run compression and decompression through libdeflate instead of zlib.
+		// Both libraries read and write the same deflate/zlib streams, so this
+		// only picks who does the work: the block format, the serializer ids and
+		// the on-disk data are the same either way. Set it to false to force the
+		// zlib path. Ignored when the build has no libdeflate, in which case zlib
+		// is always used. Intended to be set before the database is opened.
+		bool useLibdeflate = true;
         
         virtual ~ZlibCompressorBase() = default;
 

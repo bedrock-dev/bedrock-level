@@ -63,3 +63,4 @@ You just need to clone this repo and run `build.ps1` in powershell
 - [Minecraft Actor Storage](https://learn.microsoft.com/en-us/minecraft/creator/documents/actorstorage?view=minecraft-bedrock-stable)
 - [基岩版存档数据研究：DB数据\_生物实体](https://www.bilibili.com/opus/1083463817531228182?plat_id=5&share_from=article&share_medium=android&share_plat=android&share_session_id=6945817f-e41e-45b4-9840-cf726ed214ec&share_source=QQ&share_tag=s_i&timestamp=1781409692&unique_k=lUcEWqK)
 - [Bedrock .mcstructure files](https://gist.github.com/tryashtar/87ad9654305e5df686acab05cc4b6205)
+- [网易版存档XOR加解密](https://github.com/HTMonkeyG/leveldb-mcne)

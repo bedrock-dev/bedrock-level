@@ -17,7 +17,7 @@
 #include "leveldb/decompress_allocator.h"
 #include "leveldb/env.h"
 #include "leveldb/filter_policy.h"
-#include "leveldb/libdeflate_compressor.h"
+#include "leveldb/mcne.h"
 #include "leveldb/options.h"
 #include "leveldb/slice.h"
 #include "leveldb/write_batch.h"
@@ -39,29 +39,39 @@ namespace bl {
     const std::string bedrock_level::CUSTOM_DIM_KEY_PREFIX = "custom_dim:";
     const std::string bedrock_level::CUSTOM_DIM_TABLE_KEY = "DimensionNameIdTable";
 
-    bedrock_level::bedrock_level(bool libdeflate) {
+    bedrock_level::bedrock_level(bool libdeflate, std::string xor_key) {
         options_.filter_policy = leveldb::NewBloomFilterPolicy(10);
         options_.block_cache = leveldb::NewLRUCache(20 * 1024 * 1024);
         options_.write_buffer_size = 4 * 1024 * 1024;
         options_.block_size = 163840;
         // Slot 0 reads raw-deflate tables; slot 1 reads zlib-wrapped data.
-        if (libdeflate) {
-            options_.compressors[0] = new leveldb::LibdeflateCompressorRaw(6);
-        } else {
-            options_.compressors[0] = new leveldb::ZlibCompressorRaw(-1);
-        }
-        options_.compressors[1] = new leveldb::ZlibCompressor();
+        auto* comprssor_0 = new leveldb::ZlibCompressorRaw(-1);
+        comprssor_0->useLibdeflate = libdeflate;
+        auto* compressor_1 = new leveldb::ZlibCompressor();
+        compressor_1->useLibdeflate = libdeflate;
+        options_.compressors[0] = comprssor_0;
+        options_.compressors[1] = compressor_1;
+        env_wrapper_ = new leveldb::McneWrapper(leveldb::Env::Default(), xor_key);
+        options_.env = env_wrapper_;
         read_option_.decompress_allocator = new leveldb::DecompressAllocator();
     };
 
     bedrock_level::~bedrock_level() {
         this->close();
+        delete this->env_wrapper_;
         delete this->options_.compressors[0];
         delete this->options_.compressors[1];
         delete this->options_.block_cache;
         delete this->options_.filter_policy;
         delete this->read_option_.decompress_allocator;
     };
+
+    void bedrock_level::set_xor_key(std::string xor_key) {
+        if (this->is_open_) return;
+        delete this->env_wrapper_;
+        this->env_wrapper_ = new leveldb::McneWrapper(leveldb::Env::Default(), xor_key);
+        this->options_.env = this->env_wrapper_;
+    }
 
     bool bedrock_level::open(const std::string& root) {
         namespace fs = std::filesystem;
