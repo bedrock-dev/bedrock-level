@@ -47,3 +47,4 @@ worlds
 *.png
 tests/data
 build_msvc/
+build_android

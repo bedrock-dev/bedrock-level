@@ -48,23 +48,36 @@ target_include_directories(bedrock-level PUBLIC
         )
 
 
-if (WIN32)
-    if (MSVC)
-        MESSAGE(STATUS "Current compiler is MSVC")
-        set(EXTRA_LIBS ${PROJECT_SOURCE_DIR}/libs/leveldb.lib ${PROJECT_SOURCE_DIR}/libs/zs.lib)
-        target_compile_options(bedrock-level PRIVATE /O2)
-    elseif (MINGW)
-        MESSAGE(STATUS "Current compiler is MinGW")
-        set(EXTRA_LIBS ${PROJECT_SOURCE_DIR}/libs/libleveldb.a ${PROJECT_SOURCE_DIR}/libs/libzs.a ${PROJECT_SOURCE_DIR}/libs/libdeflate.a)
-        target_compile_options(bedrock-level PRIVATE -O2 -Wall)
+set(BEDROCK_LEVEL_LIB_DIR "${PROJECT_SOURCE_DIR}/libs")
+
+if (MINGW)
+    message(STATUS "Current compiler is MinGW/GCC")
+    set(EXTRA_LIBS
+            "${BEDROCK_LEVEL_LIB_DIR}/libleveldb-win64.a"
+            "${BEDROCK_LEVEL_LIB_DIR}/libzs-win64.a"
+            "${BEDROCK_LEVEL_LIB_DIR}/libdeflate-win64.a")
+    target_compile_options(bedrock-level PRIVATE -O2 -Wall)
+elseif (ANDROID)
+    if (NOT ANDROID_ABI STREQUAL "arm64-v8a")
+        message(FATAL_ERROR
+                "bedrock-level currently provides Android libraries only for arm64-v8a; got '${ANDROID_ABI}'")
     endif ()
-    target_link_libraries(bedrock-level PRIVATE ${EXTRA_LIBS})
-endif (WIN32)
+    message(STATUS "Current platform is Android ${ANDROID_ABI}")
+    set(EXTRA_LIBS
+            "${BEDROCK_LEVEL_LIB_DIR}/libleveldb-android-arm64.a"
+            "${BEDROCK_LEVEL_LIB_DIR}/libz-android-arm64.a"
+            "${BEDROCK_LEVEL_LIB_DIR}/libdeflate-android-arm64.a")
+else ()
+    message(FATAL_ERROR "Unsupported platform for bedrock-level: ${CMAKE_SYSTEM_NAME}")
+endif ()
 
+foreach (extra_lib IN LISTS EXTRA_LIBS)
+    if (NOT EXISTS "${extra_lib}")
+        message(FATAL_ERROR "Missing prebuilt dependency: ${extra_lib}")
+    endif ()
+endforeach ()
 
-if (UNIX)
-    MESSAGE(STATUS "Current compiler is GUN gcc, not support yet, please compile libz and leveldb-mcpe manually")
-endif (UNIX)
+target_link_libraries(bedrock-level PRIVATE ${EXTRA_LIBS})
 
 message(STATUS "C compiler: ${CMAKE_C_COMPILER}")
 message(STATUS "C++ compiler: ${CMAKE_CXX_COMPILER}")
