@@ -10,7 +10,6 @@
 #include <ostream>
 #include <sstream>
 #include <span>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -125,12 +124,12 @@ namespace bl::nbt {
         virtual void write_payload(std::string& out) const = 0;
 
         template <typename T>
-        T as() {
+        [[nodiscard]] T as() noexcept {
             return dynamic_cast<T>(this);
         }
 
         template <typename T>
-        T as() const {
+        [[nodiscard]] T as() const noexcept {
             // Preserve the historical API: callers may request a mutable
             // pointer even when the tag itself is reached through a const
             // reference.  The non-const overload remains type-safe; this
@@ -154,9 +153,7 @@ namespace bl::nbt {
 
        protected:
         void write_key(std::string& out) const {
-            if (this->key_.size() > std::numeric_limits<uint16_t>::max()) {
-                throw std::length_error("NBT key exceeds 16-bit length");
-            }
+            if (this->key_.size() > std::numeric_limits<uint16_t>::max()) return;
             auto size = static_cast<uint16_t>(this->key_.size());
             detail::append_u16_le(out, size);
             out += this->key_;
@@ -395,9 +392,6 @@ namespace bl::nbt {
                 child_type = value[0]->type();
             }
             out.push_back(static_cast<char>(child_type));
-            if (value.size() > static_cast<size_t>(std::numeric_limits<int32_t>::max())) {
-                throw std::length_error("NBT list exceeds 32-bit length");
-            }
             auto sz = static_cast<int32_t>(value.size());
             detail::append_scalar_le(out, sz);
             for (auto* child : value) {
@@ -430,9 +424,6 @@ namespace bl::nbt {
 
        public:
         void write_payload(std::string& out) const override {
-            if (this->value.size() > std::numeric_limits<uint16_t>::max()) {
-                throw std::length_error("NBT string exceeds 16-bit length");
-            }
             auto len = static_cast<uint16_t>(this->value.size());
             detail::append_u16_le(out, len);
             out += this->value;
@@ -508,9 +499,6 @@ namespace bl::nbt {
 
        public:
         void write_payload(std::string& out) const override {
-            if (this->value.size() > static_cast<size_t>(std::numeric_limits<int32_t>::max())) {
-                throw std::length_error("NBT array exceeds 32-bit length");
-            }
             auto size = static_cast<int32_t>(this->value.size());
             detail::append_scalar_le(out, size);
             if constexpr (sizeof(ElemType) == 1) {
