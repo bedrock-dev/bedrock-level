@@ -327,14 +327,14 @@ TEST(BlockEntity, RawChunkMoveToMovesChestPair) {
     chest->put(new nbt::int_tag("z", -9));
     chest->put(new nbt::int_tag("pairx", 20));
     chest->put(new nbt::int_tag("pairz", 3));
-    rc.set_normal(chunk_key::BlockEntity, chest->to_raw());
+    rc.set_normal(chunk_key::BlockEntity, chest->serialize());
     delete chest;
 
     // move chunk by (+2, -1) chunks -> +32/-16 blocks
     rc.move_to(chunk_pos{2, -1, 0}, &level);
 
     const auto payload = rc.get_normal_key(chunk_key::BlockEntity);
-    auto stored = nbt::read_palette_to_end(payload.data(), payload.size());
+    auto stored = nbt::parse_all(payload.data(), payload.size());
     ASSERT_EQ(stored.size(), 1u);
     EXPECT_EQ(stored[0]->get("x")->as<nbt::int_tag*>()->value, 44);
     EXPECT_EQ(stored[0]->get("y")->as<nbt::int_tag*>()->value, 64);

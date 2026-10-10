@@ -115,7 +115,7 @@ namespace bl {
         if (data.size() <= 8) return false;
         int read = 0;
         this->header_ = std::string(data.data(), 8);
-        this->root_ = read_one_palette(data.data() + 8, read);
+        this->root_ = parse_one(data.data() + 8, read);
         if (!root_ || read != static_cast<int>(data.size()) - 8) {
             return false;
         }
@@ -127,6 +127,6 @@ namespace bl {
         this->root_ = root;
         this->preload_data();
     }
-    std::string level_dat::to_raw() const { return this->header_ + this->root_->to_raw(); }
+    std::string level_dat::to_raw() const { return this->header_ + this->root_->serialize(); }
     level_dat::~level_dat() { delete this->root_; }
 }  // namespace bl

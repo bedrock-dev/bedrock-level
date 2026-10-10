@@ -3,8 +3,8 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <string>
 #include <span>
+#include <string>
 #include <vector>
 
 #include "nbt.h"

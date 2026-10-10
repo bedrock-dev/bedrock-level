@@ -167,7 +167,7 @@ namespace bl {
                 entry.tag = nullptr;
                 continue;
             }
-            const std::string raw = entry.tag ? entry.tag->to_raw() : std::string();
+            const std::string raw = entry.tag ? entry.tag->serialize() : std::string();
             const auto it = first_index_by_raw.find(raw);
             if (it != first_index_by_raw.end()) {
                 remap[i] = it->second;

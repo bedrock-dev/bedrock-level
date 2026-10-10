@@ -202,7 +202,7 @@ namespace bl {
         auto r = this->db_->Get(read_option_, CUSTOM_DIM_TABLE_KEY, &value);
         if (!r.ok()) return;
         int read;
-        auto* nbt = bl::nbt::read_one_palette(value.c_str(), read);
+        auto* nbt = bl::nbt::parse_one(value.c_str(), read);
         if (!nbt) return;
 
         auto* entries = nbt->get("entries");

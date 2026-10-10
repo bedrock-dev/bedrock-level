@@ -10,7 +10,7 @@
 namespace bl {
 
     bool actor::load(const byte_t* data, size_t len) {
-        auto p = bl::nbt::read_palette_to_end(data, len);
+        auto p = bl::nbt::parse_all(data, len);
         if (p.size() != 1) {
             LOG_F(ERROR, "Invalid Actor!!");
             return false;

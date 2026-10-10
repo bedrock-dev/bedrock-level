@@ -22,7 +22,7 @@ namespace bl {
     }
     void village_data::append_village(const village_key& key, std::string_view value) {
         int read = 0;
-        auto* nbt = bl::nbt::read_one_palette(value.data(), read);
+        auto* nbt = bl::nbt::parse_one(value.data(), read);
         if (static_cast<size_t>(read) == value.size() && nbt && key.dim >= 0 && key.dim <= 2) {
             this->data_[key.dim][key.uuid][static_cast<size_t>(key.type)] = nbt;
         }
@@ -45,7 +45,7 @@ namespace bl {
     }
     void general_kv_nbts::append_nbt(std::string_view key, std::string_view value) {
         int read = 0;
-        auto* nbt = bl::nbt::read_one_palette(value.data(), read);
+        auto* nbt = bl::nbt::parse_one(value.data(), read);
         if (static_cast<size_t>(read) == value.size() && nbt) {
             this->data_[std::string(key)] = nbt;
         }

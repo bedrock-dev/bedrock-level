@@ -17,16 +17,20 @@ namespace bl::nbt {
         return name.empty() ? "UNKNOWN" : std::string(name);
     }
 
-    int read_string(std::span<const byte_t> data, std::string& val) {
+    int read_string_view(std::span<const byte_t> data, std::string_view& value) {
         if (data.size() < 2) return 0;
         const uint16_t len = detail::read_u16_le(data.data());
         if (static_cast<size_t>(len) > data.size() - 2) return 0;
-        if (len != 0) {
-            val.assign(data.data() + 2, len);
-        } else {
-            val.clear();
-        }
+        value = std::string_view(reinterpret_cast<const char*>(data.data() + 2), len);
         return len + 2;
+    }
+
+    int read_string(std::span<const byte_t> data, std::string& value) {
+        std::string_view view;
+        const int read = read_string_view(data, view);
+        if (read == 0) return 0;
+        value.assign(view);
+        return read;
     }
 
     int read_tag_type(std::span<const byte_t> data, tag_type& type) {
@@ -68,11 +72,13 @@ namespace bl::nbt {
 
     std::tuple<string_tag*, size_t> read_string_value(std::span<const byte_t> data, std::string_view key) {
         auto* tag = new string_tag(key);
-        int r = read_string(data, tag->value);
+        std::string_view value;
+        const int r = read_string_view(data, value);
         if (r == 0) {
             delete tag;
             return {nullptr, 0};
         }
+        tag->value.assign(value);
         return {tag, static_cast<size_t>(r)};
     }
 
@@ -82,18 +88,33 @@ namespace bl::nbt {
         tag_type child_type;
         {
             int r = read_tag_type(data.subspan(read), child_type);
-            if (r == 0) { delete tag; return {nullptr, 0}; }
+            if (r == 0) {
+                delete tag;
+                return {nullptr, 0};
+            }
             read += r;
         }
-        if (data.size() - read < 4) { delete tag; return {nullptr, 0}; }
+        if (data.size() - read < 4) {
+            delete tag;
+            return {nullptr, 0};
+        }
         const int32_t list_size = detail::read_scalar_le<int32_t>(data.data() + read);
         read += 4;
-        if (list_size < 0 || (list_size != 0 && child_type == End)) { delete tag; return {nullptr, 0}; }
+        if (list_size < 0 || (list_size != 0 && child_type == End)) {
+            delete tag;
+            return {nullptr, 0};
+        }
         const auto count = static_cast<size_t>(list_size);
-        if (count > data.size() - read) { delete tag; return {nullptr, 0}; }
+        if (count > data.size() - read) {
+            delete tag;
+            return {nullptr, 0};
+        }
         tag->value.reserve(count);
         for (int i = 0; i < list_size; i++) {
-            if (data.size() <= read) { delete tag; return {nullptr, 0}; }
+            if (data.size() <= read) {
+                delete tag;
+                return {nullptr, 0};
+            }
             auto [child, sz] = read_value_by_type(child_type, data.subspan(read), "");
             if (child == nullptr || sz == 0 || sz > data.size() - read) {
                 delete child;
@@ -111,7 +132,10 @@ namespace bl::nbt {
         size_t total = 0;
         while (total < data.size()) {
             auto [child, read] = read_nbt(data.subspan(total));
-            if (read == 0) { delete tag; return {nullptr, 0}; }
+            if (read == 0) {
+                delete tag;
+                return {nullptr, 0};
+            }
             total += read;
             if (child) {
                 tag->value.assign(child);
@@ -171,9 +195,9 @@ namespace bl::nbt {
         if (type == End) {
             return {nullptr, 1};
         }
-        std::string key;
+        std::string_view key;
         {
-            int r = read_string(data.subspan(read), key);
+            int r = read_string_view(data.subspan(read), key);
             if (r == 0) return {nullptr, 0};
             read += r;
         }
@@ -182,9 +206,9 @@ namespace bl::nbt {
         return {tag, read + len};
     }
 
-    compound_tag* read_one_palette(const byte_t* data, int& read) { return read_one_palette(data, SIZE_MAX, read); }
+    compound_tag* parse_one(const byte_t* data, int& read) { return parse_one(data, SIZE_MAX, read); }
 
-    compound_tag* read_one_palette(const byte_t* data, size_t data_len, int& read) {
+    compound_tag* parse_one(const byte_t* data, size_t data_len, int& read) {
         read = 0;
         if (!data || data_len == 0) return nullptr;
         auto [r, x] = read_nbt(std::span<const byte_t>(data, data_len));
@@ -198,13 +222,13 @@ namespace bl::nbt {
         }
     }
 
-    std::vector<compound_tag*> read_palette_to_end(const byte_t* data, size_t len) {
+    std::vector<compound_tag*> parse_all(const byte_t* data, size_t len) {
         if (!data && len != 0) return {};
         size_t ptr = 0;
         std::vector<compound_tag*> owned;
         while (ptr < len) {
             int read = 0;
-            auto* tag = read_one_palette(data + ptr, len - ptr, read);
+            auto* tag = parse_one(data + ptr, len - ptr, read);
             if (read <= 0 || static_cast<size_t>(read) > len - ptr) {
                 delete tag;
                 for (auto* parsed : owned) delete parsed;

@@ -161,7 +161,7 @@ namespace bl {
 
         root->put(structure);
         root->put(make_int_list("structure_world_origin", origin_.x, origin_.y, origin_.z));
-        return root->to_raw();
+        return root->serialize();
     }
 
     bool mcstructure::save_to_file(const std::string& file_name) const {
@@ -208,7 +208,7 @@ namespace bl {
         if (!tag) return nullptr;
         auto clone = std::unique_ptr<bl::nbt::compound_tag>(static_cast<bl::nbt::compound_tag*>(tag->copy()));
         if (strip_version) clone->remove("version");
-        const std::string raw = clone->to_raw();
+        const std::string raw = clone->serialize();
         if (auto it = interned_tags_.find(raw); it != interned_tags_.end()) {
             return it->second;
         }
@@ -220,7 +220,7 @@ namespace bl {
 
     size_t mcstructure_builder::ensure_palette_index(bl::nbt::compound_tag* tag) {
         if (!tag) return std::numeric_limits<size_t>::max();
-        const std::string raw = tag->to_raw();
+        const std::string raw = tag->serialize();
         if (auto it = palette_index_by_raw_.find(raw); it != palette_index_by_raw_.end()) {
             return it->second;
         }
@@ -349,7 +349,7 @@ namespace bl {
     mcstructure parse_mcstructure(const byte_t* data, size_t len) {
         mcstructure result;
         int read = 0;
-        auto* root = bl::nbt::read_one_palette(data, len, read);
+        auto* root = bl::nbt::parse_one(data, len, read);
         if (!root) return result;
 
         auto* format_version_tag = root->get("format_version");

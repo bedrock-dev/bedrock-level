@@ -93,7 +93,7 @@ TEST(LargeNbt, DeserializeTime) {
     size_t tags = 0;
     auto start = steady_clock_t::now();
     for (int r = 0; r < ROUNDS; r++) {
-        auto palettes = bl::nbt::read_palette_to_end(data.data(), data.size());
+        auto palettes = bl::nbt::parse_all(data.data(), data.size());
         tags = palettes.size();
         for (auto* p : palettes) delete p;
     }
@@ -102,7 +102,7 @@ TEST(LargeNbt, DeserializeTime) {
     EXPECT_GT(tags, 0u);
 
     // one extra parse to estimate the in-memory footprint of the tag tree
-    auto palettes = bl::nbt::read_palette_to_end(data.data(), data.size());
+    auto palettes = bl::nbt::parse_all(data.data(), data.size());
     TreeStats st;
     for (auto* p : palettes) accumulateTree(p, st);
     for (auto* p : palettes) delete p;
@@ -117,14 +117,14 @@ TEST(LargeNbt, SerializeTime) {
     auto data = bl::utils::read_file(LARGE_NBT.string());
     ASSERT_FALSE(data.empty());
 
-    auto palettes = bl::nbt::read_palette_to_end(data.data(), data.size());
+    auto palettes = bl::nbt::parse_all(data.data(), data.size());
     ASSERT_FALSE(palettes.empty());
 
     size_t total_bytes = 0;
     auto start = steady_clock_t::now();
     for (int r = 0; r < ROUNDS; r++) {
         total_bytes = 0;
-        for (auto* p : palettes) total_bytes += p->to_raw().size();
+        for (auto* p : palettes) total_bytes += p->serialize().size();
     }
     auto ms = std::chrono::duration<double, std::milli>(steady_clock_t::now() - start).count();
     std::cout << "serialize " << palettes.size() << " tag(s) -> " << total_bytes << " bytes in " << ms << " ms (" << (ms / ROUNDS)

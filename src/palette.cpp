@@ -47,7 +47,7 @@ namespace bl {
         result.reserve(number);
         for (auto i = 0u; i < number; i++) {
             int r = 0;
-            auto* tag = bl::nbt::read_one_palette(stream.data() + read, stream.size() - static_cast<size_t>(read), r);
+            auto* tag = bl::nbt::parse_one(stream.data() + read, stream.size() - static_cast<size_t>(read), r);
             if (tag) {
                 result.push_back(make_palette_entry(tag));
             } else {
@@ -84,7 +84,7 @@ namespace bl {
         }
 
         for (const auto& entry : palette) {
-            if (entry.tag) out += entry.tag->to_raw();
+            if (entry.tag) out += entry.tag->serialize();
         }
     }
 

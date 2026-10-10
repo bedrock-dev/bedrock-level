@@ -347,23 +347,23 @@ namespace bl {
         this->pos_ = pos;
         if (auto it = data_.find(chunk_key::BlockEntity); it != data_.end()) {
             auto& data = it->second;
-            auto palette = nbt::read_palette_to_end(data.data(), data.size());
+            auto palette = nbt::parse_all(data.data(), data.size());
             for (auto*& p : palette) {
                 block_pos world_pos;
                 if (!read_block_entity_pos(p, world_pos)) continue;
                 set_block_entity_pos(p, block_pos{world_pos.x + dx, world_pos.y, world_pos.z + dz});
             }
             data.clear();
-            for (auto* p : palette) data += p->to_raw();
+            for (auto* p : palette) data += p->serialize();
             for (auto* p : palette) delete p;
         }
 
         if (auto it = data_.find(chunk_key::PendingTicks); it != data_.end()) {
             auto& data = it->second;
-            auto palette = nbt::read_palette_to_end(data.data(), data.size());
+            auto palette = nbt::parse_all(data.data(), data.size());
             for (auto*& p : palette) offset_pending_ticks_pos(p, dx, dz);
             data.clear();
-            for (auto* p : palette) data += p->to_raw();
+            for (auto* p : palette) data += p->serialize();
             for (auto* p : palette) delete p;
         }
 
@@ -378,7 +378,7 @@ namespace bl {
 
         if (auto it = data_.find(chunk_key::Entity); it != data_.end()) {
             auto& data = it->second;
-            auto palette = nbt::read_palette_to_end(data.data(), data.size());
+            auto palette = nbt::parse_all(data.data(), data.size());
             data.clear();
             for (auto* p : palette) {
                 if (!p) continue;
@@ -387,9 +387,9 @@ namespace bl {
                     auto uid = level->generate_actor_uid();
                     ac.reassign_uid(uid);
                     ac.offset_pos(static_cast<float>(dx), 0.0f, static_cast<float>(dz));
-                    data += ac.root()->to_raw();
+                    data += ac.root()->serialize();
                 } else {
-                    data += p->to_raw();
+                    data += p->serialize();
                 }
                 delete p;
             }
@@ -402,7 +402,7 @@ namespace bl {
                 auto new_uid = level->generate_actor_uid();
                 ac.reassign_uid(new_uid);
                 ac.offset_pos(static_cast<float>(dx), 0.0f, static_cast<float>(dz));
-                new_entities.emplace(ac.storage_key_raw(), ac.root()->to_raw());
+                new_entities.emplace(ac.storage_key_raw(), ac.root()->serialize());
             } else {
                 LOG_F(ERROR, "load actor (uid len=%llu) failed when reset raw chunk position", static_cast<unsigned long long>(uid.size()));
             }
@@ -417,7 +417,7 @@ namespace bl {
     void raw_chunk::set_block_entities(const std::vector<nbt::compound_tag*>& entities) {
         std::string payload;
         for (const auto* entity : entities) {
-            if (entity) payload += entity->to_raw();
+            if (entity) payload += entity->serialize();
         }
         set_normal(chunk_key::BlockEntity, payload);
     }
@@ -430,12 +430,12 @@ namespace bl {
             std::string chunk_actor_data;
             for (auto* a : entities) {
                 if (!a) continue;
-                chunk_actor_data += a->root()->to_raw();
+                chunk_actor_data += a->root()->serialize();
             }
             set_normal(chunk_key::Entity, chunk_actor_data);
         } else {
             for (auto* ac : entities) {
-                entities_[ac->storage_key_raw()] = ac->root()->to_raw();
+                entities_[ac->storage_key_raw()] = ac->root()->serialize();
                 this->actor_digest_ += ac->storage_key_raw();
             }
         }

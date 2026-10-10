@@ -99,7 +99,7 @@ namespace {
         root->put(structure);
         root->put(make_int_list_tag("structure_world_origin", 10, 20, 30));
 
-        const auto raw = root->to_raw();
+        const auto raw = root->serialize();
         return {raw.begin(), raw.end()};
     }
 }  // namespace
@@ -187,7 +187,7 @@ TEST(McStructure, HandlesInvalidData) {
 TEST(McStructure, RejectsUnsupportedFormatVersion) {
     auto root = std::make_unique<bl::nbt::compound_tag>("");
     root->put(new bl::nbt::int_tag("format_version", 3));
-    const auto raw = root->to_raw();
+    const auto raw = root->serialize();
 
     auto structure = bl::parse_mcstructure(reinterpret_cast<const byte_t*>(raw.data()), raw.size());
     EXPECT_EQ(structure.version(), 0);
@@ -246,7 +246,7 @@ TEST(McStructureBuilder, WritesVersion2IntArraysAndOmitsEmptyLayer) {
     EXPECT_EQ(structure.version(), 2);
     const auto raw = structure.to_raw();
     int read = 0;
-    auto* root = bl::nbt::read_one_palette(reinterpret_cast<const byte_t*>(raw.data()), raw.size(), read);
+    auto* root = bl::nbt::parse_one(reinterpret_cast<const byte_t*>(raw.data()), raw.size(), read);
     ASSERT_NE(root, nullptr);
 
     auto* block_indices_tag = root->get_by_path("structure.block_indices");

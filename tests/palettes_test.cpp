@@ -103,7 +103,7 @@ TEST_F(PaletteBenchmark, ParseAllPalettes) {
     for (int round = 0; round < ROUNDS; round++) {
         tags = 0;
         for (auto& raw : raw_palettes_) {
-            auto palettes = bl::nbt::read_palette_to_end(reinterpret_cast<const byte_t*>(raw.data()), raw.size());
+            auto palettes = bl::nbt::parse_all(reinterpret_cast<const byte_t*>(raw.data()), raw.size());
             tags += palettes.size();
             for (auto* p : palettes) delete p;
         }
@@ -123,9 +123,9 @@ TEST_F(PaletteBenchmark, SerializeAllPalettes) {
     for (int round = 0; round < ROUNDS; round++) {
         total_bytes = 0;
         for (auto& raw : raw_palettes_) {
-            auto palettes = bl::nbt::read_palette_to_end(reinterpret_cast<const byte_t*>(raw.data()), raw.size());
+            auto palettes = bl::nbt::parse_all(reinterpret_cast<const byte_t*>(raw.data()), raw.size());
             for (auto* p : palettes) {
-                total_bytes += p->to_raw().size();
+                total_bytes += p->serialize().size();
             }
             for (auto* p : palettes) delete p;
         }
@@ -140,9 +140,9 @@ TEST_F(PaletteBenchmark, SerializeAllPalettes) {
 TEST_F(PaletteBenchmark, RoundTrip) {
     size_t ok = 0;
     for (auto& raw : raw_palettes_) {
-        auto palettes = bl::nbt::read_palette_to_end(reinterpret_cast<const byte_t*>(raw.data()), raw.size());
+        auto palettes = bl::nbt::parse_all(reinterpret_cast<const byte_t*>(raw.data()), raw.size());
         std::string reencoded;
-        for (auto* p : palettes) reencoded += p->to_raw();
+        for (auto* p : palettes) reencoded += p->serialize();
         if (reencoded == raw) ok++;
         for (auto* p : palettes) delete p;
     }
@@ -153,14 +153,14 @@ TEST_F(PaletteBenchmark, RoundTrip) {
 // serialize -> parse -> serialize must be stable (idempotent, byte-identical on 2nd round)
 TEST_F(PaletteBenchmark, ReSerializeStable) {
     for (auto& raw : raw_palettes_) {
-        auto first = bl::nbt::read_palette_to_end(reinterpret_cast<const byte_t*>(raw.data()), raw.size());
+        auto first = bl::nbt::parse_all(reinterpret_cast<const byte_t*>(raw.data()), raw.size());
         std::string first_raw;
-        for (auto* p : first) first_raw += p->to_raw();
+        for (auto* p : first) first_raw += p->serialize();
         for (auto* p : first) delete p;
 
-        auto second = bl::nbt::read_palette_to_end(reinterpret_cast<const byte_t*>(first_raw.data()), first_raw.size());
+        auto second = bl::nbt::parse_all(reinterpret_cast<const byte_t*>(first_raw.data()), first_raw.size());
         std::string second_raw;
-        for (auto* p : second) second_raw += p->to_raw();
+        for (auto* p : second) second_raw += p->serialize();
         for (auto* p : second) delete p;
 
         EXPECT_EQ(first_raw, second_raw) << "2nd serialization differs for palette of " << first_raw.size() << " bytes";
@@ -209,7 +209,7 @@ TEST(PaletteLeak, DuplicateKeyParse) {
         raw.push_back(0);  // End
 
         int read = 0;
-        auto* nbt = bl::nbt::read_one_palette(raw.data(), raw.size(), read);
+        auto* nbt = bl::nbt::parse_one(raw.data(), raw.size(), read);
         ASSERT_NE(nbt, nullptr);
         EXPECT_EQ(nbt->value.size(), 1u);  // older Int "k" dropped
         EXPECT_NE(nbt->get("k"), nullptr);

@@ -242,7 +242,7 @@ namespace bl {
     bool chunk::load_pending_ticks(const bl::raw_chunk& rc) {
         auto raw = rc.get_normal_key(chunk_key::PendingTicks);
         if (!raw.empty()) {
-            this->pending_ticks_ = nbt::read_palette_to_end(raw.data(), raw.size());
+            this->pending_ticks_ = nbt::parse_all(raw.data(), raw.size());
         }
         return true;
     }
@@ -250,7 +250,7 @@ namespace bl {
     void chunk::load_entities(const bl::raw_chunk& rc) {
         auto raw = rc.get_normal_key(chunk_key::Entity);
         if (!raw.empty()) {
-            auto actors = nbt::read_palette_to_end(raw.data(), raw.size());
+            auto actors = nbt::parse_all(raw.data(), raw.size());
             for (auto& a : actors) {
                 auto* ac = new actor;
                 if (ac->load_from_nbt_owned(a)) {
@@ -293,7 +293,7 @@ namespace bl {
     bool chunk::load_block_entities(const bl::raw_chunk& rc) {
         auto raw = rc.get_normal_key(chunk_key::BlockEntity);
         if (!raw.empty()) {
-            this->block_entities_ = nbt::read_palette_to_end(raw.data(), raw.size());
+            this->block_entities_ = nbt::parse_all(raw.data(), raw.size());
         }
         return true;
     }

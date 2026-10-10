@@ -45,12 +45,12 @@ int main() {
     constexpr std::size_t node_count = entry_count * 5 + 2;
     constexpr std::size_t iterations = 10;
     const auto sample = make_sample(entry_count);
-    const auto serialized = sample.to_raw();
+    const auto serialized = sample.serialize();
 
     volatile std::size_t serialized_bytes = 0;
     const auto serialize_ns = measure_ns_per_operation(
         [&] {
-            const auto raw = sample.to_raw();
+            const auto raw = sample.serialize();
             serialized_bytes += raw.size();
         },
         iterations);
@@ -59,7 +59,7 @@ int main() {
     const auto deserialize_ns = measure_ns_per_operation(
         [&] {
             int read = 0;
-            auto* parsed = bl::nbt::read_one_palette(
+            auto* parsed = bl::nbt::parse_one(
                 reinterpret_cast<const byte_t*>(serialized.data()), serialized.size(), read);
             parsed_bytes += static_cast<std::size_t>(read);
             delete parsed;

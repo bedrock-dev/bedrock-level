@@ -8,8 +8,8 @@
 #include <limits>
 #include <memory>
 #include <ostream>
-#include <sstream>
 #include <span>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -106,16 +106,16 @@ namespace bl::nbt {
         [[nodiscard]] virtual std::string value_string() const = 0;
         [[nodiscard]] virtual abstract_tag* copy() const = 0;
         [[nodiscard]] virtual std::string restricted_value_string() const { return this->value_string(); }
-        [[nodiscard]] std::string to_raw() const {
+        [[nodiscard]] std::string serialize() const {
             std::string out;
             out.reserve(3 + this->key_.size());
-            this->write_raw(out);
+            this->serialize_into(out);
             return out;
         }
         [[nodiscard]] const std::string& key() const { return this->key_; }
         void set_key(std::string_view key) { this->key_ = key; }
 
-        void write_raw(std::string& out) const {
+        void serialize_into(std::string& out) const {
             out.push_back(static_cast<char>(this->type()));
             this->write_key(out);
             this->write_payload(out);
@@ -273,9 +273,7 @@ namespace bl::nbt {
 
         void put(abstract_tag* tag) { this->value.assign(tag); }
 
-        void remove(std::string_view key) {
-            this->value.erase(key);
-        }
+        void remove(std::string_view key) { this->value.erase(key); }
 
         [[nodiscard]] abstract_tag* get(std::string_view key) {
             auto it = this->value.find(key);
@@ -300,7 +298,7 @@ namespace bl::nbt {
        public:
         void write_payload(std::string& out) const override {
             for (auto& kv : this->value) {
-                kv.second->write_raw(out);
+                kv.second->serialize_into(out);
             }
             out.push_back(static_cast<char>(bl::nbt::tag_type::End));
         }
@@ -513,10 +511,9 @@ namespace bl::nbt {
     using int_array_tag = array_tag<int32_t, IntArray>;
     using long_array_tag = array_tag<int64_t, LongArray>;
 
-    compound_tag* read_one_palette(const byte_t* data, int& read);
-    compound_tag* read_one_palette(const byte_t* data, size_t data_len, int& read);
-
-    std::vector<compound_tag*> read_palette_to_end(const byte_t* data, size_t len);
+    compound_tag* parse_one(const byte_t* data, int& read);
+    compound_tag* parse_one(const byte_t* data, size_t data_len, int& read);
+    std::vector<compound_tag*> parse_all(const byte_t* data, size_t len);
 }  // namespace bl::nbt
 
 #endif  // BEDROCK_LEVEL_NBT_H

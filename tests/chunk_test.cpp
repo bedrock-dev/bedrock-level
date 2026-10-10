@@ -416,7 +416,7 @@ TEST(ChunkBlockEdit, ToRawChunkWritesBlockEntities) {
 
     const auto payload = out.get_normal_key(bl::chunk_key::BlockEntity);
     ASSERT_FALSE(payload.empty()) << "block entities must be written back";
-    auto stored = bl::nbt::read_palette_to_end(payload.data(), payload.size());
+    auto stored = bl::nbt::parse_all(payload.data(), payload.size());
     ASSERT_EQ(stored.size(), 1u);
     EXPECT_EQ(stored[0]->get("x")->as<bl::nbt::int_tag*>()->value, 2 * 16 + 3);
     EXPECT_EQ(stored[0]->get("y")->as<bl::nbt::int_tag*>()->value, 70);
@@ -543,7 +543,7 @@ TEST(ChunkBlockEdit, ToRawChunkWritesActors) {
     EXPECT_EQ(raw.get_actor_digest(), raw.get_entities().begin()->first);
 
     const auto& stored = raw.get_entities().begin()->second;
-    auto tags = bl::nbt::read_palette_to_end(stored.data(), stored.size());
+    auto tags = bl::nbt::parse_all(stored.data(), stored.size());
     ASSERT_EQ(tags.size(), 1u);
     EXPECT_EQ(tags[0]->get("identifier")->as<bl::nbt::string_tag*>()->value, "minecraft:pig");
     EXPECT_NE(tags[0]->get("UniqueID")->as<bl::nbt::long_tag*>()->value, 777);
