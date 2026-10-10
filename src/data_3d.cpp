@@ -9,10 +9,11 @@
 
 namespace bl {
     namespace {
-        std::vector<biome> load_subchunk_biome(const byte_t* data, int& read, size_t len) {
+        std::vector<biome> load_subchunk_biome(std::span<const byte_t> data, int& read) {
             read = 1;
 
-            uint8_t head = data[0];
+            const auto* raw = data.data();
+            uint8_t head = raw[0];
             if (head == 0xff) return std::vector<biome>(4096, biome::none);
 
             auto bits = static_cast<uint8_t>(head >> 1);
@@ -26,7 +27,7 @@ namespace bl {
                 int position = 0;
 
                 for (int wordi = 0; wordi < word_count; wordi++) {
-                    const auto word = binary::read_u32_le(data + read + wordi * 4);
+                    const auto word = binary::read_u32_le(raw + read + wordi * 4);
                     // word_count * bpw can exceed 4096 for widths such as 3, 5, and 6.
                     for (int block = 0; block < bpw && position < BLOCK_NUM; block++) {
                         int state = (word >> ((position % bpw) * bits)) & ((1 << bits) - 1);
@@ -36,7 +37,7 @@ namespace bl {
                 }
 
                 read += word_count << 2;
-                palette_len = static_cast<int>(binary::read_i32_le(data + read));
+                palette_len = static_cast<int>(binary::read_i32_le(raw + read));
                 read += 4;
             }
 
@@ -44,7 +45,7 @@ namespace bl {
             std::vector<biome> biomes_palettes;
 
             for (int i = 0; i < palette_len; i++) {
-                auto biomeId = binary::read_i32_le(data + read);
+                auto biomeId = binary::read_i32_le(raw + read);
                 read += 4;
                 biomes_palettes.push_back(static_cast<biome>(biomeId));
             }
@@ -125,7 +126,7 @@ namespace bl {
         index += 512;
         while (index < static_cast<int>(len)) {
             int read = 0;
-            auto sub_chunk_biome = load_subchunk_biome(data + index, read, len);
+            auto sub_chunk_biome = load_subchunk_biome(std::span<const byte_t>(data + index, len - static_cast<size_t>(index)), read);
             for (int y = 0; y < 16; y++) {
                 std::array<biome, 256> layer{};
                 for (int x = 0; x < 16; x++) {

@@ -9,6 +9,7 @@
 #include <memory>
 #include <ostream>
 #include <sstream>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -130,6 +131,11 @@ namespace bl::nbt {
 
         template <typename T>
         T as() const {
+            // Preserve the historical API: callers may request a mutable
+            // pointer even when the tag itself is reached through a const
+            // reference.  The non-const overload remains type-safe; this
+            // compatibility overload keeps existing read/edit call sites
+            // source-compatible.
             return dynamic_cast<T>(const_cast<abstract_tag*>(this));
         }
 
@@ -165,6 +171,19 @@ namespace bl::nbt {
         using iterator = std::vector<value_type>::iterator;
         using const_iterator = std::vector<value_type>::const_iterator;
 
+        tag_map() = default;
+        tag_map(const tag_map&) = delete;
+        tag_map& operator=(const tag_map&) = delete;
+        tag_map(tag_map&& other) noexcept { vec_.swap(other.vec_); }
+        tag_map& operator=(tag_map&& other) noexcept {
+            if (this != &other) {
+                clear();
+                vec_.swap(other.vec_);
+            }
+            return *this;
+        }
+        ~tag_map() { clear(); }
+
         [[nodiscard]] iterator begin() { return vec_.begin(); }
         [[nodiscard]] iterator end() { return vec_.end(); }
         [[nodiscard]] const_iterator begin() const { return vec_.begin(); }
@@ -184,12 +203,6 @@ namespace bl::nbt {
 
         [[nodiscard]] size_t count(std::string_view key) const { return find(key) == end() ? 0 : 1; }
 
-        abstract_tag*& operator[](std::string_view key) {
-            auto it = lower_bound(key);
-            if (it != vec_.end() && it->first == key) return it->second;
-            return vec_.emplace(it, key, nullptr)->second;
-        }
-
         void assign(abstract_tag* tag) {
             auto it = lower_bound(tag->key());
             if (it != vec_.end() && it->first == tag->key()) {
@@ -203,11 +216,15 @@ namespace bl::nbt {
         size_t erase(std::string_view key) {
             auto it = find(key);
             if (it == vec_.end()) return 0;
+            delete it->second;
             vec_.erase(it);
             return 1;
         }
 
-        void clear() { vec_.clear(); }
+        void clear() {
+            for (auto& [key, tag] : vec_) delete tag;
+            vec_.clear();
+        }
 
        private:
         [[nodiscard]] iterator lower_bound(std::string_view key) {
@@ -226,17 +243,16 @@ namespace bl::nbt {
         compound_tag(const compound_tag& tag) : abstract_tag(tag.key_) {
             this->key_ = tag.key_;
             for (auto& kv : tag.value) {
-                this->value[kv.first] = kv.second->copy();
+                this->value.assign(kv.second->copy());
             }
         }
 
         compound_tag& operator=(const compound_tag& tag) {
             if (this == &tag) return *this;
-            for (auto& kv : this->value) delete kv.second;
             this->value.clear();
             this->key_ = tag.key_;
             for (auto& kv : tag.value) {
-                this->value[kv.first] = kv.second->copy();
+                this->value.assign(kv.second->copy());
             }
             return *this;
         }
@@ -261,10 +277,6 @@ namespace bl::nbt {
         void put(abstract_tag* tag) { this->value.assign(tag); }
 
         void remove(std::string_view key) {
-            auto it = this->value.find(key);
-            if (it != this->value.end()) {
-                delete it->second;
-            }
             this->value.erase(key);
         }
 
@@ -286,11 +298,7 @@ namespace bl::nbt {
             return res;
         }
 
-        ~compound_tag() override {
-            for (auto& kv : this->value) {
-                delete kv.second;
-            }
-        }
+        ~compound_tag() override = default;
 
        public:
         void write_payload(std::string& out) const override {

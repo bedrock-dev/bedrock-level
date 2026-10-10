@@ -4,13 +4,14 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <span>
 #include <vector>
 
 #include "nbt.h"
 
 namespace bl {
     // Read the layer header and 4096 block indices.
-    std::vector<uint16_t> read_block_indices(const byte_t* stream, int& read, uint8_t& bits, uint32_t& palette_len);
+    std::vector<uint16_t> read_block_indices(std::span<const byte_t> stream, int& read, uint8_t& bits, uint32_t& palette_len);
 
     struct palette_entry {
         bl::nbt::compound_tag* tag = nullptr;
@@ -18,7 +19,7 @@ namespace bl {
     };
 
     // Read palette entries and their resolved names.
-    std::vector<palette_entry> read_palettes(const byte_t* stream, size_t number, size_t len, int& read);
+    std::vector<palette_entry> read_palettes(std::span<const byte_t> stream, size_t number, int& read);
 
     // Write a complete layer body, recomputing bits from the palette.
     void write_layer(std::string& out, const std::vector<uint16_t>& blocks, const std::vector<palette_entry>& palette);

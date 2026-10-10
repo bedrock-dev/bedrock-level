@@ -79,13 +79,14 @@ namespace bl {
         int index = 0;
         int offset = 0;
         map_y_to_subchunk(y, index, offset);
-        if (auto it = this->sub_chunks_.find(index); it != this->sub_chunks_.end()) return it->second;
+        if (auto it = this->sub_chunks_.find(index); it != this->sub_chunks_.end()) return it->second.get();
 
-        auto* created = new bl::sub_chunk();
+        auto created = std::make_unique<bl::sub_chunk>();
         created->set_version(is_new_chunk_format(this->chunk_format_) ? SubChunkVersion::V9 : SubChunkVersion::V8);
         created->set_y_index(static_cast<int8_t>(index));
-        this->sub_chunks_[index] = created;
-        return created;
+        auto* result = created.get();
+        this->sub_chunks_[index] = std::move(created);
+        return result;
     }
 
     void chunk::set_block(int cx, int y, int cz, const nbt::compound_tag* tag, int layer) {
@@ -144,7 +145,7 @@ namespace bl {
             const auto it = this->sub_chunks_.find(index);
             sub_chunk* target = nullptr;
             if (it != this->sub_chunks_.end()) {
-                target = it->second;
+                target = it->second.get();
             } else if (layer >= 0) {
                 target = this->ensure_sub_chunk(y);
             }
@@ -218,15 +219,14 @@ namespace bl {
     bool chunk::load_subchunks(const bl::raw_chunk& rc) {
         for (auto& [sub_index, raw] : rc.get_sub_chunks()) {
             if (raw.empty()) continue;
-            auto* sb = new bl::sub_chunk();
+            auto sb = std::make_unique<bl::sub_chunk>();
             sb->set_y_index(sub_index);
-            if (!sb->load(raw.data(), raw.size())) {
+            if (!sb->load(std::span<const byte_t>(reinterpret_cast<const byte_t*>(raw.data()), raw.size()))) {
                 LOG_F(ERROR, "Can not load sub chunk (pos = %s, idx = %d, data size = %llu)", pos_.to_string().c_str(), sub_index,
                       static_cast<unsigned long long>(raw.size()));
-                delete sb;
                 continue;
             }
-            this->sub_chunks_[sub_index] = sb;
+            this->sub_chunks_[sub_index] = std::move(sb);
         }
         return true;
     }
@@ -365,9 +365,6 @@ namespace bl {
     bl::chunk_pos chunk::get_pos() const { return this->pos_; }
 
     chunk::~chunk() {
-        for (auto& sub : this->sub_chunks_) {
-            delete sub.second;
-        }
         for (auto& p : this->pending_ticks_) delete p;
         for (auto& p : this->block_entities_) delete p;
         for (auto& e : this->entities_) delete e;

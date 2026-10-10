@@ -2,6 +2,8 @@
 #define BEDROCK_LEVEL_SUB_CHUNK_H
 
 #include <cstdint>
+#include <memory>
+#include <span>
 #include <vector>
 
 #include "bedrock_key.h"
@@ -57,7 +59,8 @@ namespace bl {
         sub_chunk() = default;
         ~sub_chunk();
 
-        bool load(const byte_t* data, size_t len);
+        bool load(std::span<const byte_t> data);
+        bool load(const byte_t* data, size_t len) { return load(std::span<const byte_t>(data, len)); }
 
         /// Serialize to a SubChunkTerrain payload.
         [[nodiscard]] std::string to_raw() const;
@@ -89,7 +92,7 @@ namespace bl {
         void compact();
 
        private:
-        void push_back_layer(layer* layer) { this->layers_.push_back(layer); }
+        void push_back_layer(std::unique_ptr<layer> layer) { this->layers_.push_back(std::move(layer)); }
 
         /// Layer at index, appending uniform-air layers until it exists; nullptr when index < 0.
         [[nodiscard]] layer* ensure_layer(int index);
@@ -99,7 +102,7 @@ namespace bl {
 
         uint8_t version_{UNSET_SUB_CHUNK_VERSION};
         int8_t y_index_{0};
-        std::vector<layer*> layers_;
+        std::vector<std::unique_ptr<layer>> layers_;
     };
 
 }  // namespace bl

@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstring>
+#include <memory>
 #include <string>
 #include <utility>
 
@@ -103,7 +104,7 @@ namespace bl {
 
         if (has_flag(policy, chunk_load_policy::Jigsaw)) {
             const auto prefix = bl::chunk_key{chunk_key::JigsawStructureBlueprint, this->pos_}.to_raw().substr(0, 13);
-            auto* iterator = level.db()->NewIterator(level.bulk_read_options());
+            std::unique_ptr<leveldb::Iterator> iterator(level.db()->NewIterator(level.bulk_read_options()));
             for (iterator->Seek(prefix); iterator->Valid(); iterator->Next()) {
                 const auto& db_key = iterator->key();
                 if (db_key.size() < prefix.size() || std::memcmp(db_key.data(), prefix.data(), prefix.size()) != 0) break;
@@ -112,7 +113,6 @@ namespace bl {
                     this->jigsaw_data_[parsed.identifier_hash] = iterator->value().ToString();
                 }
             }
-            delete iterator;
         }
 
         if (has_flag(policy, chunk_load_policy::Terrain)) {

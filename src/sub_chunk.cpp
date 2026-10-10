@@ -58,27 +58,27 @@ namespace bl {
     }  // namespace
 
     sub_chunk::~sub_chunk() {
-        for (auto& layer : this->layers_) {
-            delete layer;
-        }
+        // Layers are owned by the vector.
     }
 
     sub_chunk::layer::~layer() {
         for (auto& entry : this->palette) delete entry.tag;
     }
 
-    bool sub_chunk::load(const byte_t* data, size_t len) {
+    bool sub_chunk::load(std::span<const byte_t> data) {
+        const auto* raw = data.data();
         size_t idx = 0;
         int read{0};
         uint8_t layers_num = 0;
-        if (!read_header(this, data, read, layers_num)) return false;
+        if (!read_header(this, raw, read, layers_num)) return false;
         idx += read;
         for (auto i = 0; i < (int)layers_num; i++) {
-            auto* layer = new bl::sub_chunk::layer();
-            this->layers_.push_back(layer);
-            layer->blocks = bl::read_block_indices(data + idx, read, layer->bits, layer->palette_len);
+            auto layer = std::make_unique<bl::sub_chunk::layer>();
+            this->layers_.push_back(std::move(layer));
+            auto& loaded_layer = *this->layers_.back();
+            loaded_layer.blocks = bl::read_block_indices(data.subspan(idx), read, loaded_layer.bits, loaded_layer.palette_len);
             idx += read;
-            layer->palette = bl::read_palettes(data + idx, layer->palette_len, len - idx, read);
+            loaded_layer.palette = bl::read_palettes(data.subspan(idx), loaded_layer.palette_len, read);
             idx += read;
         }
         return true;
@@ -97,7 +97,7 @@ namespace bl {
         if (version == static_cast<uint8_t>(SubChunkVersion::V9)) {
             out.push_back(static_cast<char>(this->y_index_));
         }
-        for (const auto* layer : this->layers_) {
+        for (const auto& layer : this->layers_) {
             if (!layer) continue;
             bl::write_layer(out, layer->blocks, layer->palette);
         }
@@ -189,11 +189,11 @@ namespace bl {
         if (index < 0) return nullptr;
         while (static_cast<int>(this->layers_.size()) <= index) {
             // Empty padding layers have no valid on-disk form, so seed them with air.
-            auto* created = new layer();
+            auto created = std::make_unique<layer>();
             seed_layer_with_air(*created);
-            this->push_back_layer(created);
+            this->push_back_layer(std::move(created));
         }
-        return this->layers_[index];
+        return this->layers_[index].get();
     }
 
     void sub_chunk::set_block(int rx, int ry, int rz, const nbt::compound_tag* tag, int layer_index) {
@@ -205,7 +205,7 @@ namespace bl {
     void sub_chunk::fill_layer(const nbt::compound_tag* tag, int layer_index) {
         if (!tag) return;
         if (layer_index < 0) {
-            for (auto* existing : this->layers_) {
+            for (auto& existing : this->layers_) {
                 if (existing) existing->fill_blocks(tag);
             }
             return;
@@ -216,7 +216,7 @@ namespace bl {
     void sub_chunk::fill_blocks(const block_box& box, const nbt::compound_tag* tag, int layer_index) {
         if (!tag) return;
         if (layer_index < 0) {
-            for (auto* existing : this->layers_) {
+            for (auto& existing : this->layers_) {
                 if (existing) existing->fill_blocks(box, tag);
             }
             return;
@@ -225,7 +225,7 @@ namespace bl {
     }
 
     void sub_chunk::compact() {
-        for (auto* layer : this->layers_) {
+        for (auto& layer : this->layers_) {
             if (layer) layer->compact();
         }
     }

@@ -17,6 +17,7 @@ enable_testing()
 
 option(BEDROCK_LEVEL_BUILD_APPS "Build bedrock-level sample apps" OFF)
 option(BEDROCK_LEVEL_BUILD_TESTS "Build bedrock-level unit tests" OFF)
+option(BEDROCK_LEVEL_BUILD_BENCHMARKS "Build bedrock-level benchmarks" ON)
 
 add_library(bedrock-level
         STATIC
@@ -95,6 +96,17 @@ if (BEDROCK_LEVEL_BUILD_APPS)
     create_app(level_stater app/level_stater.cpp)
 endif ()
 
+if (BEDROCK_LEVEL_BUILD_BENCHMARKS)
+    function(create_benchmark name files)
+        add_executable(${name} ${files})
+        target_link_libraries(${name} PRIVATE bedrock-level)
+        set_target_properties(${name} PROPERTIES
+                RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/benchmark")
+    endfunction(create_benchmark)
+
+    create_benchmark(nbt_benchmark benchmark/nbt_benchmark.cpp)
+endif ()
+
 if (BEDROCK_LEVEL_BUILD_TESTS)
     #testing
     include(FetchContent)
@@ -113,6 +125,8 @@ if (BEDROCK_LEVEL_BUILD_TESTS)
         )
         target_link_libraries(${name} PRIVATE GTest::gtest_main bedrock-level)
         target_compile_definitions(${name} PRIVATE TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/data")
+        set_target_properties(${name} PROPERTIES
+                RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests")
         add_test(NAME ${name} COMMAND ${name})
     endfunction(create_test)
 

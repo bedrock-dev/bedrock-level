@@ -8,9 +8,10 @@ namespace bl {
         constexpr auto BLOCK_NUM = 16 * 16 * 16;
     }  // namespace
 
-    std::vector<uint16_t> read_block_indices(const byte_t* stream, int& read, uint8_t& bits, uint32_t& palette_len) {
+    std::vector<uint16_t> read_block_indices(std::span<const byte_t> stream, int& read, uint8_t& bits, uint32_t& palette_len) {
         read = 0;
-        auto layer_header = stream[0];
+        const auto* data = stream.data();
+        auto layer_header = data[0];
         read++;
         bits = layer_header >> 1u;
         std::vector<uint16_t> blocks;
@@ -21,7 +22,7 @@ namespace bl {
             if (BLOCK_NUM % block_per_word != 0) wordCount++;
             int position = 0;
             for (int wordi = 0; wordi < wordCount; wordi++) {
-                const auto word = binary::read_u32_le(stream + read + wordi * 4);
+                const auto word = binary::read_u32_le(data + read + wordi * 4);
                 for (int block = 0; block < block_per_word; block++) {
                     int state = (word >> ((position % block_per_word) * bits)) & ((1 << bits) - 1);
                     if (position < static_cast<int>(blocks.size())) {
@@ -31,7 +32,7 @@ namespace bl {
                 }
             }
             read += wordCount << 2;
-            palette_len = binary::read_u32_le(stream + read);
+            palette_len = binary::read_u32_le(data + read);
             read += 4;
         } else {  // uniform
             blocks = std::vector<uint16_t>(BLOCK_NUM, 0);
@@ -40,13 +41,13 @@ namespace bl {
         return blocks;
     }
 
-    std::vector<palette_entry> read_palettes(const byte_t* stream, size_t number, size_t len, int& read) {
+    std::vector<palette_entry> read_palettes(std::span<const byte_t> stream, size_t number, int& read) {
         read = 0;
         std::vector<palette_entry> result;
         result.reserve(number);
         for (auto i = 0u; i < number; i++) {
             int r = 0;
-            auto* tag = bl::nbt::read_one_palette(stream + read, len - read, r);
+            auto* tag = bl::nbt::read_one_palette(stream.data() + read, stream.size() - static_cast<size_t>(read), r);
             if (tag) {
                 result.push_back(make_palette_entry(tag));
             } else {

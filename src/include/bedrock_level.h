@@ -3,6 +3,7 @@
 #include <atomic>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -28,7 +29,7 @@ namespace bl {
         void close();
 
         bool is_open() const { return this->is_open_; }
-        leveldb::DB*& db() { return this->db_; }
+        leveldb::DB* db() { return this->db_.get(); }
         [[nodiscard]] const std::string& root_path() const noexcept { return this->root_name_; }
 
         general_kv_nbts& player_data() { return this->player_data_; }
@@ -78,7 +79,7 @@ namespace bl {
         leveldb::Env* env_wrapper_{nullptr};
 
         bool is_open_{false};
-        leveldb::DB* db_{nullptr};
+        std::unique_ptr<leveldb::DB> db_;
         std::string root_name_;
         level_dat dat_;
         LevelChunkFormat chunk_format_{LevelChunkFormat::V9_00};

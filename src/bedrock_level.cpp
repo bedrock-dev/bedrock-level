@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <iostream>
+#include <memory>
 #include <random>
 #include <string>
 #include <string_view>
@@ -31,6 +32,7 @@ namespace {
     [[nodiscard]] inline std::string_view slice_view(const leveldb::Slice& slice) noexcept {
         return std::string_view(slice.data(), slice.size());
     }
+
 }  // namespace
 
 namespace bl {
@@ -45,12 +47,12 @@ namespace bl {
         options_.write_buffer_size = 4 * 1024 * 1024;
         options_.block_size = 163840;
         // Slot 0 reads raw-deflate tables; slot 1 reads zlib-wrapped data.
-        auto* comprssor_0 = new leveldb::ZlibCompressorRaw(-1);
-        comprssor_0->useLibdeflate = libdeflate;
-        auto* compressor_1 = new leveldb::ZlibCompressor();
-        compressor_1->useLibdeflate = libdeflate;
-        options_.compressors[0] = comprssor_0;
-        options_.compressors[1] = compressor_1;
+        auto* compressor_raw = new leveldb::ZlibCompressorRaw(-1);
+        compressor_raw->useLibdeflate = libdeflate;
+        auto* compressor_zlib = new leveldb::ZlibCompressor();
+        compressor_zlib->useLibdeflate = libdeflate;
+        options_.compressors[0] = compressor_raw;
+        options_.compressors[1] = compressor_zlib;
         env_wrapper_ = new leveldb::McneWrapper(leveldb::Env::Default(), xor_key);
         options_.env = env_wrapper_;
         read_option_.decompress_allocator = new leveldb::DecompressAllocator();
@@ -90,8 +92,7 @@ namespace bl {
     void bedrock_level::close() {
         this->village_data_.clear_data();
         this->player_data_.clear_data();
-        delete this->db_;
-        this->db_ = nullptr;
+        this->db_.reset();
         this->is_open_ = false;
         this->actor_uid_tag_ = 0;
         this->actor_uid_index = 1;
@@ -131,7 +132,7 @@ namespace bl {
         });
     }
     void bedrock_level::foreach_global_keys(const std::function<void(std::string_view, std::string_view)>& f) {
-        auto* it = this->db_->NewIterator(this->read_option_);
+        std::unique_ptr<leveldb::Iterator> it(this->db_->NewIterator(this->read_option_));
         for (it->SeekToFirst(); it->Valid(); it->Next()) {
             const auto key = slice_view(it->key());
             auto ck = bl::chunk_key::parse(key);
@@ -142,12 +143,11 @@ namespace bl {
             const auto value = it->value();
             f(std::string_view(db_key.data(), db_key.size()), std::string_view(value.data(), value.size()));
         }
-        delete it;
     }
 
     void bedrock_level::foreach_key_with_prefix(std::string_view prefix, const std::function<void(std::string_view, std::string_view)>& f,
                                                 std::atomic_bool& stop, int max) {
-        auto* it = this->db_->NewIterator(this->read_option_);
+        std::unique_ptr<leveldb::Iterator> it(this->db_->NewIterator(this->read_option_));
         int count = 0;
         const leveldb::Slice prefix_slice(prefix.data(), prefix.size());
         for (it->Seek(prefix_slice); it->Valid() && it->key().starts_with(prefix_slice); it->Next()) {
@@ -156,11 +156,9 @@ namespace bl {
             f(std::string_view(key.data(), key.size()), std::string_view(value.data(), value.size()));
             count++;
             if ((count >= max && max > 0) || stop) {
-                delete it;
                 return;
             }
         }
-        delete it;
     }
 
     void bedrock_level::roll_actor_uid_tag() {
@@ -187,7 +185,9 @@ namespace bl {
         namespace fs = std::filesystem;
         fs::path path(this->root_name_);
         path /= bl::bedrock_level::LEVEL_DB;
-        leveldb::Status status = leveldb::DB::Open(this->options_, bl::utils::UTF8ToGBEx(path.string().c_str()), &this->db_);
+        leveldb::DB* opened_db = nullptr;
+        leveldb::Status status = leveldb::DB::Open(this->options_, bl::utils::UTF8ToGBEx(path.string().c_str()), &opened_db);
+        this->db_.reset(opened_db);
         if (!status.ok()) {
             LOG_F(ERROR, "Can not open level database: [%s].", status.ToString().c_str());
         } else {

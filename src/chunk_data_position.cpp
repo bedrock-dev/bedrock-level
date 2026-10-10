@@ -63,7 +63,7 @@ namespace bl {
         if (!pending_ticks) return;
 
         const auto* list_tag = pending_ticks->get("tickList");
-        auto* tick_list = list_tag ? list_tag->as<nbt::list_tag*>() : nullptr;
+        auto* tick_list = list_tag ? list_tag->as<const nbt::list_tag*>() : nullptr;
         if (!tick_list) return;
 
         for (auto* item : tick_list->value) {

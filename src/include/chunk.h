@@ -2,6 +2,7 @@
 #define BEDROCK_LEVEL_CHUNK_H
 
 #include <map>
+#include <memory>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -109,7 +110,7 @@ namespace bl {
         const chunk_pos pos_;
         bool block_entities_loaded_{false};
         bool entities_loaded_{false};
-        std::map<int, sub_chunk*> sub_chunks_;
+        std::map<int, std::unique_ptr<sub_chunk>> sub_chunks_;
         biome3d d3d_{};
         std::vector<bl::actor*> entities_;
         std::vector<bl::nbt::compound_tag*> block_entities_;

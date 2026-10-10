@@ -44,6 +44,7 @@ cmake -G "Ninja" `
     -DCMAKE_BUILD_TYPE=Release `
     -DBEDROCK_LEVEL_BUILD_APPS=ON `
     -DBEDROCK_LEVEL_BUILD_TESTS=OFF `
+    -DBEDROCK_LEVEL_BUILD_BENCHMARKS=ON `
     -B "$build_dir" `
     "$source_dir"
 
