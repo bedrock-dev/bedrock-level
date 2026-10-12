@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <fstream>
+#include <iterator>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -221,14 +222,17 @@ namespace bl {
     }
 
     bool init_biome_color_palette_from_file(const std::string& filename) {
+        std::ifstream f(filename);
+        if (!f.is_open()) {
+            LOG_F(ERROR, "Can not open biome color file %s", filename.c_str());
+            return false;
+        }
+        return init_biome_color_palette_from_json(std::string((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>()));
+    }
+
+    bool init_biome_color_palette_from_json(const std::string& json_text) {
         try {
-            std::ifstream f(filename);
-            if (!f.is_open()) {
-                LOG_F(ERROR, "Can not open biome color file %s", filename.c_str());
-                return false;
-            }
-            nlohmann::json j;
-            f >> j;
+            const auto j = nlohmann::json::parse(json_text);
             for (auto& [key, value] : j.items()) {
                 int id = value["id"].get<int>();
 
@@ -261,14 +265,17 @@ namespace bl {
     }
 
     bool init_block_color_from_file(const std::string& filename) {
+        std::ifstream f(filename);
+        if (!f.is_open()) {
+            LOG_F(ERROR, "Can not open block color file %s", filename.c_str());
+            return false;
+        }
+        return init_block_color_from_json(std::string((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>()));
+    }
+
+    bool init_block_color_from_json(const std::string& json_text) {
         try {
-            std::ifstream f(filename);
-            if (!f.is_open()) {
-                LOG_F(ERROR, "Can not open block color file %s", filename.c_str());
-                return false;
-            }
-            nlohmann::json j;
-            f >> j;
+            const auto j = nlohmann::json::parse(json_text);
 
             std::vector<std::pair<std::string, bl::color>> vec;
             for (const auto& [blockname, value] : j.items()) {
@@ -294,7 +301,7 @@ namespace bl {
                 block_id_to_names.push_back(std::move(key));
             }
         } catch (std::exception& e) {
-            LOG_F(ERROR, "Can not parse block color file %s: %s", filename.c_str(), e.what());
+            LOG_F(ERROR, "Can not parse block color JSON: %s", e.what());
             return false;
         }
         return true;

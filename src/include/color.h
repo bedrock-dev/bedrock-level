@@ -22,6 +22,8 @@ namespace bl {
 
     bool init_biome_color_palette_from_file(const std::string& filename);
     bool init_block_color_from_file(const std::string& filename);
+    bool init_biome_color_palette_from_json(const std::string& json_text);
+    bool init_block_color_from_json(const std::string& json_text);
 
     // Block name/runtime ID tables are initialized once and then read-only.
     int block_name_to_runtime_id(std::string_view name);
