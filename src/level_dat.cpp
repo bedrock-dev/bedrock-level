@@ -1,7 +1,8 @@
 #include "level_dat.h"
 
+#include <leveldb/env.h>
+
 #include <cctype>
-#include <filesystem>
 #include <string_view>
 
 #include "magic-enum/magic_enum.hpp"
@@ -65,15 +66,15 @@ namespace bl {
         return formats.front();  // client older than every known format
     }
 
-    bool level_dat::load_from_file(const std::string& path) {
-        using namespace bl::nbt;
-        namespace fs = std::filesystem;
-        if (!fs::exists(path)) {
-            LOG_F(ERROR, "No such level.dat file: %s", path.c_str());
+    bool level_dat::load_from_file(const std::string& path, leveldb::Env* env) {
+        std::string raw;
+        const auto status =
+            leveldb::ReadFileToString(env ? env : leveldb::Env::Default(), env ? path : utils::UTF8ToGBEx(path.c_str()), &raw);
+        if (!status.ok()) {
+            LOG_F(ERROR, "Cannot read level.dat: %s", status.ToString().c_str());
             return false;
         }
-
-        auto data = utils::read_file(path);
+        const std::vector<byte_t> data(raw.begin(), raw.end());
         if (this->load_from_raw_data(data)) {
             return true;
         } else {

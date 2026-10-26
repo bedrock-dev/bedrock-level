@@ -7,6 +7,9 @@
 
 #include "bedrock_key.h"
 #include "nbt.h"
+namespace leveldb {
+    class Env;
+}
 namespace bl {
 
     struct ClientVersion {
@@ -22,7 +25,7 @@ namespace bl {
 
     class level_dat {
        public:
-        bool load_from_file(const std::string& path);
+        bool load_from_file(const std::string& path, leveldb::Env* env = nullptr);
 
         bool load_from_raw_data(const std::vector<byte_t>& data);
 

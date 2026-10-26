@@ -20,11 +20,13 @@ namespace bl {
     class bedrock_level {
        public:
         /// Select libdeflate instead of zlib for raw-deflate payloads.
-        explicit bedrock_level(bool libdeflate = false, std::string xor_key = "88329851");
+        explicit bedrock_level(bool libdeflate = false, std::string xor_key = "88329851", std::shared_ptr<leveldb::Env> file_env = {});
         ~bedrock_level();
 
         /// Set the already-resolved XOR key before opening the database.
-        void set_xor_key(std::string xor_key);
+        void set_xor_key(std::string xor_key, std::shared_ptr<leveldb::Env> file_env = {});
+        /// The underlying file environment, without database XOR transformations.
+        [[nodiscard]] leveldb::Env& file_env() const;
         bool open(const std::string& root);
         void close();
 
@@ -76,7 +78,8 @@ namespace bl {
        private:
         leveldb::Options options_{};
         leveldb::ReadOptions read_option_{};
-        leveldb::Env* env_wrapper_{nullptr};
+        std::shared_ptr<leveldb::Env> file_env_;
+        std::unique_ptr<leveldb::Env> env_wrapper_;
 
         bool is_open_{false};
         std::unique_ptr<leveldb::DB> db_;

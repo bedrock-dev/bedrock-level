@@ -25,8 +25,6 @@
 #include "leveldb/zlib_compressor.h"
 #include "nbt.h"
 
-class SlowEnv : public leveldb::Env {};
-
 namespace {
     /// A key never needs to be copied to be classified, so scans read it as a view.
     [[nodiscard]] inline std::string_view slice_view(const leveldb::Slice& slice) noexcept {
@@ -41,7 +39,8 @@ namespace bl {
     const std::string bedrock_level::CUSTOM_DIM_KEY_PREFIX = "custom_dim:";
     const std::string bedrock_level::CUSTOM_DIM_TABLE_KEY = "DimensionNameIdTable";
 
-    bedrock_level::bedrock_level(bool libdeflate, std::string xor_key) {
+    bedrock_level::bedrock_level(bool libdeflate, std::string xor_key, std::shared_ptr<leveldb::Env> file_env)
+        : file_env_(std::move(file_env)) {
         options_.filter_policy = leveldb::NewBloomFilterPolicy(10);
         options_.block_cache = leveldb::NewLRUCache(20 * 1024 * 1024);
         options_.write_buffer_size = 4 * 1024 * 1024;
@@ -53,14 +52,14 @@ namespace bl {
         compressor_zlib->useLibdeflate = libdeflate;
         options_.compressors[0] = compressor_raw;
         options_.compressors[1] = compressor_zlib;
-        env_wrapper_ = new leveldb::McneWrapper(leveldb::Env::Default(), xor_key);
-        options_.env = env_wrapper_;
+        env_wrapper_ = std::make_unique<leveldb::McneWrapper>(&this->file_env(), xor_key);
+        options_.env = env_wrapper_.get();
         read_option_.decompress_allocator = new leveldb::DecompressAllocator();
     };
 
     bedrock_level::~bedrock_level() {
         this->close();
-        delete this->env_wrapper_;
+        this->env_wrapper_.reset();
         delete this->options_.compressors[0];
         delete this->options_.compressors[1];
         delete this->options_.block_cache;
@@ -68,11 +67,14 @@ namespace bl {
         delete this->read_option_.decompress_allocator;
     };
 
-    void bedrock_level::set_xor_key(std::string xor_key) {
+    leveldb::Env& bedrock_level::file_env() const { return file_env_ ? *file_env_ : *leveldb::Env::Default(); }
+
+    void bedrock_level::set_xor_key(std::string xor_key, std::shared_ptr<leveldb::Env> file_env) {
         if (this->is_open_) return;
-        delete this->env_wrapper_;
-        this->env_wrapper_ = new leveldb::McneWrapper(leveldb::Env::Default(), xor_key);
-        this->options_.env = this->env_wrapper_;
+        this->env_wrapper_.reset();
+        if (file_env) this->file_env_ = std::move(file_env);
+        this->env_wrapper_ = std::make_unique<leveldb::McneWrapper>(&this->file_env(), xor_key);
+        this->options_.env = this->env_wrapper_.get();
     }
 
     bool bedrock_level::open(const std::string& root) {
@@ -80,7 +82,7 @@ namespace bl {
         this->root_name_ = root;
         fs::path path(this->root_name_);
         path /= LEVEL_DATA;
-        const bool loaded = this->dat_.load_from_file(path.string());
+        const bool loaded = this->dat_.load_from_file(path.string(), file_env_.get());
         if (loaded) {
             this->chunk_format_ = client_version_to_chunk_format(this->dat_.min_compat_version());
             this->roll_actor_uid_tag();
@@ -186,7 +188,8 @@ namespace bl {
         fs::path path(this->root_name_);
         path /= bl::bedrock_level::LEVEL_DB;
         leveldb::DB* opened_db = nullptr;
-        leveldb::Status status = leveldb::DB::Open(this->options_, bl::utils::UTF8ToGBEx(path.string().c_str()), &opened_db);
+        const std::string db_path = file_env_ ? path.string() : bl::utils::UTF8ToGBEx(path.string().c_str());
+        leveldb::Status status = leveldb::DB::Open(this->options_, db_path, &opened_db);
         this->db_.reset(opened_db);
         if (!status.ok()) {
             LOG_F(ERROR, "Can not open level database: [%s].", status.ToString().c_str());
