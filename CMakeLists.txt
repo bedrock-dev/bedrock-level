@@ -18,6 +18,7 @@ enable_testing()
 option(BEDROCK_LEVEL_BUILD_APPS "Build bedrock-level sample apps" OFF)
 option(BEDROCK_LEVEL_BUILD_TESTS "Build bedrock-level unit tests" OFF)
 option(BEDROCK_LEVEL_BUILD_BENCHMARKS "Build bedrock-level benchmarks" ON)
+option(BEDROCK_LEVEL_BUILD_WEB_DEMO "Build the browser NBT viewer" OFF)
 
 add_library(bedrock-level
         STATIC
@@ -68,6 +69,37 @@ elseif (ANDROID)
             "${BEDROCK_LEVEL_LIB_DIR}/libleveldb-android-arm64.a"
             "${BEDROCK_LEVEL_LIB_DIR}/libz-android-arm64.a"
             "${BEDROCK_LEVEL_LIB_DIR}/libdeflate-android-arm64.a")
+elseif (EMSCRIPTEN)
+    if (NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
+        message(FATAL_ERROR "bedrock-level provides Emscripten libraries only for wasm32")
+    endif ()
+    message(STATUS "Current platform is Emscripten wasm32 (pthread)")
+    set(wasm_version_file "${BEDROCK_LEVEL_LIB_DIR}/wasm32-emscripten-version.txt")
+    if (NOT EXISTS "${wasm_version_file}")
+        message(FATAL_ERROR "Missing wasm toolchain version file; rebuild dependencies with leveldb-mcpe/build-wasm.ps1")
+    endif ()
+    file(READ "${wasm_version_file}" wasm_dependency_version)
+    string(STRIP "${wasm_dependency_version}" wasm_dependency_version)
+    if (NOT wasm_dependency_version STREQUAL EMSCRIPTEN_VERSION)
+        message(FATAL_ERROR
+                "Wasm dependencies use Emscripten ${wasm_dependency_version}, but this toolchain is ${EMSCRIPTEN_VERSION}. Copy matching prebuilt archives into libs; see libs/README.md")
+    endif ()
+    set(EXTRA_LIBS
+            "${BEDROCK_LEVEL_LIB_DIR}/libleveldb-wasm32.a"
+            "${BEDROCK_LEVEL_LIB_DIR}/libz-wasm32.a"
+            "${BEDROCK_LEVEL_LIB_DIR}/libdeflate-wasm32.a")
+    set_target_properties(bedrock-level PROPERTIES OUTPUT_NAME bedrock-level-wasm32)
+    target_compile_definitions(bedrock-level PRIVATE LOGURU_STACKTRACES=0)
+    # Match the JavaScript exception mode used by the Qt 6.11.1 prebuilt kit.
+    target_compile_options(bedrock-level PUBLIC -pthread -fexceptions)
+    # Propagate the runtime requirements to executables linking this static library.
+    target_link_options(bedrock-level PUBLIC
+            -pthread -fexceptions
+            "-sPTHREAD_POOL_SIZE=2"
+            "-sSTACK_SIZE=5242880"
+            "-sDEFAULT_PTHREAD_STACK_SIZE=2097152"
+            "-sINITIAL_MEMORY=33554432"
+            "-sALLOW_MEMORY_GROWTH=1")
 else ()
     message(FATAL_ERROR "Unsupported platform for bedrock-level: ${CMAKE_SYSTEM_NAME}")
 endif ()
@@ -82,6 +114,26 @@ target_link_libraries(bedrock-level PRIVATE ${EXTRA_LIBS})
 
 message(STATUS "C compiler: ${CMAKE_C_COMPILER}")
 message(STATUS "C++ compiler: ${CMAKE_CXX_COMPILER}")
+
+if (BEDROCK_LEVEL_BUILD_WEB_DEMO)
+    if (NOT EMSCRIPTEN)
+        message(FATAL_ERROR "The NBT web demo requires Emscripten; use build_wasm.ps1 -WebDemo")
+    endif ()
+    add_executable(nbt_viewer webdemo/nbt_viewer.cpp)
+    target_link_libraries(nbt_viewer PRIVATE bedrock-level)
+    set_target_properties(nbt_viewer PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/webdemo")
+    target_link_options(nbt_viewer PRIVATE
+            --no-entry
+            "-sMODULARIZE=1"
+            "-sEXPORT_NAME=createNbtViewer"
+            "-sENVIRONMENT=web,worker,node"
+            "-sEXPORTED_FUNCTIONS=_malloc,_free,_nbt_to_string,_nbt_result_size,_nbt_last_error"
+            "-sEXPORTED_RUNTIME_METHODS=UTF8ToString,HEAPU8")
+    foreach (asset index.html viewer.js nbt_worker.js)
+        configure_file("webdemo/${asset}" "${CMAKE_BINARY_DIR}/webdemo/${asset}" COPYONLY)
+    endforeach ()
+endif ()
 
 if (BEDROCK_LEVEL_BUILD_APPS)
     function(create_app name files)
