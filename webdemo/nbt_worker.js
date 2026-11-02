@@ -10,9 +10,9 @@ self.onmessage = async ({ data }) => {
   try {
     module = await moduleReady;
     const bytes = new Uint8Array(data.buffer);
-    if (!bytes.length) throw new Error('文件为空。');
+    if (!bytes.length) throw new Error('The file is empty.');
     pointer = module._malloc(bytes.length);
-    if (!pointer) throw new Error('没有足够的内存读取文件。');
+    if (!pointer) throw new Error('Not enough memory to read the file.');
     module.HEAPU8.set(bytes, pointer);
     const output = module._nbt_to_string(pointer, bytes.length);
     if (!output) throw new Error(module.UTF8ToString(module._nbt_last_error()));

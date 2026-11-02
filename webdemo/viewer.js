@@ -4,7 +4,7 @@ const result = document.getElementById('result');
 
 if (!crossOriginIsolated) {
   fileInput.disabled = true;
-  status.textContent = '请先运行 python webdemo/serve.py，再通过 http://127.0.0.1:8000 打开页面。';
+  status.textContent = 'Run python webdemo/serve.py, then open http://127.0.0.1:8000.';
 }
 
 fileInput.addEventListener('change', async () => {
@@ -12,25 +12,25 @@ fileInput.addEventListener('change', async () => {
   if (!file) return;
   fileInput.disabled = true;
   result.textContent = '';
-  status.textContent = `正在解析 ${file.name}（${file.size} 字节）…`;
+  status.textContent = `Parsing ${file.name} (${file.size} bytes)...`;
   let worker;
   let timeout;
   try {
     const buffer = await file.arrayBuffer();
     worker = new Worker('nbt_worker.js');
     const text = await new Promise((resolve, reject) => {
-      timeout = setTimeout(() => reject(new Error('解析超过 30 秒，请尝试较小的文件。')), 30000);
+      timeout = setTimeout(() => reject(new Error('Parsing took more than 30 seconds. Try a smaller file.')), 30000);
       worker.onmessage = ({ data }) => data.error ? reject(new Error(data.error)) : resolve(data.text);
       worker.onerror = (event) => {
         event.preventDefault();
-        reject(new Error(event.message || '无法加载或运行 NBT 解析器。'));
+        reject(new Error(event.message || 'Could not load or run the NBT parser.'));
       };
       worker.postMessage({ buffer }, [buffer]);
     });
     result.textContent = text;
-    status.textContent = `${file.name}：解析完成（${file.size} 字节）。`;
+    status.textContent = `${file.name}: parsing complete (${file.size} bytes).`;
   } catch (error) {
-    status.textContent = `解析失败：${error.message}`;
+    status.textContent = `Parsing failed: ${error.message}`;
   } finally {
     clearTimeout(timeout);
     worker?.terminate();

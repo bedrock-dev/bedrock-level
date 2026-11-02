@@ -1,17 +1,17 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Bedrock NBT 文本查看器</title>
+  <title>Bedrock NBT Text Viewer</title>
   <style>pre { white-space: pre-wrap; overflow-wrap: anywhere; }</style>
 </head>
 <body>
-  <h1>NBT 文本查看器</h1>
-  <p>选择未压缩的 Bedrock 小端 NBT 文件或 level.dat。文件只在浏览器本地解析。</p>
-  <label>选择文件：<input id="file" type="file" accept=".nbt,.dat,.mcstructure"></label>
-  <p id="status" role="status">请选择文件。</p>
-  <pre id="result" aria-label="NBT 文本结果"></pre>
+  <h1>NBT Text Viewer</h1>
+  <p>Select an uncompressed Bedrock little-endian NBT file or level.dat. Files are parsed locally in your browser.</p>
+  <label>Select file: <input id="file" type="file" accept=".nbt,.dat,.mcstructure"></label>
+  <p id="status" role="status">Select a file.</p>
+  <pre id="result" aria-label="NBT text output"></pre>
   <script src="viewer.js"></script>
 </body>
 </html>
