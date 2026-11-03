@@ -1,9 +1,14 @@
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
+#include <memory>
+#include <set>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "bedrock_key.h"
@@ -12,6 +17,29 @@
 #include "utils.h"
 
 namespace fs = std::filesystem;
+
+bool isXorEncrypted(const fs::path& worldRoot) {
+    constexpr std::array<char, 4> xorMagic{'\x80', '\x1d', '\x30', '\x01'};
+    for (const auto& entry : fs::directory_iterator(worldRoot / bl::bedrock_level::LEVEL_DB)) {
+        if (!entry.is_regular_file()) continue;
+        const auto name = entry.path().filename().string();
+        const auto extension = entry.path().extension();
+        // Inspect database metadata and tables; logs and lock files are not XOR encoded.
+        if (name != "CURRENT" && !name.starts_with("MANIFEST-") && extension != ".ldb" && extension != ".sst") continue;
+
+        std::ifstream input(entry.path(), std::ios::binary);
+        std::array<char, 4> header{};
+        if (!input.is_open()) {
+            throw fs::filesystem_error("Cannot open database header", entry.path(), std::make_error_code(std::errc::io_error));
+        }
+        input.read(header.data(), header.size());
+        if (input.bad()) {
+            throw fs::filesystem_error("Cannot read database header", entry.path(), std::make_error_code(std::errc::io_error));
+        }
+        if (input.gcount() == static_cast<std::streamsize>(header.size()) && header == xorMagic) return true;
+    }
+    return false;
+}
 
 uintmax_t getTotalLdbSize(const fs::path& path) {
     uintmax_t totalSize = 0;
@@ -66,14 +94,17 @@ void PrintDatabaseStats(leveldb::DB* db) {
 
 struct Options {
     fs::path path;
+    std::string xorkey{"88329851"};
     bool stat{false};
     bool export_chunks{false};
+    bool dump{false};
     bool unpack{false};
     fs::path output;
     bool has_pos{false};
     bool range{false};
     int x1{0}, z1{0}, x2{0}, z2{0};
     int dim{0};
+    bool has_dim{false};
 };
 
 void printUsage(const char* prog) {
@@ -83,15 +114,19 @@ void printUsage(const char* prog) {
             "Modes (default: --stat):\n"
             "  --stat                    print level database statistics\n"
             "  --export                  export chunks\n"
+            "  --dump                    export all chunks without --pos\n"
+            "\n"
+            "Database options:\n"
+            "  --xorkey <key>            key for auto-detected XOR databases (default: 88329851)\n"
             "\n"
             "Export options:\n"
             "  --pos <x> <z>             single chunk at (x, z)\n"
             "  --pos <x1> <z1> <x2> <z2> export chunks in rectangle [x1..x2] x [z1..z2]\n"
-            "  --dim <d>                 dimension id (default 0)\n"
+            "  --dim <d>                 dimension id (--export: default 0; --dump: default all)\n"
             "  --unpack                  unpack every non-empty key into its own file\n"
             "                            (one folder per chunk); default writes one .bchk\n"
             "                            file per chunk\n"
-            "  -o, --output <dir>        output directory (required for --export)\n"
+            "  -o, --output <dir>        output directory (required for --export/--dump)\n"
             "  -h, --help                show this help\n",
             prog);
 }
@@ -121,10 +156,14 @@ bool parseArgs(int argc, const char* argv[], Options& opt) {
             std::string v;
             if (!takeValue(v)) return false;
             opt.path = v;
+        } else if (a == "--xorkey") {
+            if (!takeValue(opt.xorkey)) return false;
         } else if (a == "--stat") {
             opt.stat = true;
         } else if (a == "--export") {
             opt.export_chunks = true;
+        } else if (a == "--dump") {
+            opt.dump = true;
         } else if (a == "--unpack") {
             opt.unpack = true;
         } else if (a == "--output" || a == "-o") {
@@ -138,6 +177,7 @@ bool parseArgs(int argc, const char* argv[], Options& opt) {
                 fprintf(stderr, "Invalid --dim value: %s\n", v.c_str());
                 return false;
             }
+            opt.has_dim = true;
         } else if (a == "--pos") {
             std::vector<int> nums;
             while (i + 1 < argc) {
@@ -241,6 +281,30 @@ bool exportChunk(bl::bedrock_level& level, const bl::chunk_pos& cp, const fs::pa
     return true;
 }
 
+int dumpChunks(bl::bedrock_level& level, const Options& opt) {
+    std::set<bl::chunk_pos> positions;
+    std::unique_ptr<leveldb::Iterator> iterator(level.db()->NewIterator(level.bulk_read_options()));
+    for (iterator->SeekToFirst(); iterator->Valid(); iterator->Next()) {
+        const auto key = iterator->key();
+        const auto chunkKey = bl::chunk_key::parse(std::string_view(key.data(), key.size()));
+        if (chunkKey.valid() && (!opt.has_dim || chunkKey.cp.dim == opt.dim)) positions.insert(chunkKey.cp);
+    }
+    const auto status = iterator->status();
+    iterator.reset();
+    if (!status.ok()) {
+        fprintf(stderr, "Cannot enumerate chunks: %s\n", status.ToString().c_str());
+        return 1;
+    }
+
+    size_t present = 0;
+    for (const auto& pos : positions) {
+        if (exportChunk(level, pos, opt.output, opt.unpack)) ++present;
+    }
+    printf("%s %zu chunk(s) to %s (%zu present)\n", opt.unpack ? "Unpacked" : "Exported", positions.size(),
+           opt.output.string().c_str(), present);
+    return 0;
+}
+
 // ----------------------------- stats -----------------------------
 
 int printStats(bl::bedrock_level& level, const std::string& path) {
@@ -266,13 +330,36 @@ int main(int argc, const char* argv[]) {
         printUsage(argv[0]);
         return 1;
     }
-    if (opt.stat && opt.export_chunks) {
-        fprintf(stderr, "--stat and --export are mutually exclusive\n");
+    if (static_cast<int>(opt.stat) + static_cast<int>(opt.export_chunks) + static_cast<int>(opt.dump) > 1) {
+        fprintf(stderr, "--stat, --export and --dump are mutually exclusive\n");
         return 1;
     }
-    if (!opt.stat && !opt.export_chunks) opt.stat = true;  // default mode
+    if (!opt.stat && !opt.export_chunks && !opt.dump) opt.stat = true;  // default mode
+    if (opt.dump && opt.has_pos) {
+        fprintf(stderr, "--dump does not accept --pos\n");
+        return 1;
+    }
+    if (opt.export_chunks && !opt.has_pos) {
+        fprintf(stderr, "--export requires --pos\n");
+        return 1;
+    }
+    if ((opt.export_chunks || opt.dump) && opt.output.empty()) {
+        fprintf(stderr, "%s requires --output <dir>\n", opt.dump ? "--dump" : "--export");
+        return 1;
+    }
 
-    bl::bedrock_level level;
+    bool encrypted = false;
+    try {
+        encrypted = isXorEncrypted(opt.path);
+    } catch (const fs::filesystem_error& error) {
+        fprintf(stderr, "Cannot detect database XOR format: %s\n", error.what());
+        return 1;
+    }
+    if (encrypted && opt.xorkey.empty()) {
+        fprintf(stderr, "XOR database requires a non-empty --xorkey\n");
+        return 1;
+    }
+    bl::bedrock_level level(false, encrypted ? opt.xorkey : std::string{});
     if (!level.open(opt.path.string())) {
         LOG_F(ERROR, "Can not open level %s", opt.path.string().c_str());
         return 1;
@@ -280,16 +367,8 @@ int main(int argc, const char* argv[]) {
 
     if (opt.stat) return printStats(level, opt.path.string());
 
-    // export
-    if (!opt.has_pos) {
-        fprintf(stderr, "--export requires --pos\n");
-        return 1;
-    }
-    if (opt.output.empty()) {
-        fprintf(stderr, "--export requires --output <dir>\n");
-        return 1;
-    }
     fs::create_directories(opt.output);
+    if (opt.dump) return dumpChunks(level, opt);
 
     int x1 = opt.x1, z1 = opt.z1, x2 = opt.x2, z2 = opt.z2;
     if (x1 > x2) std::swap(x1, x2);
