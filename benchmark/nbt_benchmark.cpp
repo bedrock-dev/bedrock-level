@@ -58,11 +58,14 @@ int main() {
     volatile std::size_t parsed_bytes = 0;
     const auto deserialize_ns = measure_ns_per_operation(
         [&] {
-            int read = 0;
-            auto* parsed = bl::nbt::parse_one(
-                reinterpret_cast<const byte_t*>(serialized.data()), serialized.size(), read);
-            parsed_bytes += static_cast<std::size_t>(read);
-            delete parsed;
+            auto parsed = bl::nbt::parse_one(
+                std::span<const byte_t>(reinterpret_cast<const byte_t*>(serialized.data()), serialized.size()));
+            if (!parsed) {
+                delete parsed.root;
+                throw std::runtime_error(bl::nbt::parse_error_to_string(parsed.error_code));
+            }
+            parsed_bytes += parsed.consumed_length;
+            delete parsed.root;
         },
         iterations);
 

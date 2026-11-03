@@ -31,15 +31,15 @@ const char* nbt_to_string(const byte_t* data, size_t size) {
 
         size_t offset = 0;
         while (offset < size) {
-            int consumed = 0;
-            std::unique_ptr<bl::nbt::compound_tag> root(bl::nbt::parse_one(data + offset, size - offset, consumed));
-            if (!root || consumed <= 0 || static_cast<size_t>(consumed) > size - offset) {
+            auto parsed = bl::nbt::parse_one(std::span<const byte_t>(data + offset, size - offset));
+            std::unique_ptr<bl::nbt::compound_tag> root(parsed.root);
+            if (!parsed || !root || parsed.consumed_length == 0 || parsed.consumed_length > size - offset) {
                 result.clear();
-                last_error = "Invalid or truncated NBT. Expected uncompressed Bedrock little-endian NBT with a compound root.";
+                last_error = bl::nbt::parse_error_to_string(parsed.error_code);
                 return nullptr;
             }
             result += root->to_readable_string();
-            offset += static_cast<size_t>(consumed);
+            offset += parsed.consumed_length;
         }
         return result.c_str();
     } catch (const std::exception&) {

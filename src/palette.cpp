@@ -46,15 +46,23 @@ namespace bl {
         std::vector<palette_entry> result;
         result.reserve(number);
         for (auto i = 0u; i < number; i++) {
-            int r = 0;
-            auto* tag = bl::nbt::parse_one(stream.data() + read, stream.size() - static_cast<size_t>(read), r);
-            if (tag) {
-                result.push_back(make_palette_entry(tag));
-            } else {
-                LOG_F(ERROR, "Can not read block palette");
+            if (static_cast<size_t>(read) >= stream.size()) {
+                LOG_F(ERROR, "Block palette data ended unexpectedly");
                 return result;
             }
-            read += r;
+            const auto parsed = bl::nbt::parse_one(stream.subspan(static_cast<size_t>(read)));
+            if (!parsed) {
+                LOG_F(ERROR, "Can not read block palette: %s", bl::nbt::parse_error_to_string(parsed.error_code));
+                return result;
+            }
+            if (parsed.consumed_length == 0 ||
+                parsed.consumed_length > stream.size() - static_cast<size_t>(read)) {
+                LOG_F(ERROR, "Invalid block palette length");
+                delete parsed.root;
+                return result;
+            }
+            result.push_back(make_palette_entry(parsed.root));
+            read += static_cast<int>(parsed.consumed_length);
         }
         return result;
     }

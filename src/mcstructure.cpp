@@ -348,9 +348,12 @@ namespace bl {
 
     mcstructure parse_mcstructure(const byte_t* data, size_t len) {
         mcstructure result;
-        int read = 0;
-        auto* root = bl::nbt::parse_one(data, len, read);
-        if (!root) return result;
+        const auto parsed = bl::nbt::parse_one(std::span<const byte_t>(data, len));
+        if (!parsed) {
+            LOG_F(ERROR, "Cannot parse mcstructure NBT: %s", bl::nbt::parse_error_to_string(parsed.error_code));
+            return result;
+        }
+        auto* root = parsed.root;
 
         auto* format_version_tag = root->get("format_version");
         auto* format_version = format_version_tag ? format_version_tag->as<bl::nbt::int_tag*>() : nullptr;

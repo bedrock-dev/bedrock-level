@@ -204,9 +204,13 @@ namespace bl {
         std::string value;
         auto r = this->db_->Get(read_option_, CUSTOM_DIM_TABLE_KEY, &value);
         if (!r.ok()) return;
-        int read;
-        auto* nbt = bl::nbt::parse_one(value.c_str(), read);
-        if (!nbt) return;
+        const auto parsed = bl::nbt::parse_one(std::span<const byte_t>(value.data(), value.size()));
+        if (!parsed || parsed.consumed_length != value.size()) {
+            delete parsed.root;
+            LOG_F(ERROR, "Cannot parse dimension name table: %s", bl::nbt::parse_error_to_string(parsed.error_code));
+            return;
+        }
+        auto* nbt = parsed.root;
 
         auto* entries = nbt->get("entries");
         if (entries) {

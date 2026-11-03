@@ -2,61 +2,112 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <new>
+#include <stdexcept>
 
 #include "magic-enum/magic_enum.hpp"
 #include "utils.h"
 
 namespace bl::nbt {
 
-    std::tuple<abstract_tag*, size_t> read_nbt(std::span<const byte_t> data);
-    std::tuple<compound_tag*, size_t> read_compound_value(std::span<const byte_t> data, std::string_view key);
-    std::tuple<abstract_tag*, size_t> read_value_by_type(tag_type type, std::span<const byte_t> data, std::string_view key);
+    namespace {
+        void set_error(parse_error& error, parse_error value) noexcept {
+            if (error == parse_error::none) error = value;
+        }
+    }  // namespace
+
+    std::tuple<abstract_tag*, size_t> read_nbt(std::span<const byte_t> data, parse_error& error);
+    std::tuple<compound_tag*, size_t> read_compound_value(std::span<const byte_t> data, std::string_view key,
+                                                         parse_error& error);
+    std::tuple<abstract_tag*, size_t> read_value_by_type(tag_type type, std::span<const byte_t> data,
+                                                        std::string_view key, parse_error& error);
+
+    const char* parse_error_to_string(parse_error error) noexcept {
+        switch (error) {
+            case parse_error::none:
+                return "none";
+            case parse_error::empty_input:
+                return "empty input";
+            case parse_error::truncated_data:
+                return "truncated data";
+            case parse_error::invalid_tag_type:
+                return "invalid tag type";
+            case parse_error::invalid_root_type:
+                return "root value is not a compound";
+            case parse_error::invalid_array_length:
+                return "invalid array length";
+            case parse_error::invalid_list_length:
+                return "invalid list length";
+            case parse_error::missing_compound_end:
+                return "missing compound end marker";
+            case parse_error::invalid_consumed_length:
+                return "invalid consumed length";
+            case parse_error::resource_exhausted:
+                return "resource exhausted";
+        }
+        return "unknown parse error";
+    }
 
     std::string tag_type_to_str(tag_type type) {
         auto name = magic_enum::enum_name(type);
         return name.empty() ? "UNKNOWN" : std::string(name);
     }
 
-    int read_string_view(std::span<const byte_t> data, std::string_view& value) {
-        if (data.size() < 2) return 0;
+    int read_string_view(std::span<const byte_t> data, std::string_view& value, parse_error& error) {
+        if (data.size() < 2) {
+            set_error(error, parse_error::truncated_data);
+            return 0;
+        }
         const uint16_t len = detail::read_u16_le(data.data());
-        if (static_cast<size_t>(len) > data.size() - 2) return 0;
+        if (static_cast<size_t>(len) > data.size() - 2) {
+            set_error(error, parse_error::truncated_data);
+            return 0;
+        }
         value = std::string_view(reinterpret_cast<const char*>(data.data() + 2), len);
         return len + 2;
     }
 
-    int read_string(std::span<const byte_t> data, std::string& value) {
-        std::string_view view;
-        const int read = read_string_view(data, view);
-        if (read == 0) return 0;
-        value.assign(view);
-        return read;
-    }
-
-    int read_tag_type(std::span<const byte_t> data, tag_type& type) {
-        if (data.empty()) return 0;
+    int read_tag_type(std::span<const byte_t> data, tag_type& type, parse_error& error) {
+        if (data.empty()) {
+            set_error(error, parse_error::truncated_data);
+            return 0;
+        }
         type = static_cast<tag_type>(data[0]);
         return 1;
     }
 
     template <typename TagType>
-    std::tuple<TagType*, size_t> read_scalar_value(std::span<const byte_t> data, std::string_view key) {
+    std::tuple<TagType*, size_t> read_scalar_value(std::span<const byte_t> data, std::string_view key,
+                                                   parse_error& error) {
         using value_type = decltype(TagType::value);
         constexpr size_t value_size = sizeof(value_type);
-        if (data.size() < value_size) return {nullptr, 0};
+        if (data.size() < value_size) {
+            set_error(error, parse_error::truncated_data);
+            return {nullptr, 0};
+        }
         auto* tag = new TagType(key);
         tag->value = detail::read_scalar_le<value_type>(data.data());
         return {tag, value_size};
     }
 
     template <typename TagType>
-    std::tuple<TagType*, size_t> read_array_value(std::span<const byte_t> data, std::string_view key) {
+    std::tuple<TagType*, size_t> read_array_value(std::span<const byte_t> data, std::string_view key,
+                                                  parse_error& error) {
         using elem_type = typename decltype(TagType::value)::value_type;
-        if (data.size() < 4) return {nullptr, 0};
+        if (data.size() < 4) {
+            set_error(error, parse_error::truncated_data);
+            return {nullptr, 0};
+        }
         const int32_t len = detail::read_scalar_le<int32_t>(data.data());
-        if (len < 0) return {nullptr, 0};
+        if (len < 0) {
+            set_error(error, parse_error::invalid_array_length);
+            return {nullptr, 0};
+        }
         const auto element_count = static_cast<size_t>(len);
-        if (element_count > (data.size() - 4) / sizeof(elem_type)) return {nullptr, 0};
+        if (element_count > (data.size() - 4) / sizeof(elem_type)) {
+            set_error(error, parse_error::invalid_array_length);
+            return {nullptr, 0};
+        }
         auto* tag = new TagType(key);
         tag->value = std::vector<elem_type>(element_count, 0);
         if constexpr (sizeof(elem_type) == 1) {
@@ -70,10 +121,11 @@ namespace bl::nbt {
         return {tag, consumed};
     }
 
-    std::tuple<string_tag*, size_t> read_string_value(std::span<const byte_t> data, std::string_view key) {
+    std::tuple<string_tag*, size_t> read_string_value(std::span<const byte_t> data, std::string_view key,
+                                                      parse_error& error) {
         auto* tag = new string_tag(key);
         std::string_view value;
-        const int r = read_string_view(data, value);
+        const int r = read_string_view(data, value, error);
         if (r == 0) {
             delete tag;
             return {nullptr, 0};
@@ -82,12 +134,13 @@ namespace bl::nbt {
         return {tag, static_cast<size_t>(r)};
     }
 
-    std::tuple<list_tag*, size_t> read_list_tag_value(std::span<const byte_t> data, std::string_view key) {
+    std::tuple<list_tag*, size_t> read_list_tag_value(std::span<const byte_t> data, std::string_view key,
+                                                      parse_error& error) {
         size_t read = 0;
         auto* tag = new list_tag(key);
         tag_type child_type;
         {
-            int r = read_tag_type(data.subspan(read), child_type);
+            int r = read_tag_type(data.subspan(read), child_type, error);
             if (r == 0) {
                 delete tag;
                 return {nullptr, 0};
@@ -95,28 +148,33 @@ namespace bl::nbt {
             read += r;
         }
         if (data.size() - read < 4) {
+            set_error(error, parse_error::truncated_data);
             delete tag;
             return {nullptr, 0};
         }
         const int32_t list_size = detail::read_scalar_le<int32_t>(data.data() + read);
         read += 4;
         if (list_size < 0 || (list_size != 0 && child_type == End)) {
+            set_error(error, parse_error::invalid_list_length);
             delete tag;
             return {nullptr, 0};
         }
         const auto count = static_cast<size_t>(list_size);
         if (count > data.size() - read) {
+            set_error(error, parse_error::invalid_list_length);
             delete tag;
             return {nullptr, 0};
         }
         tag->value.reserve(count);
         for (int i = 0; i < list_size; i++) {
             if (data.size() <= read) {
+                set_error(error, parse_error::invalid_list_length);
                 delete tag;
                 return {nullptr, 0};
             }
-            auto [child, sz] = read_value_by_type(child_type, data.subspan(read), "");
+            auto [child, sz] = read_value_by_type(child_type, data.subspan(read), "", error);
             if (child == nullptr || sz == 0 || sz > data.size() - read) {
+                if (error == parse_error::none) set_error(error, parse_error::invalid_list_length);
                 delete child;
                 delete tag;
                 return {nullptr, 0};
@@ -127,12 +185,25 @@ namespace bl::nbt {
         return {tag, read};
     }
 
-    std::tuple<compound_tag*, size_t> read_compound_value(std::span<const byte_t> data, std::string_view key) {
+    std::tuple<compound_tag*, size_t> read_compound_value(std::span<const byte_t> data, std::string_view key,
+                                                          parse_error& error) {
         auto* tag = new compound_tag(key);
         size_t total = 0;
         while (total < data.size()) {
-            auto [child, read] = read_nbt(data.subspan(total));
+            auto [child, read] = read_nbt(data.subspan(total), error);
+            if (error != parse_error::none) {
+                delete child;
+                delete tag;
+                return {nullptr, 0};
+            }
             if (read == 0) {
+                set_error(error, parse_error::truncated_data);
+                delete tag;
+                return {nullptr, 0};
+            }
+            if (read > data.size() - total) {
+                set_error(error, parse_error::invalid_consumed_length);
+                delete child;
                 delete tag;
                 return {nullptr, 0};
             }
@@ -142,54 +213,64 @@ namespace bl::nbt {
             } else {
                 // A compound is complete only when its explicit End marker was consumed.
                 if (read == 1 && data[total - 1] == static_cast<byte_t>(End)) return {tag, total};
+                set_error(error, parse_error::missing_compound_end);
                 delete tag;
                 return {nullptr, 0};
             }
         }
         // Running out of bytes without an End marker means truncated input.
+        set_error(error, parse_error::missing_compound_end);
         delete tag;
         return {nullptr, 0};
     }
 
-    std::tuple<abstract_tag*, size_t> read_value_by_type(tag_type type, std::span<const byte_t> data, std::string_view key) {
+    std::tuple<abstract_tag*, size_t> read_value_by_type(tag_type type, std::span<const byte_t> data,
+                                                        std::string_view key, parse_error& error) {
         switch (type) {
             case Compound:
-                return read_compound_value(data, key);
+                return read_compound_value(data, key, error);
             case Int:
-                return read_scalar_value<int_tag>(data, key);
+                return read_scalar_value<int_tag>(data, key, error);
             case Short:
-                return read_scalar_value<short_tag>(data, key);
+                return read_scalar_value<short_tag>(data, key, error);
             case Long:
-                return read_scalar_value<long_tag>(data, key);
+                return read_scalar_value<long_tag>(data, key, error);
             case Float:
-                return read_scalar_value<float_tag>(data, key);
+                return read_scalar_value<float_tag>(data, key, error);
             case Double:
-                return read_scalar_value<double_tag>(data, key);
+                return read_scalar_value<double_tag>(data, key, error);
             case Byte:
-                return read_scalar_value<byte_tag>(data, key);
+                return read_scalar_value<byte_tag>(data, key, error);
             case String:
-                return read_string_value(data, key);
+                return read_string_value(data, key, error);
             case ByteArray:
-                return read_array_value<byte_array_tag>(data, key);
+                return read_array_value<byte_array_tag>(data, key, error);
             case IntArray:
-                return read_array_value<int_array_tag>(data, key);
+                return read_array_value<int_array_tag>(data, key, error);
             case LongArray:
-                return read_array_value<long_array_tag>(data, key);
+                return read_array_value<long_array_tag>(data, key, error);
             case List:
-                return read_list_tag_value(data, key);
+                return read_list_tag_value(data, key, error);
             default:
+                set_error(error, parse_error::invalid_tag_type);
                 return {nullptr, 0};
         }
     }
 
-    std::tuple<abstract_tag*, size_t> read_nbt(std::span<const byte_t> data) {
-        if (data.empty()) return {nullptr, 0};
+    std::tuple<abstract_tag*, size_t> read_nbt(std::span<const byte_t> data, parse_error& error) {
+        if (data.empty()) {
+            set_error(error, parse_error::truncated_data);
+            return {nullptr, 0};
+        }
         int read = 0;
         tag_type type;
         {
-            int r = read_tag_type(data, type);
+            int r = read_tag_type(data, type, error);
             if (r == 0) return {nullptr, 0};
-            if (static_cast<unsigned char>(data[0]) > static_cast<unsigned char>(LongArray)) return {nullptr, 0};
+            if (static_cast<unsigned char>(data[0]) > static_cast<unsigned char>(LongArray)) {
+                set_error(error, parse_error::invalid_tag_type);
+                return {nullptr, 0};
+            }
             read += r;
         }
         if (type == End) {
@@ -197,55 +278,108 @@ namespace bl::nbt {
         }
         std::string_view key;
         {
-            int r = read_string_view(data.subspan(read), key);
+            int r = read_string_view(data.subspan(read), key, error);
             if (r == 0) return {nullptr, 0};
             read += r;
         }
-        auto [tag, len] = read_value_by_type(type, data.subspan(read), key);
-        if (tag == nullptr) return {nullptr, 0};
+        auto [tag, len] = read_value_by_type(type, data.subspan(read), key, error);
+        if (tag == nullptr) {
+            if (error == parse_error::none) set_error(error, parse_error::invalid_tag_type);
+            return {nullptr, 0};
+        }
+        if (len > data.size() - static_cast<size_t>(read)) {
+            set_error(error, parse_error::invalid_consumed_length);
+            delete tag;
+            return {nullptr, 0};
+        }
         return {tag, read + len};
     }
 
-    compound_tag* parse_one(const byte_t* data, int& read) { return parse_one(data, SIZE_MAX, read); }
+    parse_result parse_one(std::span<const byte_t> data) {
+        parse_result result;
+        if (data.empty()) {
+            result.error_code = parse_error::empty_input;
+            return result;
+        }
 
-    compound_tag* parse_one(const byte_t* data, size_t data_len, int& read) {
-        read = 0;
-        if (!data || data_len == 0) return nullptr;
-        auto [r, x] = read_nbt(std::span<const byte_t>(data, data_len));
-        read = static_cast<int>(x);
-        if (!r || r->type() != tag_type::Compound) {
-            LOG_F(ERROR, "Invalid palette format");
-            delete r;
-            return nullptr;
-        } else {
-            return r->as<compound_tag*>();
+        parse_error error = parse_error::none;
+        try {
+            auto [parsed, consumed] = read_nbt(data, error);
+            if (error != parse_error::none) {
+                delete parsed;
+                result.error_code = error;
+                return result;
+            }
+            if (consumed == 0 || consumed > data.size()) {
+                delete parsed;
+                result.error_code = parse_error::invalid_consumed_length;
+                return result;
+            }
+            if (parsed == nullptr || parsed->type() != tag_type::Compound) {
+                delete parsed;
+                result.error_code = parse_error::invalid_root_type;
+                return result;
+            }
+            result.root = parsed->as<compound_tag*>();
+            if (result.root == nullptr) {
+                delete parsed;
+                result.error_code = parse_error::invalid_root_type;
+                return result;
+            }
+            result.consumed_length = consumed;
+            return result;
+        } catch (const std::bad_alloc&) {
+            result.error_code = parse_error::resource_exhausted;
+            return result;
+        } catch (const std::length_error&) {
+            result.error_code = parse_error::resource_exhausted;
+            return result;
         }
     }
 
-    std::vector<compound_tag*> parse_all(const byte_t* data, size_t len) {
-        if (!data && len != 0) return {};
+    parse_all_result parse_all(std::span<const byte_t> data) {
+        parse_all_result result;
+        if (data.empty()) {
+            result.error_code = parse_error::empty_input;
+            return result;
+        }
+
         size_t ptr = 0;
-        std::vector<compound_tag*> owned;
-        while (ptr < len) {
-            int read = 0;
-            auto* tag = parse_one(data + ptr, len - ptr, read);
-            if (read <= 0 || static_cast<size_t>(read) > len - ptr) {
-                delete tag;
-                for (auto* parsed : owned) delete parsed;
-                return {};
+        std::vector<compound_tag*> parsed;
+        try {
+            while (ptr < data.size()) {
+                auto item = parse_one(data.subspan(ptr));
+                if (!item) {
+                    delete item.root;
+                    for (auto* value : parsed) delete value;
+                    result.error_code = item.error_code;
+                    result.consumed_length = ptr;
+                    return result;
+                }
+                if (item.consumed_length == 0 || item.consumed_length > data.size() - ptr) {
+                    delete item.root;
+                    for (auto* value : parsed) delete value;
+                    result.error_code = parse_error::invalid_consumed_length;
+                    result.consumed_length = ptr;
+                    return result;
+                }
+                ptr += item.consumed_length;
+                parsed.push_back(item.root);
             }
-            ptr += static_cast<size_t>(read);
-            if (tag) owned.push_back(tag);
+        } catch (const std::bad_alloc&) {
+            for (auto* value : parsed) delete value;
+            result.error_code = parse_error::resource_exhausted;
+            result.consumed_length = ptr;
+            return result;
+        } catch (const std::length_error&) {
+            for (auto* value : parsed) delete value;
+            result.error_code = parse_error::resource_exhausted;
+            result.consumed_length = ptr;
+            return result;
         }
-        if (ptr != len) {
-            LOG_F(ERROR, "Remain bytes found (%d).", (int)len - (int)ptr);
-            for (auto* parsed : owned) delete parsed;
-            return {};
-        }
-        std::vector<compound_tag*> res;
-        res.reserve(owned.size());
-        for (auto* tag : owned) res.push_back(tag);
-        return res;
+        result.consumed_length = ptr;
+        result.roots = std::move(parsed);
+        return result;
     }
     list_tag::~list_tag() {
         for (auto tag : this->value) {

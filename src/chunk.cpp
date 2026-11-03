@@ -242,7 +242,12 @@ namespace bl {
     bool chunk::load_pending_ticks(const bl::raw_chunk& rc) {
         auto raw = rc.get_normal_key(chunk_key::PendingTicks);
         if (!raw.empty()) {
-            this->pending_ticks_ = nbt::parse_all(raw.data(), raw.size());
+            auto parsed = nbt::parse_all(std::span<const byte_t>(raw.data(), raw.size()));
+            if (!parsed) {
+                LOG_F(ERROR, "Cannot parse pending ticks: %s", nbt::parse_error_to_string(parsed.error_code));
+                return false;
+            }
+            this->pending_ticks_ = std::move(parsed.roots);
         }
         return true;
     }
@@ -250,8 +255,11 @@ namespace bl {
     void chunk::load_entities(const bl::raw_chunk& rc) {
         auto raw = rc.get_normal_key(chunk_key::Entity);
         if (!raw.empty()) {
-            auto actors = nbt::parse_all(raw.data(), raw.size());
-            for (auto& a : actors) {
+            auto parsed = nbt::parse_all(std::span<const byte_t>(raw.data(), raw.size()));
+            if (!parsed) {
+                LOG_F(ERROR, "Cannot parse chunk entities: %s", nbt::parse_error_to_string(parsed.error_code));
+            }
+            for (auto& a : parsed.roots) {
                 auto* ac = new actor;
                 if (ac->load_from_nbt_owned(a)) {
                     this->entities_.push_back(ac);
@@ -293,7 +301,12 @@ namespace bl {
     bool chunk::load_block_entities(const bl::raw_chunk& rc) {
         auto raw = rc.get_normal_key(chunk_key::BlockEntity);
         if (!raw.empty()) {
-            this->block_entities_ = nbt::parse_all(raw.data(), raw.size());
+            auto parsed = nbt::parse_all(std::span<const byte_t>(raw.data(), raw.size()));
+            if (!parsed) {
+                LOG_F(ERROR, "Cannot parse block entities: %s", nbt::parse_error_to_string(parsed.error_code));
+                return false;
+            }
+            this->block_entities_ = std::move(parsed.roots);
         }
         return true;
     }

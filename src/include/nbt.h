@@ -511,9 +511,46 @@ namespace bl::nbt {
     using int_array_tag = array_tag<int32_t, IntArray>;
     using long_array_tag = array_tag<int64_t, LongArray>;
 
-    compound_tag* parse_one(const byte_t* data, int& read);
-    compound_tag* parse_one(const byte_t* data, size_t data_len, int& read);
-    std::vector<compound_tag*> parse_all(const byte_t* data, size_t len);
+    enum class parse_error : std::uint8_t {
+        none,
+        empty_input,
+        truncated_data,
+        invalid_tag_type,
+        invalid_root_type,
+        invalid_array_length,
+        invalid_list_length,
+        missing_compound_end,
+        invalid_consumed_length,
+        resource_exhausted,
+    };
+
+    [[nodiscard]] const char* parse_error_to_string(parse_error error) noexcept;
+
+    struct parse_result {
+        parse_error error_code{parse_error::none};
+        size_t consumed_length{0};
+        compound_tag* root{nullptr};
+
+        [[nodiscard]] explicit operator bool() const noexcept { return error_code == parse_error::none; }
+    };
+
+    struct parse_all_result {
+        parse_error error_code{parse_error::none};
+        size_t consumed_length{0};
+        std::vector<compound_tag*> roots;
+
+        [[nodiscard]] explicit operator bool() const noexcept { return error_code == parse_error::none; }
+    };
+
+    /// Parse one compound value from a bounded byte range.
+    ///
+    /// The caller owns `root` when parsing succeeds.
+    [[nodiscard]] parse_result parse_one(std::span<const byte_t> data);
+
+    /// Parse consecutive compound values from a bounded byte range.
+    ///
+    /// The caller owns every pointer in `roots` when parsing succeeds.
+    [[nodiscard]] parse_all_result parse_all(std::span<const byte_t> data);
 }  // namespace bl::nbt
 
 #endif  // BEDROCK_LEVEL_NBT_H

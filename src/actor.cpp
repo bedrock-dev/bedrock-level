@@ -10,13 +10,18 @@
 namespace bl {
 
     bool actor::load(const byte_t* data, size_t len) {
-        auto p = bl::nbt::parse_all(data, len);
-        if (p.size() != 1) {
-            LOG_F(ERROR, "Invalid Actor!!");
+        auto parsed = bl::nbt::parse_all(std::span<const byte_t>(data, len));
+        if (!parsed) {
+            LOG_F(ERROR, "Invalid Actor: %s", bl::nbt::parse_error_to_string(parsed.error_code));
+            return false;
+        }
+        if (parsed.roots.size() != 1) {
+            for (auto* root : parsed.roots) delete root;
+            LOG_F(ERROR, "Invalid Actor: expected one NBT root");
             return false;
         }
 
-        this->root_ = p[0];
+        this->root_ = parsed.roots.front();
         this->loaded_ = this->preload(root_);
         return this->loaded_;
     }

@@ -347,24 +347,32 @@ namespace bl {
         this->pos_ = pos;
         if (auto it = data_.find(chunk_key::BlockEntity); it != data_.end()) {
             auto& data = it->second;
-            auto palette = nbt::parse_all(data.data(), data.size());
-            for (auto*& p : palette) {
-                block_pos world_pos;
-                if (!read_block_entity_pos(p, world_pos)) continue;
-                set_block_entity_pos(p, block_pos{world_pos.x + dx, world_pos.y, world_pos.z + dz});
+            auto parsed = nbt::parse_all(std::span<const byte_t>(data.data(), data.size()));
+            if (!parsed) {
+                LOG_F(ERROR, "Cannot move block entities: %s", nbt::parse_error_to_string(parsed.error_code));
+            } else {
+                for (auto*& p : parsed.roots) {
+                    block_pos world_pos;
+                    if (!read_block_entity_pos(p, world_pos)) continue;
+                    set_block_entity_pos(p, block_pos{world_pos.x + dx, world_pos.y, world_pos.z + dz});
+                }
+                data.clear();
+                for (auto* p : parsed.roots) data += p->serialize();
+                for (auto* p : parsed.roots) delete p;
             }
-            data.clear();
-            for (auto* p : palette) data += p->serialize();
-            for (auto* p : palette) delete p;
         }
 
         if (auto it = data_.find(chunk_key::PendingTicks); it != data_.end()) {
             auto& data = it->second;
-            auto palette = nbt::parse_all(data.data(), data.size());
-            for (auto*& p : palette) offset_pending_ticks_pos(p, dx, dz);
-            data.clear();
-            for (auto* p : palette) data += p->serialize();
-            for (auto* p : palette) delete p;
+            auto parsed = nbt::parse_all(std::span<const byte_t>(data.data(), data.size()));
+            if (!parsed) {
+                LOG_F(ERROR, "Cannot move pending ticks: %s", nbt::parse_error_to_string(parsed.error_code));
+            } else {
+                for (auto*& p : parsed.roots) offset_pending_ticks_pos(p, dx, dz);
+                data.clear();
+                for (auto* p : parsed.roots) data += p->serialize();
+                for (auto* p : parsed.roots) delete p;
+            }
         }
 
         if (auto it = data_.find(chunk_key::HardCodedSpawnAreas); it != data_.end()) {
@@ -378,20 +386,24 @@ namespace bl {
 
         if (auto it = data_.find(chunk_key::Entity); it != data_.end()) {
             auto& data = it->second;
-            auto palette = nbt::parse_all(data.data(), data.size());
-            data.clear();
-            for (auto* p : palette) {
-                if (!p) continue;
-                actor ac;
-                if (ac.load_from_nbt(p)) {
-                    auto uid = level->generate_actor_uid();
-                    ac.reassign_uid(uid);
-                    ac.offset_pos(static_cast<float>(dx), 0.0f, static_cast<float>(dz));
-                    data += ac.root()->serialize();
-                } else {
-                    data += p->serialize();
+            auto parsed = nbt::parse_all(std::span<const byte_t>(data.data(), data.size()));
+            if (!parsed) {
+                LOG_F(ERROR, "Cannot move entities: %s", nbt::parse_error_to_string(parsed.error_code));
+            } else {
+                data.clear();
+                for (auto* p : parsed.roots) {
+                    if (!p) continue;
+                    actor ac;
+                    if (ac.load_from_nbt(p)) {
+                        auto uid = level->generate_actor_uid();
+                        ac.reassign_uid(uid);
+                        ac.offset_pos(static_cast<float>(dx), 0.0f, static_cast<float>(dz));
+                        data += ac.root()->serialize();
+                    } else {
+                        data += p->serialize();
+                    }
+                    delete p;
                 }
-                delete p;
             }
         }
 

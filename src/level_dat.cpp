@@ -114,10 +114,10 @@ namespace bl {
     bool level_dat::load_from_raw_data(const std::vector<byte_t>& data) {
         using namespace bl::nbt;
         if (data.size() <= 8) return false;
-        int read = 0;
         this->header_ = std::string(data.data(), 8);
-        this->root_ = parse_one(data.data() + 8, read);
-        if (!root_ || read != static_cast<int>(data.size()) - 8) {
+        const auto parsed = parse_one(std::span<const byte_t>(data).subspan(8));
+        this->root_ = parsed.root;
+        if (!parsed || !root_ || parsed.consumed_length != data.size() - 8) {
             return false;
         }
         return this->preload_data();
