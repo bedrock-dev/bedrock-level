@@ -14,6 +14,7 @@
 namespace bl {
     // On-disk SubChunkTerrain version byte.
     enum class SubChunkVersion : uint8_t {
+        V1 = 1,  // Legacy single-layer palette storage
         V8 = 8,  // 1.2~1.17: header is version + layer count
         V9 = 9   // 1.18+: header also carries a Y index
     };
@@ -22,7 +23,8 @@ namespace bl {
     inline constexpr uint8_t UNSET_SUB_CHUNK_VERSION = 0xff;
 
     [[nodiscard]] constexpr bool is_supported_sub_chunk_version(uint8_t version) noexcept {
-        return version == static_cast<uint8_t>(SubChunkVersion::V8) || version == static_cast<uint8_t>(SubChunkVersion::V9);
+        return version == static_cast<uint8_t>(SubChunkVersion::V1) || version == static_cast<uint8_t>(SubChunkVersion::V8) ||
+               version == static_cast<uint8_t>(SubChunkVersion::V9);
     }
 
     struct block_appearance {

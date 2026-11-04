@@ -34,8 +34,8 @@ namespace bl {
             return false;
         }
 
-        bool read_header(sub_chunk* sub_chunk, const byte_t* stream, int& read, uint8_t& layers_num) {
-            if (!sub_chunk || !stream) return false;
+        bool read_header(sub_chunk* sub_chunk, std::span<const byte_t> stream, size_t& read, uint8_t& layers_num) {
+            if (!sub_chunk || stream.empty()) return false;
             const auto raw_version = static_cast<uint8_t>(stream[0]);
             if (!is_supported_sub_chunk_version(raw_version)) {
                 LOG_F(INFO, "Unsupported sub chunk version: %u", raw_version);
@@ -43,9 +43,23 @@ namespace bl {
             }
             const auto version = static_cast<SubChunkVersion>(raw_version);
             sub_chunk->set_version(version);
+            if (version == SubChunkVersion::V1) {
+                // V1 stores exactly one layer and has no layer-count byte.
+                layers_num = 1;
+                read = 1;
+                return true;
+            }
+            if (stream.size() < 2) {
+                LOG_F(ERROR, "Truncated sub chunk header");
+                return false;
+            }
             layers_num = static_cast<uint8_t>(stream[1]);
             read = 2;
             if (version == SubChunkVersion::V9) {
+                if (stream.size() < 3) {
+                    LOG_F(ERROR, "Truncated v9 sub chunk header");
+                    return false;
+                }
                 int8_t y_index = stream[2];
                 if (y_index != sub_chunk->y_index()) {
                     LOG_F(ERROR, "Invalid Y index value(new(%d)  != default(%d))", y_index, sub_chunk->y_index());
@@ -66,22 +80,38 @@ namespace bl {
     }
 
     bool sub_chunk::load(std::span<const byte_t> data) {
-        const auto* raw = data.data();
         size_t idx = 0;
-        int read{0};
+        size_t header_read{0};
         uint8_t layers_num = 0;
-        if (!read_header(this, raw, read, layers_num)) return false;
-        idx += read;
+        if (!read_header(this, data, header_read, layers_num)) return false;
+        idx += header_read;
         for (auto i = 0; i < (int)layers_num; i++) {
             auto layer = std::make_unique<bl::sub_chunk::layer>();
             this->layers_.push_back(std::move(layer));
             auto& loaded_layer = *this->layers_.back();
+            int read{0};
+            if (idx >= data.size()) {
+                LOG_F(ERROR, "Missing sub chunk layer data");
+                return false;
+            }
             loaded_layer.blocks = bl::read_block_indices(data.subspan(idx), read, loaded_layer.bits, loaded_layer.palette_len);
+            if (read <= 0 || static_cast<size_t>(read) > data.size() - idx) {
+                LOG_F(ERROR, "Invalid sub chunk block index data");
+                return false;
+            }
             idx += read;
+            if (idx > data.size() || loaded_layer.palette_len == 0) {
+                LOG_F(ERROR, "Invalid sub chunk palette count");
+                return false;
+            }
             loaded_layer.palette = bl::read_palettes(data.subspan(idx), loaded_layer.palette_len, read);
+            if (loaded_layer.palette.size() != loaded_layer.palette_len) {
+                LOG_F(ERROR, "Invalid sub chunk palette data");
+                return false;
+            }
             idx += read;
         }
-        return true;
+        return idx == data.size();
     }
 
     std::string sub_chunk::to_raw() const {
@@ -90,10 +120,16 @@ namespace bl {
             LOG_F(WARNING, "Sub chunk version %u is not a valid on-disk value, writing v9", version);
             version = static_cast<uint8_t>(SubChunkVersion::V9);
         }
+        if (version == static_cast<uint8_t>(SubChunkVersion::V1) && this->layers_.size() != 1) {
+            LOG_F(WARNING, "V1 sub chunks require exactly one layer, writing v8");
+            version = static_cast<uint8_t>(SubChunkVersion::V8);
+        }
 
         std::string out;
         out.push_back(static_cast<char>(version));
-        out.push_back(static_cast<char>(this->layers_.size()));
+        if (version != static_cast<uint8_t>(SubChunkVersion::V1)) {
+            out.push_back(static_cast<char>(this->layers_.size()));
+        }
         if (version == static_cast<uint8_t>(SubChunkVersion::V9)) {
             out.push_back(static_cast<char>(this->y_index_));
         }

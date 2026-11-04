@@ -1,5 +1,7 @@
 #include "palette.h"
 
+#include <limits>
+
 #include "binary_io.h"
 #include "loguru/loguru.hpp"
 
@@ -10,30 +12,36 @@ namespace bl {
 
     std::vector<uint16_t> read_block_indices(std::span<const byte_t> stream, int& read, uint8_t& bits, uint32_t& palette_len) {
         read = 0;
+        palette_len = 0;
+        if (stream.empty()) return {};
         const auto* data = stream.data();
         auto layer_header = data[0];
         read++;
         bits = layer_header >> 1u;
+        if (bits > 32) return {};
         std::vector<uint16_t> blocks;
         if (bits != 0) {
             blocks.resize(BLOCK_NUM);
-            int block_per_word = 32 / bits;
-            auto wordCount = BLOCK_NUM / block_per_word;
-            if (BLOCK_NUM % block_per_word != 0) wordCount++;
+            const int blocks_per_word = 32 / bits;
+            size_t word_count = BLOCK_NUM / blocks_per_word;
+            if (BLOCK_NUM % blocks_per_word != 0) word_count++;
+            const auto required = 1 + word_count * sizeof(uint32_t) + sizeof(uint32_t);
+            if (stream.size() < required) return {};
             int position = 0;
-            for (int wordi = 0; wordi < wordCount; wordi++) {
-                const auto word = binary::read_u32_le(data + read + wordi * 4);
-                for (int block = 0; block < block_per_word; block++) {
-                    int state = (word >> ((position % block_per_word) * bits)) & ((1 << bits) - 1);
+            const uint32_t mask = bits == 32 ? std::numeric_limits<uint32_t>::max() : (1u << bits) - 1u;
+            for (size_t word_index = 0; word_index < word_count; word_index++) {
+                const auto word = binary::read_u32_le(data + read + word_index * 4);
+                for (int block = 0; block < blocks_per_word; block++) {
+                    uint32_t state = (word >> ((position % blocks_per_word) * bits)) & mask;
                     if (position < static_cast<int>(blocks.size())) {
                         blocks[position] = static_cast<uint16_t>(state);
                     }
                     position++;
                 }
             }
-            read += wordCount << 2;
+            read += static_cast<int>(word_count * sizeof(uint32_t));
             palette_len = binary::read_u32_le(data + read);
-            read += 4;
+            read += sizeof(uint32_t);
         } else {  // uniform
             blocks = std::vector<uint16_t>(BLOCK_NUM, 0);
             palette_len = 1;
@@ -55,8 +63,7 @@ namespace bl {
                 LOG_F(ERROR, "Can not read block palette: %s", bl::nbt::parse_error_to_string(parsed.error_code));
                 return result;
             }
-            if (parsed.consumed_length == 0 ||
-                parsed.consumed_length > stream.size() - static_cast<size_t>(read)) {
+            if (parsed.consumed_length == 0 || parsed.consumed_length > stream.size() - static_cast<size_t>(read)) {
                 LOG_F(ERROR, "Invalid block palette length");
                 delete parsed.root;
                 return result;
