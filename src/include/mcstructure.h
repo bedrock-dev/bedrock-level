@@ -63,6 +63,7 @@ namespace bl {
 
        private:
         friend mcstructure parse_mcstructure(const byte_t* data, size_t len);
+        friend mcstructure parse_mcstructure(const bl::nbt::compound_tag& root);
         friend class mcstructure_builder;
 
         int size_x_{0}, size_y_{0}, size_z_{0};
@@ -77,6 +78,8 @@ namespace bl {
 
     // Parse a .mcstructure file from raw bytes.
     mcstructure parse_mcstructure(const byte_t* data, size_t len);
+    // Build a structure from an already parsed .mcstructure root. Tags are copied.
+    mcstructure parse_mcstructure(const bl::nbt::compound_tag& root);
 
     class mcstructure_builder {
        public:

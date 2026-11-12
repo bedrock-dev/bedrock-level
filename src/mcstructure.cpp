@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <fstream>
 #include <limits>
+#include <memory>
 #include <sstream>
 #include <unordered_set>
 
@@ -347,26 +348,30 @@ namespace bl {
     }
 
     mcstructure parse_mcstructure(const byte_t* data, size_t len) {
-        mcstructure result;
         const auto parsed = bl::nbt::parse_one(std::span<const byte_t>(data, len));
         if (!parsed) {
             LOG_F(ERROR, "Cannot parse mcstructure NBT: %s", bl::nbt::parse_error_to_string(parsed.error_code));
-            return result;
+            return {};
         }
-        auto* root = parsed.root;
+        const std::unique_ptr<bl::nbt::compound_tag> root(parsed.root);
+        return parse_mcstructure(*root);
+    }
+
+    mcstructure parse_mcstructure(const bl::nbt::compound_tag& source) {
+        mcstructure result;
+        // get_by_path() is non-const; the root is only read and its tags are copied.
+        auto* root = const_cast<bl::nbt::compound_tag*>(&source);
 
         auto* format_version_tag = root->get("format_version");
         auto* format_version = format_version_tag ? format_version_tag->as<bl::nbt::int_tag*>() : nullptr;
         if (!format_version) {
             LOG_F(ERROR, "Invalid mcstructure: missing format_version");
-            delete root;
             return result;
         }
         result.version_ = format_version->value;
         if (result.version_ != 1 && result.version_ != 2) {
             LOG_F(ERROR, "Unsupported mcstructure format_version: %d (supported versions are 1 and 2)", result.version_);
             result.version_ = 0;
-            delete root;
             return result;
         }
 
@@ -454,7 +459,6 @@ namespace bl {
             }
         }
 
-        delete root;
         return result;
     }
 
