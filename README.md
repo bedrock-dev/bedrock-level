@@ -21,8 +21,9 @@ int main() {
         return -1;
     }
 
-    auto spawn_pos = level.dat().spawn_position();
-    auto center_chunk_pos = spawn_pos.to_chunk_pos();
+    const auto spawn_pos = level.dat().spawn_position();
+    if (!spawn_pos) return -1;
+    auto center_chunk_pos = spawn_pos->to_chunk_pos();
     const int DIM = 0;
     const int R = 40;
     auto minP = bl::chunk_pos{center_chunk_pos.x - R, center_chunk_pos.z - R, DIM};

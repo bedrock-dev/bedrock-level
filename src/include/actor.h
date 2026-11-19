@@ -1,6 +1,7 @@
 #ifndef BEDROCK_LEVEL_ACRTOR_H
 #define BEDROCK_LEVEL_ACRTOR_H
 #include <cstdint>
+#include <optional>
 #include <string_view>
 
 #include "bedrock_key.h"
@@ -17,6 +18,8 @@ namespace bl {
 
         /// Take ownership of nbt (no deep copy); on failure the caller keeps ownership
         bool load_from_nbt_owned(bl::nbt::compound_tag* nbt);
+
+        [[nodiscard]] static std::optional<vec3> position_from_nbt(const bl::nbt::compound_tag* nbt);
 
         /// Offset the entity's Pos by (dx, dy, dz), modify nbt in place
         void offset_pos(float dx, float dy, float dz);

@@ -3,6 +3,7 @@
 #include <array>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "bedrock_key.h"
@@ -32,7 +33,7 @@ namespace bl {
         void set_nbt(bl::nbt::compound_tag* tag);
 
         [[nodiscard]] inline bool loaded() const { return this->loaded_; }
-        [[nodiscard]] inline block_pos spawn_position() const { return this->spawn_position_; }
+        [[nodiscard]] inline std::optional<block_pos> spawn_position() const { return this->spawn_position_; }
         [[deprecated("Wrong API")]] inline uint64_t storage_version() const { return this->storage_version_; }
         [[nodiscard]] inline ClientVersion min_compat_version() const { return this->min_compat_version_; }
         [[nodiscard]] inline const std::string& level_name() const { return this->level_name_; }
@@ -49,7 +50,7 @@ namespace bl {
 
        private:
         bool loaded_{false};
-        block_pos spawn_position_{0, 0, 0};
+        std::optional<block_pos> spawn_position_;
         std::string level_name_;
         int storage_version_{10};
         ClientVersion min_compat_version_;

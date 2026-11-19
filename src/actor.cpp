@@ -1,5 +1,6 @@
 #include "actor.h"
 
+#include <cmath>
 #include <cstdint>
 #include <iostream>
 #include <random>
@@ -48,25 +49,35 @@ namespace bl {
         return true;
     }
 
+    std::optional<vec3> actor::position_from_nbt(const bl::nbt::compound_tag* nbt) {
+        if (!nbt) return std::nullopt;
+        auto it = nbt->value.find("Pos");
+        if (it == nbt->value.end()) return std::nullopt;
+        auto* pos_tag = dynamic_cast<bl::nbt::list_tag*>(it->second);
+        if (!pos_tag || pos_tag->value.size() < 3) return std::nullopt;
+
+        const auto read = [](const bl::nbt::abstract_tag* value) -> std::optional<float> {
+            if (const auto* float_value = value ? value->as<const bl::nbt::float_tag*>() : nullptr) return float_value->value;
+            if (const auto* double_value = value ? value->as<const bl::nbt::double_tag*>() : nullptr) {
+                return static_cast<float>(double_value->value);
+            }
+            return std::nullopt;
+        };
+        const auto x = read(pos_tag->value[0]);
+        const auto y = read(pos_tag->value[1]);
+        const auto z = read(pos_tag->value[2]);
+        if (!x || !y || !z || !std::isfinite(*x) || !std::isfinite(*y) || !std::isfinite(*z)) return std::nullopt;
+        return vec3{*x, *y, *z};
+    }
+
     bool actor::preload(bl::nbt::compound_tag* root) {
         if (!root) return false;
         bool read_pos = false;
         bool read_uid = false;
         bool read_identifier = false;
-        auto it = root->value.find("Pos");
-        if (it != root->value.end()) {
-            auto* pos_tag = dynamic_cast<bl::nbt::list_tag*>(it->second);
-            if (pos_tag && pos_tag->value.size() == 3) {
-                auto* tag_x = dynamic_cast<bl::nbt::float_tag*>(pos_tag->value[0]);
-                auto* tag_y = dynamic_cast<bl::nbt::float_tag*>(pos_tag->value[1]);
-                auto* tag_z = dynamic_cast<bl::nbt::float_tag*>(pos_tag->value[2]);
-                if (tag_x && tag_y && tag_z) {
-                    this->pos_.x = tag_x->value;
-                    this->pos_.y = tag_y->value;
-                    this->pos_.z = tag_z->value;
-                    read_pos = true;
-                }
-            }
+        if (const auto position = position_from_nbt(root)) {
+            this->pos_ = *position;
+            read_pos = true;
         }
 
         auto it2 = root->value.find("identifier");

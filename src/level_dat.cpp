@@ -93,15 +93,11 @@ namespace bl {
         auto x_tag = root_->get("SpawnX");
         auto y_tag = root_->get("SpawnY");
         auto z_tag = root_->get("SpawnZ");
-        if (x_tag && x_tag->type() == tag_type::Int) {
-            this->spawn_position_.x = dynamic_cast<int_tag*>(x_tag)->value;
-        }
-        if (y_tag && y_tag->type() == tag_type::Int) {
-            this->spawn_position_.y = dynamic_cast<int_tag*>(y_tag)->value;
-        }
-
-        if (z_tag && z_tag->type() == tag_type::Int) {
-            this->spawn_position_.z = dynamic_cast<int_tag*>(z_tag)->value;
+        if (x_tag && x_tag->type() == tag_type::Int && y_tag && y_tag->type() == tag_type::Int && z_tag && z_tag->type() == tag_type::Int) {
+            this->spawn_position_ =
+                block_pos{x_tag->as<const int_tag*>()->value, y_tag->as<const int_tag*>()->value, z_tag->as<const int_tag*>()->value};
+        } else {
+            this->spawn_position_.reset();
         }
 
         auto* ver_tag = root_->get("MinimumCompatibleClientVersion");
