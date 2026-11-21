@@ -17,10 +17,9 @@ namespace bl::nbt {
     }  // namespace
 
     std::tuple<abstract_tag*, size_t> read_nbt(std::span<const byte_t> data, parse_error& error);
-    std::tuple<compound_tag*, size_t> read_compound_value(std::span<const byte_t> data, std::string_view key,
+    std::tuple<compound_tag*, size_t> read_compound_value(std::span<const byte_t> data, std::string_view key, parse_error& error);
+    std::tuple<abstract_tag*, size_t> read_value_by_type(tag_type type, std::span<const byte_t> data, std::string_view key,
                                                          parse_error& error);
-    std::tuple<abstract_tag*, size_t> read_value_by_type(tag_type type, std::span<const byte_t> data,
-                                                        std::string_view key, parse_error& error);
 
     const char* parse_error_to_string(parse_error error) noexcept {
         switch (error) {
@@ -77,8 +76,7 @@ namespace bl::nbt {
     }
 
     template <typename TagType>
-    std::tuple<TagType*, size_t> read_scalar_value(std::span<const byte_t> data, std::string_view key,
-                                                   parse_error& error) {
+    std::tuple<TagType*, size_t> read_scalar_value(std::span<const byte_t> data, std::string_view key, parse_error& error) {
         using value_type = decltype(TagType::value);
         constexpr size_t value_size = sizeof(value_type);
         if (data.size() < value_size) {
@@ -91,8 +89,7 @@ namespace bl::nbt {
     }
 
     template <typename TagType>
-    std::tuple<TagType*, size_t> read_array_value(std::span<const byte_t> data, std::string_view key,
-                                                  parse_error& error) {
+    std::tuple<TagType*, size_t> read_array_value(std::span<const byte_t> data, std::string_view key, parse_error& error) {
         using elem_type = typename decltype(TagType::value)::value_type;
         if (data.size() < 4) {
             set_error(error, parse_error::truncated_data);
@@ -121,8 +118,7 @@ namespace bl::nbt {
         return {tag, consumed};
     }
 
-    std::tuple<string_tag*, size_t> read_string_value(std::span<const byte_t> data, std::string_view key,
-                                                      parse_error& error) {
+    std::tuple<string_tag*, size_t> read_string_value(std::span<const byte_t> data, std::string_view key, parse_error& error) {
         auto* tag = new string_tag(key);
         std::string_view value;
         const int r = read_string_view(data, value, error);
@@ -134,8 +130,7 @@ namespace bl::nbt {
         return {tag, static_cast<size_t>(r)};
     }
 
-    std::tuple<list_tag*, size_t> read_list_tag_value(std::span<const byte_t> data, std::string_view key,
-                                                      parse_error& error) {
+    std::tuple<list_tag*, size_t> read_list_tag_value(std::span<const byte_t> data, std::string_view key, parse_error& error) {
         size_t read = 0;
         auto* tag = new list_tag(key);
         tag_type child_type;
@@ -185,8 +180,7 @@ namespace bl::nbt {
         return {tag, read};
     }
 
-    std::tuple<compound_tag*, size_t> read_compound_value(std::span<const byte_t> data, std::string_view key,
-                                                          parse_error& error) {
+    std::tuple<compound_tag*, size_t> read_compound_value(std::span<const byte_t> data, std::string_view key, parse_error& error) {
         auto* tag = new compound_tag(key);
         size_t total = 0;
         while (total < data.size()) {
@@ -224,8 +218,8 @@ namespace bl::nbt {
         return {nullptr, 0};
     }
 
-    std::tuple<abstract_tag*, size_t> read_value_by_type(tag_type type, std::span<const byte_t> data,
-                                                        std::string_view key, parse_error& error) {
+    std::tuple<abstract_tag*, size_t> read_value_by_type(tag_type type, std::span<const byte_t> data, std::string_view key,
+                                                         parse_error& error) {
         switch (type) {
             case Compound:
                 return read_compound_value(data, key, error);

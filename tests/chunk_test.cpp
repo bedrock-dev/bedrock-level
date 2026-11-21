@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <chrono>
 #include <filesystem>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -416,12 +417,12 @@ TEST(ChunkBlockEdit, ToRawChunkWritesBlockEntities) {
 
     const auto payload = out.get_normal_key(bl::chunk_key::BlockEntity);
     ASSERT_FALSE(payload.empty()) << "block entities must be written back";
-    auto stored = bl::nbt::parse_all(payload.data(), payload.size());
-    ASSERT_EQ(stored.size(), 1u);
-    EXPECT_EQ(stored[0]->get("x")->as<bl::nbt::int_tag*>()->value, 2 * 16 + 3);
-    EXPECT_EQ(stored[0]->get("y")->as<bl::nbt::int_tag*>()->value, 70);
-    EXPECT_EQ(stored[0]->get("z")->as<bl::nbt::int_tag*>()->value, -3 * 16 + 4);
-    for (auto* tag : stored) delete tag;
+    auto parsed = bl::nbt::parse_all(std::span(reinterpret_cast<const byte_t*>(payload.data()), payload.size()));
+    ASSERT_EQ(parsed.roots.size(), 1u);
+    EXPECT_EQ(parsed.roots[0]->get("x")->as<bl::nbt::int_tag*>()->value, 2 * 16 + 3);
+    EXPECT_EQ(parsed.roots[0]->get("y")->as<bl::nbt::int_tag*>()->value, 70);
+    EXPECT_EQ(parsed.roots[0]->get("z")->as<bl::nbt::int_tag*>()->value, -3 * 16 + 4);
+    for (auto* tag : parsed.roots) delete tag;
 }
 
 // A chunk loaded without chunk_load_policy::BlockActor never saw the payload, so it must not
@@ -543,11 +544,11 @@ TEST(ChunkBlockEdit, ToRawChunkWritesActors) {
     EXPECT_EQ(raw.get_actor_digest(), raw.get_entities().begin()->first);
 
     const auto& stored = raw.get_entities().begin()->second;
-    auto tags = bl::nbt::parse_all(stored.data(), stored.size());
-    ASSERT_EQ(tags.size(), 1u);
-    EXPECT_EQ(tags[0]->get("identifier")->as<bl::nbt::string_tag*>()->value, "minecraft:pig");
-    EXPECT_NE(tags[0]->get("UniqueID")->as<bl::nbt::long_tag*>()->value, 777);
-    auto* stored_pos = tags[0]->get("Pos")->as<bl::nbt::list_tag*>();
+    auto parsed = bl::nbt::parse_all(std::span(reinterpret_cast<const byte_t*>(stored.data()), stored.size()));
+    ASSERT_EQ(parsed.roots.size(), 1u);
+    EXPECT_EQ(parsed.roots[0]->get("identifier")->as<bl::nbt::string_tag*>()->value, "minecraft:pig");
+    EXPECT_NE(parsed.roots[0]->get("UniqueID")->as<bl::nbt::long_tag*>()->value, 777);
+    auto* stored_pos = parsed.roots[0]->get("Pos")->as<bl::nbt::list_tag*>();
     EXPECT_FLOAT_EQ(stored_pos->value[0]->as<bl::nbt::float_tag*>()->value, 8.5f);
     EXPECT_FLOAT_EQ(stored_pos->value[2]->as<bl::nbt::float_tag*>()->value, 9.5f);
     // the digest must describe this actor, or the level will not find it
@@ -558,7 +559,7 @@ TEST(ChunkBlockEdit, ToRawChunkWritesActors) {
     ASSERT_TRUE(reloaded.load_from_raw_chunk(raw));
     ASSERT_EQ(reloaded.entities().size(), 1u);
     EXPECT_EQ(reloaded.entities()[0]->identifier(), "minecraft:pig");
-    for (auto* tag : tags) delete tag;
+    for (auto* tag : parsed.roots) delete tag;
 }
 
 // Same guard as block entities: a chunk loaded without chunk_load_policy::Actor never saw the

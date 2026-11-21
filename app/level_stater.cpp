@@ -300,8 +300,8 @@ int dumpChunks(bl::bedrock_level& level, const Options& opt) {
     for (const auto& pos : positions) {
         if (exportChunk(level, pos, opt.output, opt.unpack)) ++present;
     }
-    printf("%s %zu chunk(s) to %s (%zu present)\n", opt.unpack ? "Unpacked" : "Exported", positions.size(),
-           opt.output.string().c_str(), present);
+    printf("%s %zu chunk(s) to %s (%zu present)\n", opt.unpack ? "Unpacked" : "Exported", positions.size(), opt.output.string().c_str(),
+           present);
     return 0;
 }
 

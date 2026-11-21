@@ -6,6 +6,7 @@
 #include <gtest/gtest.h>
 
 #include <memory>
+#include <span>
 
 #include "bedrock_key.h"
 #include "bedrock_level.h"
@@ -334,14 +335,14 @@ TEST(BlockEntity, RawChunkMoveToMovesChestPair) {
     rc.move_to(chunk_pos{2, -1, 0}, &level);
 
     const auto payload = rc.get_normal_key(chunk_key::BlockEntity);
-    auto stored = nbt::parse_all(payload.data(), payload.size());
-    ASSERT_EQ(stored.size(), 1u);
-    EXPECT_EQ(stored[0]->get("x")->as<nbt::int_tag*>()->value, 44);
-    EXPECT_EQ(stored[0]->get("y")->as<nbt::int_tag*>()->value, 64);
-    EXPECT_EQ(stored[0]->get("z")->as<nbt::int_tag*>()->value, -25);
-    EXPECT_EQ(stored[0]->get("pairx")->as<nbt::int_tag*>()->value, 52);
-    EXPECT_EQ(stored[0]->get("pairz")->as<nbt::int_tag*>()->value, -13);
-    for (auto* tag : stored) delete tag;
+    auto parsed = nbt::parse_all(std::span(reinterpret_cast<const byte_t*>(payload.data()), payload.size()));
+    ASSERT_EQ(parsed.roots.size(), 1u);
+    EXPECT_EQ(parsed.roots[0]->get("x")->as<nbt::int_tag*>()->value, 44);
+    EXPECT_EQ(parsed.roots[0]->get("y")->as<nbt::int_tag*>()->value, 64);
+    EXPECT_EQ(parsed.roots[0]->get("z")->as<nbt::int_tag*>()->value, -25);
+    EXPECT_EQ(parsed.roots[0]->get("pairx")->as<nbt::int_tag*>()->value, 52);
+    EXPECT_EQ(parsed.roots[0]->get("pairz")->as<nbt::int_tag*>()->value, -13);
+    for (auto* tag : parsed.roots) delete tag;
 }
 
 TEST(BlockEntity, DoesNotMovePairPosForOtherTypes) {

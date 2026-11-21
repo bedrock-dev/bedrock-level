@@ -9,6 +9,7 @@
 #include <chrono>
 #include <filesystem>
 #include <memory>
+#include <span>
 #include <vector>
 
 #include "utils.h"
@@ -245,8 +246,9 @@ TEST(McStructureBuilder, WritesVersion2IntArraysAndOmitsEmptyLayer) {
 
     EXPECT_EQ(structure.version(), 2);
     const auto raw = structure.to_raw();
-    int read = 0;
-    auto* root = bl::nbt::parse_one(reinterpret_cast<const byte_t*>(raw.data()), raw.size(), read);
+    auto parsed = bl::nbt::parse_one(std::span(reinterpret_cast<const byte_t*>(raw.data()), raw.size()));
+    ASSERT_TRUE(parsed);
+    auto* root = parsed.root;
     ASSERT_NE(root, nullptr);
 
     auto* block_indices_tag = root->get_by_path("structure.block_indices");

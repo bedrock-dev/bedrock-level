@@ -8,6 +8,7 @@
 
 #include <chrono>
 #include <filesystem>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -93,19 +94,19 @@ TEST(LargeNbt, DeserializeTime) {
     size_t tags = 0;
     auto start = steady_clock_t::now();
     for (int r = 0; r < ROUNDS; r++) {
-        auto palettes = bl::nbt::parse_all(data.data(), data.size());
-        tags = palettes.size();
-        for (auto* p : palettes) delete p;
+        auto parsed = bl::nbt::parse_all(std::span<const byte_t>(data.data(), data.size()));
+        tags = parsed.roots.size();
+        for (auto* p : parsed.roots) delete p;
     }
     auto ms = std::chrono::duration<double, std::milli>(steady_clock_t::now() - start).count();
     std::cout << "deserialize " << data.size() << " bytes -> " << tags << " tag(s) in " << ms << " ms (" << (ms / ROUNDS) << " ms/round)\n";
     EXPECT_GT(tags, 0u);
 
     // one extra parse to estimate the in-memory footprint of the tag tree
-    auto palettes = bl::nbt::parse_all(data.data(), data.size());
+    auto parsed = bl::nbt::parse_all(std::span<const byte_t>(data.data(), data.size()));
     TreeStats st;
-    for (auto* p : palettes) accumulateTree(p, st);
-    for (auto* p : palettes) delete p;
+    for (auto* p : parsed.roots) accumulateTree(p, st);
+    for (auto* p : parsed.roots) delete p;
     const double raw_mb = data.size() / (1024.0 * 1024.0);
     const double tree_mb = st.est_bytes / (1024.0 * 1024.0);
     std::cout << "estimate: " << st.tags << " tag(s), " << st.payload_bytes / (1024.0 * 1024.0) << " MiB payload, ~" << tree_mb
@@ -117,18 +118,18 @@ TEST(LargeNbt, SerializeTime) {
     auto data = bl::utils::read_file(LARGE_NBT.string());
     ASSERT_FALSE(data.empty());
 
-    auto palettes = bl::nbt::parse_all(data.data(), data.size());
-    ASSERT_FALSE(palettes.empty());
+    auto parsed = bl::nbt::parse_all(std::span<const byte_t>(data.data(), data.size()));
+    ASSERT_FALSE(parsed.roots.empty());
 
     size_t total_bytes = 0;
     auto start = steady_clock_t::now();
     for (int r = 0; r < ROUNDS; r++) {
         total_bytes = 0;
-        for (auto* p : palettes) total_bytes += p->serialize().size();
+        for (auto* p : parsed.roots) total_bytes += p->serialize().size();
     }
     auto ms = std::chrono::duration<double, std::milli>(steady_clock_t::now() - start).count();
-    std::cout << "serialize " << palettes.size() << " tag(s) -> " << total_bytes << " bytes in " << ms << " ms (" << (ms / ROUNDS)
+    std::cout << "serialize " << parsed.roots.size() << " tag(s) -> " << total_bytes << " bytes in " << ms << " ms (" << (ms / ROUNDS)
               << " ms/round)\n";
     EXPECT_GT(total_bytes, 0u);
-    for (auto* p : palettes) delete p;
+    for (auto* p : parsed.roots) delete p;
 }
