@@ -9,6 +9,7 @@
 #include <unordered_set>
 
 #include "chunk_data_position.h"
+#include "palette.h"
 #include "utils.h"
 
 namespace bl {
@@ -30,7 +31,7 @@ namespace bl {
 
         [[nodiscard]] bool is_visible_block_name(std::string_view name) {
             // "minecraft:unknown" means "no usable palette entry here", which must not render.
-            return name != "minecraft:air" && name != "minecraft:unknown";
+            return !is_air_block_name(name) && name != "minecraft:unknown";
         }
 
         bl::nbt::list_tag* make_int_list(std::string_view key, int a, int b, int c) {

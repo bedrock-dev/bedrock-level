@@ -16,6 +16,7 @@
 #include "config.h"
 #include "leveldb/write_batch.h"
 #include "nbt.h"
+#include "palette.h"
 #include "utils.h"
 
 namespace bl {
@@ -359,10 +360,10 @@ namespace bl {
         for (int y = max_y; y >= min_y; y--) {
             const auto& name = get_block_name(cx, y, cz);  // no per-block string copy
             if (name == "minecraft:unknown") continue;
-            if (top_y < min_y && name != "minecraft:air") {
+            if (top_y < min_y && !is_air_block_name(name)) {
                 top_y = y;
             }
-            if (name != "minecraft:air" && name != "minecraft:water" && solid_y < min_y) {
+            if (!is_air_block_name(name) && name != "minecraft:water" && solid_y < min_y) {
                 solid_y = y;
             }
             if (top_y >= min_y && solid_y >= min_y) break;
