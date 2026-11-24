@@ -84,6 +84,13 @@ namespace bl {
         /// Write a block, creating missing layers as needed.
         void set_block(int rx, int ry, int rz, const nbt::compound_tag* tag, int layer_index = 0);
 
+        /// True when any layer at one block column contains a non-air block.
+        [[nodiscard]] bool is_block_column_non_air(int rx, int ry, int rz) const;
+
+        /// Replaces every layer in one block column; missing source layers become air.
+        bool replace_block_column(int rx, int ry, int rz, std::span<const nbt::compound_tag* const> layers,
+                                  const nbt::compound_tag* air_block);
+
         /// Fill whole layers with one block.
         void fill_layer(const nbt::compound_tag* tag, int layer_index = -1);
 

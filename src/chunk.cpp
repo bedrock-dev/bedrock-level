@@ -99,6 +99,24 @@ namespace bl {
         target->set_block(cx, offset, cz, tag, layer);
     }
 
+    bool chunk::is_block_column_non_air(int cx, int y, int cz) const {
+        int index = 0;
+        int offset = 0;
+        map_y_to_subchunk(y, index, offset);
+        const auto it = sub_chunks_.find(index);
+        return it != sub_chunks_.end() && it->second && it->second->is_block_column_non_air(cx, offset, cz);
+    }
+
+    bool chunk::replace_block_column(int cx, int y, int cz, std::span<const nbt::compound_tag* const> layers,
+                                     const nbt::compound_tag* air_block) {
+        auto* target = ensure_sub_chunk(y);
+        if (!target) return false;
+        int index = 0;
+        int offset = 0;
+        map_y_to_subchunk(y, index, offset);
+        return target->replace_block_column(cx, offset, cz, layers, air_block);
+    }
+
     void chunk::set_block_entity(int cx, int y, int cz, const nbt::compound_tag* tag) {
         if (!tag) return;
         auto copy = std::unique_ptr<nbt::compound_tag>(static_cast<nbt::compound_tag*>(tag->copy()));
@@ -106,6 +124,28 @@ namespace bl {
         const int baseZ = this->pos_.z * 16;
         set_block_entity_pos(copy.get(), {baseX + cx, y, baseZ + cz});
         this->block_entities_.push_back(copy.release());
+    }
+
+    bool chunk::remove_block_entity(int cx, int y, int cz) {
+        const int worldX = pos_.x * 16 + cx;
+        const int worldZ = pos_.z * 16 + cz;
+        bool removed = false;
+        for (auto it = block_entities_.begin(); it != block_entities_.end();) {
+            auto* entity = *it;
+            int x = 0;
+            int entityY = 0;
+            int z = 0;
+            const bool hasPosition =
+                entity && read_int_tag(entity, "x", x) && read_int_tag(entity, "y", entityY) && read_int_tag(entity, "z", z);
+            if (hasPosition && x == worldX && entityY == y && z == worldZ) {
+                delete entity;
+                it = block_entities_.erase(it);
+                removed = true;
+            } else {
+                ++it;
+            }
+        }
+        return removed;
     }
 
     bool chunk::add_actor(bedrock_level& level, const nbt::compound_tag* tag, const vec3& world_pos) {

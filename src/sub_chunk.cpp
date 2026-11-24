@@ -238,6 +238,29 @@ namespace bl {
         target->set_block(rx, ry, rz, tag);
     }
 
+    bool sub_chunk::is_block_column_non_air(int rx, int ry, int rz) const {
+        if (!is_valid_in_chunk_pos(rx, ry, rz)) return false;
+        for (int layer = 0; layer < static_cast<int>(layers_.size()); ++layer) {
+            const auto* entry = palette_entry_at(rx, ry, rz, layer);
+            if (!entry) continue;
+            if (!is_air_block_name(entry->name) && entry->name != "minecraft:unknown") return true;
+        }
+        return false;
+    }
+
+    bool sub_chunk::replace_block_column(int rx, int ry, int rz, std::span<const nbt::compound_tag* const> layers,
+                                         const nbt::compound_tag* air_block) {
+        if (!is_valid_in_chunk_pos(rx, ry, rz) || !air_block) return false;
+        const size_t layer_count = std::max(layers_.size(), layers.size());
+        for (size_t layer = 0; layer < layer_count; ++layer) {
+            const auto* tag = layer < layers.size() && layers[layer] ? layers[layer] : air_block;
+            auto* target = ensure_layer(static_cast<int>(layer));
+            if (!target) return false;
+            target->set_block(rx, ry, rz, tag);
+        }
+        return true;
+    }
+
     void sub_chunk::fill_layer(const nbt::compound_tag* tag, int layer_index) {
         if (!tag) return;
         if (layer_index < 0) {

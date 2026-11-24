@@ -1,0 +1,13 @@
+# Keep every text file LF in the repository and in working trees.
+* text=auto eol=lf
+
+# Binary assets must never be normalized or diffed as text.
+*.a binary
+*.ico binary
+*.jpeg binary
+*.jpg binary
+*.png binary
+*.ttf binary
+*.webp binary
+*.woff binary
+*.woff2 binary

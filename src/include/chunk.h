@@ -3,6 +3,7 @@
 
 #include <map>
 #include <memory>
+#include <span>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -34,8 +35,18 @@ namespace bl {
         /// Write a block, creating missing layers and sub-chunks.
         void set_block(int cx, int y, int cz, const nbt::compound_tag* tag, int layer = 0);
 
+        /// True when any layer at one world-space block column contains a non-air block.
+        [[nodiscard]] bool is_block_column_non_air(int cx, int y, int cz) const;
+
+        /// Atomically replaces every layer in one block column; missing source layers become air.
+        bool replace_block_column(int cx, int y, int cz, std::span<const nbt::compound_tag* const> layers,
+                                  const nbt::compound_tag* air_block);
+
         /// Append a block entity after rewriting its world position.
         void set_block_entity(int cx, int y, int cz, const nbt::compound_tag* tag);
+
+        /// Remove every block entity at one world-space block position.
+        bool remove_block_entity(int cx, int y, int cz);
 
         /// Fill a clipped, left-closed/right-open box with one block.
         void fill_blocks(const block_box& box, const nbt::compound_tag* tag, int layer = -1);
