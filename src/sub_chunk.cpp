@@ -251,7 +251,9 @@ namespace bl {
     bool sub_chunk::replace_block_column(int rx, int ry, int rz, std::span<const nbt::compound_tag* const> layers,
                                          const nbt::compound_tag* air_block) {
         if (!is_valid_in_chunk_pos(rx, ry, rz) || !air_block) return false;
-        const size_t layer_count = std::max(layers_.size(), layers.size());
+        size_t layer_count = std::max(layers_.size(), layers.size());
+        // Do not create new target layers solely for trailing undefined source layers.
+        while (layer_count > layers_.size() && layers[layer_count - 1] == nullptr) --layer_count;
         for (size_t layer = 0; layer < layer_count; ++layer) {
             const auto* tag = layer < layers.size() && layers[layer] ? layers[layer] : air_block;
             auto* target = ensure_layer(static_cast<int>(layer));

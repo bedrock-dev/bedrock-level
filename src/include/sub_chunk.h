@@ -87,7 +87,7 @@ namespace bl {
         /// True when any layer at one block column contains a non-air block.
         [[nodiscard]] bool is_block_column_non_air(int rx, int ry, int rz) const;
 
-        /// Replaces every layer in one block column; missing source layers become air.
+        /// Replaces retained target layers in one block column without creating trailing undefined source layers.
         bool replace_block_column(int rx, int ry, int rz, std::span<const nbt::compound_tag* const> layers,
                                   const nbt::compound_tag* air_block);
 

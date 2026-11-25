@@ -75,9 +75,17 @@ namespace bl {
     }
 
     void write_layer(std::string& out, const std::vector<uint16_t>& blocks, const std::vector<palette_entry>& palette) {
-        // bits has to cover every palette index; a 1-entry palette collapses to the uniform form
-        uint8_t bits = 0;
-        while ((1u << bits) < palette.size()) bits++;
+        // Select the smallest storage width supported by Minecraft's chunk reader.
+        uint8_t required_bits = 0;
+        while ((1u << required_bits) < palette.size()) ++required_bits;
+        static constexpr uint8_t SUPPORTED_BITS[] = {0, 1, 2, 3, 4, 5, 6, 8, 16};
+        uint8_t bits = 16;
+        for (const uint8_t supported : SUPPORTED_BITS) {
+            if (supported >= required_bits) {
+                bits = supported;
+                break;
+            }
+        }
 
         // Bit 0 of the header is the layer type: vanilla writes 0 (palette-based) on every layer.
         out.push_back(static_cast<char>(bits << 1));
