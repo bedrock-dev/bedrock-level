@@ -12,6 +12,9 @@
 
 namespace bl {
     [[nodiscard]] constexpr bool is_air_block_name(std::string_view name) noexcept { return name == "minecraft:air"; }
+    [[nodiscard]] constexpr bool is_structure_void_block_name(std::string_view name) noexcept {
+        return name == "minecraft:structure_void";
+    }
 
     // Read the layer header and 4096 block indices.
     std::vector<uint16_t> read_block_indices(std::span<const byte_t> stream, int& read, uint8_t& bits, uint32_t& palette_len);
